@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import abc
 import datetime
 import functools
 import sys
@@ -15,7 +14,7 @@ from liblaf import cherries
 _T = TypeVar("_T")
 
 
-class Run(abc.ABC, Generic[_T]):
+class Run(Generic[_T]):
     enabled: bool = True
     plugins: list[cherries.Plugin]
     _backend: _T
@@ -35,17 +34,13 @@ class Run(abc.ABC, Generic[_T]):
             self.start()
 
     @property
-    @abc.abstractmethod
-    def backend(self) -> str: ...
+    def backend(self) -> str:
+        return "dummy"
+
     @property
-    @abc.abstractmethod
-    def id(self) -> str: ...
-    @property
-    @abc.abstractmethod
-    def name(self) -> str: ...
-    @property
-    @abc.abstractmethod
-    def url(self) -> str: ...
+    def id(self) -> str:
+        raise NotImplementedError
+
     @functools.cached_property
     def creation_time(self) -> datetime.datetime:
         return datetime.datetime.now().astimezone()
@@ -53,6 +48,14 @@ class Run(abc.ABC, Generic[_T]):
     @functools.cached_property
     def entrypoint(self) -> Path:
         return Path(sys.argv[0]).absolute()
+
+    @property
+    def name(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def url(self) -> str:
+        raise NotImplementedError
 
     def start(self) -> None:
         for plugin in self.plugins:
@@ -106,7 +109,10 @@ class Run(abc.ABC, Generic[_T]):
 _current_run: Run | None = None
 
 
-def current_run() -> Run | None:
+def current_run() -> Run:
+    global _current_run  # noqa: PLW0603
+    if _current_run is None:
+        _current_run = Run()
     return _current_run
 
 
