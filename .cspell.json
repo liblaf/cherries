@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/packages/cspell-types/cspell.schema.json",
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "asyncio",
+    "bdabdac",
+    "cuda",
+    "getattr",
+    "hynek",
+    "libc",
+    "liblaf",
+    "numpy",
+    "pixi",
+    "pydantic",
+    "pydocstyle",
+    "pypa",
+    "pypi",
+    "pyplot",
+    "pyproject",
+    "pyrightconfig",
+    "pyvista",
+    "stefanzweifel",
+    "trimesh",
+    "ubelt"
+  ],
+  "ignorePaths": [
+    "**/.cspell.*",
+    "**/.git",
+    "**/.vscode",
+    "**/*-lock.*",
+    "**/*.lock*"
+  ],
+  "allowCompoundWords": true
+}
