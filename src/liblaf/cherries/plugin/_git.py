@@ -9,11 +9,11 @@ class PluginGit(cherries.Plugin):
     auto_commit: bool = True
     auto_commit_message: str = cherries.git.DEFAULT_COMMIT_MESSAGE
 
-    def pre_start(self) -> None:
+    def _pre_start(self) -> None:
         if self.auto_commit:
             cherries.git.commit(self.auto_commit_message)
 
-    def post_start(self, run: cherries.Run) -> None:
+    def _post_start(self, run: cherries.Run) -> None:
         r = git.Repo(search_parent_directories=True)
         sha: str = r.head.commit.hexsha
         run.log_other("cherries/git/sha", sha)

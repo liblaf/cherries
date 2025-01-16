@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import functools
+import os
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -79,17 +80,27 @@ class Run(Generic[_T]):
         *,
         step: float | None = None,
         timestamp: float | None = None,
+        **kwargs,
     ) -> None:
         logger.opt(depth=1).debug("{}: {}", key, value)
         if self.enabled:
-            self._log_metric(key, value, step=step, timestamp=timestamp)
+            self._log_metric(key, value, step=step, timestamp=timestamp, **kwargs)
 
     def log_other(
-        self, key: str, value: bool | float | str | datetime.datetime
+        self,
+        key: str,
+        value: bool | float | str | datetime.datetime,
+        **kwargs,
     ) -> None:
         logger.opt(depth=1).info("{}: {}", key, value)
         if self.enabled:
-            self._log_other(key, value)
+            self._log_other(key, value, **kwargs)
+
+    def upload_file(self, key: str, path: str | os.PathLike[str], **kwargs) -> None:
+        path = Path(path)
+        logger.opt(depth=1).info("Uploading file: {}", path)
+        if self.enabled:
+            self._upload_file(key, path, **kwargs)
 
     def _start(self) -> _T: ...
     def _end(self) -> None: ...
@@ -100,10 +111,12 @@ class Run(Generic[_T]):
         *,
         step: float | None = None,
         timestamp: float | None = None,
+        **kwargs,
     ) -> None: ...
     def _log_other(
-        self, key: str, value: bool | float | str | datetime.datetime
+        self, key: str, value: bool | float | str | datetime.datetime, **kwargs
     ) -> None: ...
+    def _upload_file(self, key: str, path: Path, **kwargs) -> None: ...
 
 
 _current_run: Run | None = None

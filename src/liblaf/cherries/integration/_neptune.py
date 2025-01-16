@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 
 import neptune
 import neptune.common.exceptions
@@ -36,10 +37,17 @@ class RunNeptune(cherries.Run[neptune.Run]):
         *,
         step: float | None = None,
         timestamp: float | None = None,
+        **kwargs,  # noqa: ARG002
     ) -> None:
         self._backend[key].append(value, step=step, timestamp=timestamp)
 
     def _log_other(
-        self, key: str, value: bool | float | str | datetime.datetime
+        self,
+        key: str,
+        value: bool | float | str | datetime.datetime,
+        **kwargs,  # noqa: ARG002
     ) -> None:
         self._backend[key] = value
+
+    def _upload_file(self, key: str, path: Path, **kwargs) -> None:
+        return self._backend[key].upload(path, **kwargs)
