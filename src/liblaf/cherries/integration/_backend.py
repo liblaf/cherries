@@ -2,6 +2,7 @@ import datetime
 import functools
 import sys
 from pathlib import Path
+from typing import Any
 
 import pydantic_settings as ps
 
@@ -49,10 +50,5 @@ class Backend(ps.BaseSettings):
         timestamp: float | None = None,
         **kwargs,
     ) -> None: ...
-    def log_other(
-        self,
-        key: str,
-        value: bool | float | str | datetime.datetime,
-        **kwargs,
-    ) -> None: ...
+    def log_other(self, key: str, value: Any, **kwargs) -> None: ...
     def upload_file(self, key: str, path: Path, **kwargs) -> None: ...

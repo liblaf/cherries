@@ -1,5 +1,5 @@
-import datetime
 from pathlib import Path
+from typing import Any
 
 import neptune
 import neptune.common.exceptions
@@ -10,9 +10,8 @@ from liblaf import cherries
 
 
 class BackendNeptune(cherries.Backend):
-    model_config = ps.SettingsConfigDict(
-        frozen=True, env_prefix=cherries.ENV_PREFIX + "NEPTUNE_"
-    )
+    model_config = ps.SettingsConfigDict(frozen=True, env_prefix="NEPTUNE_")
+    monitoring_namespace: str | None = None
     _backend: neptune.Run = pydantic.PrivateAttr()
 
     @property
@@ -32,7 +31,8 @@ class BackendNeptune(cherries.Backend):
         return self._backend.get_url()
 
     def start(self) -> None:
-        self._backend = neptune.init_run()
+        neptune.common.exceptions.STYLES.update(neptune.common.exceptions.EMPTY_STYLES)
+        self._backend = neptune.init_run(monitoring_namespace=self.monitoring_namespace)
 
     def end(self) -> None:
         self._backend.stop()
@@ -44,17 +44,14 @@ class BackendNeptune(cherries.Backend):
         *,
         step: float | None = None,
         timestamp: float | None = None,
-        **kwargs,  # noqa: ARG002
+        **kwargs,
     ) -> None:
-        self._backend[key].append(value, step=step, timestamp=timestamp)
+        self._backend[key].append(value, step=step, timestamp=timestamp, **kwargs)
 
-    def log_other(
-        self,
-        key: str,
-        value: bool | float | str | datetime.datetime,
-        **kwargs,  # noqa: ARG002
-    ) -> None:
-        self._backend[key] = value
+    def log_other(self, key: str, value: Any, **kwargs) -> None:
+        if isinstance(value, pydantic.BaseModel):
+            value = value.model_dump()
+        self._backend[key].assign(value, **kwargs)
 
     def upload_file(self, key: str, path: Path, **kwargs) -> None:
-        return self._backend[key].upload(path, **kwargs)
+        return self._backend[key].upload(str(path), **kwargs)

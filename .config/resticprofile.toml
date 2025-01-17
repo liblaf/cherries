@@ -1,0 +1,17 @@
+#:schema https://creativeprojects.github.io/resticprofile/jsonschema/config.json
+
+[global]
+initialize = true
+prevent-auto-repository-file = true
+prevent-sleep = true
+
+[default]
+insecure-no-password = true
+repository = "~/restic/cherries"
+
+[default.backup]
+check-after = true
+check-before = true
+source = ["."]
+source-relative = true
+exclude-file = [".restic-ignore"]

@@ -5,6 +5,7 @@ import functools
 import os
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from environs import env
 from loguru import logger
@@ -50,6 +51,7 @@ class Experiment:
         for plugin in self.plugins:
             plugin.pre_start()
         self.backend.start()
+        cherries.set_current_experiment(self)
         for plugin in self.plugins:
             plugin.post_start(self)
         self.log_other("cherries/start_time", self.start_time)
@@ -79,12 +81,7 @@ class Experiment:
         logger.opt(depth=1).debug("{}: {}", key, value)
         self.backend.log_metric(key, value, step=step, timestamp=timestamp, **kwargs)
 
-    def log_other(
-        self,
-        key: str,
-        value: bool | float | str | datetime.datetime,
-        **kwargs,
-    ) -> None:
+    def log_other(self, key: str, value: Any, **kwargs) -> None:
         if not self.enabled:
             return
         logger.opt(depth=1).info("{}: {}", key, value)
