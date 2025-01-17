@@ -13,6 +13,10 @@ DEFAULT_FILTER: "loguru.FilterDict" = {
     "__main__": "TRACE",
     "liblaf": "DEBUG",
 }
+DEFAULT_FILE_FILTER: "loguru.FilterDict" = {
+    **DEFAULT_FILTER,
+    "liblaf.cherries": "SUCCESS",
+}
 
 
 class PluginLogging(cherries.Plugin):
@@ -34,13 +38,13 @@ class PluginLogging(cherries.Plugin):
                 },
                 {
                     "sink": "run.log",
-                    "filter": DEFAULT_FILTER,
+                    "filter": DEFAULT_FILE_FILTER,
                     "enqueue": True,
                     "mode": "w",
                 },
                 {
                     "sink": "run.log.jsonl",
-                    "filter": DEFAULT_FILTER,
+                    "filter": DEFAULT_FILE_FILTER,
                     "serialize": True,
                     "enqueue": True,
                     "mode": "w",
