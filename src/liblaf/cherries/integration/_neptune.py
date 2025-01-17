@@ -1,8 +1,10 @@
+import os
 from pathlib import Path
 from typing import Any
 
 import neptune
 import neptune.common.exceptions
+import neptune.utils
 import pydantic
 import pydantic_settings as ps
 
@@ -49,9 +51,16 @@ class BackendNeptune(cherries.Backend):
         self._backend[key].append(value, step=step, timestamp=timestamp, **kwargs)
 
     def log_other(self, key: str, value: Any, **kwargs) -> None:
-        if isinstance(value, pydantic.BaseModel):
-            value = value.model_dump()
+        value = stringify_unsupported(value)
         self._backend[key].assign(value, **kwargs)
 
     def upload_file(self, key: str, path: Path, **kwargs) -> None:
         return self._backend[key].upload(str(path), **kwargs)
+
+
+def stringify_unsupported(value: Any) -> Any:
+    if isinstance(value, pydantic.BaseModel):
+        return value.model_dump()
+    if isinstance(value, os.PathLike):
+        return str(value)
+    return value
