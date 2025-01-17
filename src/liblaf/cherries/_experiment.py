@@ -47,6 +47,7 @@ class Experiment:
     def start(self) -> None:
         if not self.enabled:
             return
+        self.plugins = sorted(self.plugins, key=lambda plugin: plugin.priority)
         for plugin in self.plugins:
             plugin.pre_start()
         self.backend.start()
@@ -60,10 +61,10 @@ class Experiment:
     def end(self) -> None:
         if not self.enabled:
             return
-        for plugin in self.plugins:
+        for plugin in reversed(self.plugins):
             plugin.pre_end(self)
         self.backend.end()
-        for plugin in self.plugins:
+        for plugin in reversed(self.plugins):
             plugin.post_end(self)
         self.enabled = False  # prevent `end()` from being called multiple times
 
