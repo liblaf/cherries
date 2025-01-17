@@ -1,7 +1,6 @@
 import atexit
 import dataclasses
 import datetime
-import functools
 import os
 from collections.abc import Sequence
 from pathlib import Path
@@ -25,7 +24,7 @@ class Experiment:
         default_factory=cherries.default_plugins
     )
 
-    @functools.cached_property
+    @property
     def entrypoint(self) -> Path:
         return self.backend.entrypoint
 

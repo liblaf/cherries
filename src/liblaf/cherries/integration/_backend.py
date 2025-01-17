@@ -1,6 +1,5 @@
 import datetime
 import functools
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -19,9 +18,9 @@ class Backend(ps.BaseSettings):
     def backend(self) -> str:
         return "dummy"
 
-    @property
+    @functools.cached_property
     def entrypoint(self) -> Path:
-        return Path(sys.argv[0]).absolute()
+        return cherries.entrypoint()
 
     @property
     def id(self) -> str:
