@@ -54,6 +54,7 @@ class Experiment:
         cherries.set_current_experiment(self)
         for plugin in self.plugins:
             plugin.post_start(self)
+        self.log_other("cherries/entrypoint", self.entrypoint)
         self.log_other("cherries/start_time", self.start_time)
         atexit.register(self.end)
 
