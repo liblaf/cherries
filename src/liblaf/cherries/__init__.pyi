@@ -1,23 +1,30 @@
 from . import git, integration, plugin, utils
-from ._start import current_run, end, set_current_run, start
+from ._env import ENV_PREFIX, env
+from ._experiment import Experiment, current_experiment, set_current_experiment
+from ._start import end, start
 from .git import entrypoint
-from .integration import Run, RunNeptune
-from .plugin import Plugin, PluginGit, PluginLogging, default_plugins
+from .integration import Backend, BackendNeptune, backend_factory
+from .plugin import Plugin, PluginGit, PluginLogging, PluginRestic, default_plugins
 
 __all__ = [
+    "ENV_PREFIX",
+    "Backend",
+    "BackendNeptune",
+    "Experiment",
     "Plugin",
     "PluginGit",
     "PluginLogging",
-    "Run",
-    "RunNeptune",
-    "current_run",
+    "PluginRestic",
+    "backend_factory",
+    "current_experiment",
     "default_plugins",
     "end",
     "entrypoint",
+    "env",
     "git",
     "integration",
     "plugin",
-    "set_current_run",
+    "set_current_experiment",
     "start",
     "utils",
 ]

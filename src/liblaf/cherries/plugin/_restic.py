@@ -21,12 +21,12 @@ def default_config() -> Path:
 
 
 class PluginRestic(cherries.Plugin):
-    model_config = ps.SettingsConfigDict(env_prefix="LIBLAF_CHERRIES_RESTIC_")
+    model_config = ps.SettingsConfigDict(env_prefix=cherries.ENV_PREFIX + "RESTIC_")
     config: Path = pydantic.Field(default_factory=default_config)
     name: str | None = None
     dry_run: bool = False
 
-    def _pre_end(self, run: cherries.Run) -> None:
+    def _pre_end(self, run: cherries.Experiment) -> None:
         if not self.config.exists():
             logger.warning("configuration file '{}' was not found", self.config)
             return
@@ -40,6 +40,6 @@ class PluginRestic(cherries.Plugin):
             args += ["--name", self.name]
         if self.dry_run:
             args.append("--dry-run")
-        args += ["--time", run.creation_time.strftime("%Y-%m-%d %H:%M:%S")]
+        args += ["--time", run.start_time.strftime("%Y-%m-%d %H:%M:%S")]
         proc: sp.CompletedProcess[bytes] = sp.run(args, check=False)
         run.log_other("cherries/restic/returncode", proc.returncode)

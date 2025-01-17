@@ -5,7 +5,7 @@ from liblaf import cherries
 
 
 class PluginGit(cherries.Plugin):
-    model_config = ps.SettingsConfigDict(env_prefix="LIBLAF_CHERRIES_GIT_")
+    model_config = ps.SettingsConfigDict(env_prefix=cherries.ENV_PREFIX + "GIT_")
     auto_commit: bool = True
     auto_commit_message: str = cherries.git.DEFAULT_COMMIT_MESSAGE
 
@@ -13,7 +13,7 @@ class PluginGit(cherries.Plugin):
         if self.auto_commit:
             cherries.git.commit(self.auto_commit_message)
 
-    def _post_start(self, run: cherries.Run) -> None:
+    def _post_start(self, run: cherries.Experiment) -> None:
         r = git.Repo(search_parent_directories=True)
         sha: str = r.head.commit.hexsha
         run.log_other("cherries/git/sha", sha)

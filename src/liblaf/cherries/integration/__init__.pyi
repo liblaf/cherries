@@ -1,4 +1,5 @@
-from ._abc import Run, current_run, set_current_run
-from ._neptune import RunNeptune
+from ._backend import Backend
+from ._factory import backend_factory
+from ._neptune import BackendNeptune
 
-__all__ = ["Run", "RunNeptune", "current_run", "set_current_run"]
+__all__ = ["Backend", "BackendNeptune", "backend_factory"]
