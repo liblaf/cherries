@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.0.1](https://github.com/liblaf/cherries/compare/v0.0.0...v0.0.1) (2025-01-19)
+
+
+### ✨ Features
+
+* **cherries:** enhance experiment tracking and logging capabilities ([093e56e](https://github.com/liblaf/cherries/commit/093e56ec73b1d1c86a46bfe9893a09f0f51f4f39))
+* **cherries:** refactor experiment tracking and add new features ([8594ac1](https://github.com/liblaf/cherries/commit/8594ac1ff3f782d4aba7072c9f92ad3091ea64b7))
+* **integration:** enhance logging support for unsupported types ([019b5b7](https://github.com/liblaf/cherries/commit/019b5b7130f9a2612c3f58c4e89c3e4b954f724a))
+* log experiment entrypoint for better traceability ([06c3f84](https://github.com/liblaf/cherries/commit/06c3f84bf4e675229ae73be2ad5978b2d9a282c1))
+* **logging:** enhance file logging with custom filter for cherries module ([d03a6a1](https://github.com/liblaf/cherries/commit/d03a6a1b3bab3eeca929520dee33e6542a46766e))
+
+
+### ♻ Code Refactoring
+
+* remove unused integration base class and update gitignore ([4015f84](https://github.com/liblaf/cherries/commit/4015f846b0d7436280cc018cf60f46a46d5e3ec5))
+* sort plugins by priority and reverse iteration order ([33d98e4](https://github.com/liblaf/cherries/commit/33d98e4f613adad1f756950e6cf26e0b0bf6787d))
+
 ## 0.0.0 (2025-01-16)
 
 
