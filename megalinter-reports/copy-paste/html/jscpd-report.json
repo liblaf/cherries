@@ -1,0 +1,358 @@
+{
+  "statistics": {
+    "detectionDate": "2025-01-26T01:20:34.230Z",
+    "formats": {
+      "python": {
+        "sources": {
+          "src/liblaf/cherries/git/github/_repo.py": {
+            "lines": 22,
+            "tokens": 210,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 13,
+            "duplicatedTokens": 177,
+            "percentage": 59.09,
+            "percentageTokens": 84.29,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/git/github/_link.py": {
+            "lines": 24,
+            "tokens": 233,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/plugin/_restic.py": {
+            "lines": 59,
+            "tokens": 565,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/plugin/_logging.py": {
+            "lines": 57,
+            "tokens": 371,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/plugin/_git.py": {
+            "lines": 22,
+            "tokens": 243,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/plugin/_default.py": {
+            "lines": 8,
+            "tokens": 63,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/plugin/_abc.py": {
+            "lines": 30,
+            "tokens": 300,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/integration/_neptune.py": {
+            "lines": 65,
+            "tokens": 595,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/integration/_factory.py": {
+            "lines": 12,
+            "tokens": 116,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/integration/_backend.py": {
+            "lines": 52,
+            "tokens": 434,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/git/_repo.py": {
+            "lines": 32,
+            "tokens": 295,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 13,
+            "duplicatedTokens": 177,
+            "percentage": 40.63,
+            "percentageTokens": 60,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/git/_entrypoint.py": {
+            "lines": 11,
+            "tokens": 97,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/git/_commit.py": {
+            "lines": 16,
+            "tokens": 153,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/_start.py": {
+            "lines": 25,
+            "tokens": 235,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/_main.py": {
+            "lines": 37,
+            "tokens": 399,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/_experiment.py": {
+            "lines": 110,
+            "tokens": 955,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/_env.py": {
+            "lines": 3,
+            "tokens": 27,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/liblaf/cherries/_config.py": {
+            "lines": 21,
+            "tokens": 152,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "exp/hello-cherries.py": {
+            "lines": 13,
+            "tokens": 78,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 619,
+          "tokens": 5521,
+          "sources": 19,
+          "clones": 1,
+          "duplicatedLines": 13,
+          "duplicatedTokens": 177,
+          "percentage": 2.1,
+          "percentageTokens": 3.21,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      },
+      "bash": {
+        "sources": {
+          "scripts/gen-init.sh": {
+            "lines": 13,
+            "tokens": 112,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 13,
+          "tokens": 112,
+          "sources": 1,
+          "clones": 0,
+          "duplicatedLines": 0,
+          "duplicatedTokens": 0,
+          "percentage": 0,
+          "percentageTokens": 0,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      },
+      "markdown": {
+        "sources": {
+          "93a0320d-0a33-42e5-a8b1-7acef2b2453d-megalinter_file_names_cspell.txt": {
+            "lines": 51,
+            "tokens": 413,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 51,
+          "tokens": 413,
+          "sources": 1,
+          "clones": 0,
+          "duplicatedLines": 0,
+          "duplicatedTokens": 0,
+          "percentage": 0,
+          "percentageTokens": 0,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      }
+    },
+    "total": {
+      "lines": 683,
+      "tokens": 6046,
+      "sources": 21,
+      "clones": 1,
+      "duplicatedLines": 13,
+      "duplicatedTokens": 177,
+      "percentage": 1.9,
+      "percentageTokens": 2.93,
+      "newDuplicatedLines": 0,
+      "newClones": 0
+    }
+  },
+  "duplicates": [
+    {
+      "format": "python",
+      "lines": 14,
+      "fragment": "(\n    repo: git.Repo | None = None,\n) -> tuple[str, str] | tuple[None, None]:\n    if repo is None:\n        repo = git.Repo(search_parent_directories=True)\n    remote: git.Remote = repo.remote()\n    for pattern in GITHUB_URL_PATTERNS:\n        match: re.Match[str] | None = re.match(pattern, remote.url)\n        if not match:\n            continue\n        user: str = match.group(\"user\")\n        repo_name: str = match.group(\"repo\")\n        return user, repo_name\n    return None, None",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/liblaf/cherries/git/_repo.py",
+        "start": 20,
+        "end": 33,
+        "startLoc": {
+          "line": 20,
+          "column": 17,
+          "position": 118
+        },
+        "endLoc": {
+          "line": 33,
+          "column": 5,
+          "position": 295
+        }
+      },
+      "secondFile": {
+        "name": "src/liblaf/cherries/git/github/_repo.py",
+        "start": 10,
+        "end": 23,
+        "startLoc": {
+          "line": 10,
+          "column": 10,
+          "position": 33
+        },
+        "endLoc": {
+          "line": 23,
+          "column": 5,
+          "position": 210
+        }
+      }
+    }
+  ],
+  "filename": "/node-deps/node_modules/@jscpd/html-reporter/dist/templates/main.pug"
+}
