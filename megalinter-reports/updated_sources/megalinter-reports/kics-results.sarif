@@ -35,33 +35,13 @@
 							}
 						},
 						{
-							"name": "Access Control",
-							"id": "CAT001",
+							"name": "Backup",
+							"id": "CAT003",
 							"shortDescription": {
-								"text": "Service permission and identity management"
+								"text": "Survivability and Recovery"
 							},
 							"fullDescription": {
-								"text": "Service permission and identity management"
-							}
-						},
-						{
-							"name": "Networking and Firewall",
-							"id": "CAT009",
-							"shortDescription": {
-								"text": "Network port exposure and firewall configuration"
-							},
-							"fullDescription": {
-								"text": "Network port exposure and firewall configuration"
-							}
-						},
-						{
-							"name": "Supply-Chain",
-							"id": "CAT013",
-							"shortDescription": {
-								"text": "Dependency version management"
-							},
-							"fullDescription": {
-								"text": "Dependency version management"
+								"text": "Survivability and Recovery"
 							}
 						},
 						{
@@ -75,33 +55,23 @@
 							}
 						},
 						{
-							"name": "Observability",
-							"id": "CAT010",
+							"name": "Insecure Defaults",
+							"id": "CAT008",
 							"shortDescription": {
-								"text": "Logging and Monitoring"
+								"text": "Configurations that are insecure by default"
 							},
 							"fullDescription": {
-								"text": "Logging and Monitoring"
+								"text": "Configurations that are insecure by default"
 							}
 						},
 						{
-							"name": "Resource Management",
-							"id": "CAT011",
+							"name": "Networking and Firewall",
+							"id": "CAT009",
 							"shortDescription": {
-								"text": "Resource and privilege limit configuration"
+								"text": "Network port exposure and firewall configuration"
 							},
 							"fullDescription": {
-								"text": "Resource and privilege limit configuration"
-							}
-						},
-						{
-							"name": "Secret Management",
-							"id": "CAT012",
-							"shortDescription": {
-								"text": "Secret and Key management"
-							},
-							"fullDescription": {
-								"text": "Secret and Key management"
+								"text": "Network port exposure and firewall configuration"
 							}
 						},
 						{
@@ -115,6 +85,66 @@
 							}
 						},
 						{
+							"name": "Bill Of Materials",
+							"id": "CAT015",
+							"shortDescription": {
+								"text": "List of resources provisioned"
+							},
+							"fullDescription": {
+								"text": "List of resources provisioned"
+							}
+						},
+						{
+							"name": "Secret Management",
+							"id": "CAT012",
+							"shortDescription": {
+								"text": "Secret and Key management"
+							},
+							"fullDescription": {
+								"text": "Secret and Key management"
+							}
+						},
+						{
+							"name": "Supply-Chain",
+							"id": "CAT013",
+							"shortDescription": {
+								"text": "Dependency version management"
+							},
+							"fullDescription": {
+								"text": "Dependency version management"
+							}
+						},
+						{
+							"name": "Access Control",
+							"id": "CAT001",
+							"shortDescription": {
+								"text": "Service permission and identity management"
+							},
+							"fullDescription": {
+								"text": "Service permission and identity management"
+							}
+						},
+						{
+							"name": "Build Process",
+							"id": "CAT005",
+							"shortDescription": {
+								"text": "Insecure configurations when building/deploying"
+							},
+							"fullDescription": {
+								"text": "Insecure configurations when building/deploying"
+							}
+						},
+						{
+							"name": "Observability",
+							"id": "CAT010",
+							"shortDescription": {
+								"text": "Logging and Monitoring"
+							},
+							"fullDescription": {
+								"text": "Logging and Monitoring"
+							}
+						},
+						{
 							"name": "Availability",
 							"id": "CAT002",
 							"shortDescription": {
@@ -122,16 +152,6 @@
 							},
 							"fullDescription": {
 								"text": "Reliability and Scalability"
-							}
-						},
-						{
-							"name": "Backup",
-							"id": "CAT003",
-							"shortDescription": {
-								"text": "Survivability and Recovery"
-							},
-							"fullDescription": {
-								"text": "Survivability and Recovery"
 							}
 						},
 						{
@@ -155,33 +175,13 @@
 							}
 						},
 						{
-							"name": "Insecure Defaults",
-							"id": "CAT008",
+							"name": "Resource Management",
+							"id": "CAT011",
 							"shortDescription": {
-								"text": "Configurations that are insecure by default"
+								"text": "Resource and privilege limit configuration"
 							},
 							"fullDescription": {
-								"text": "Configurations that are insecure by default"
-							}
-						},
-						{
-							"name": "Build Process",
-							"id": "CAT005",
-							"shortDescription": {
-								"text": "Insecure configurations when building/deploying"
-							},
-							"fullDescription": {
-								"text": "Insecure configurations when building/deploying"
-							}
-						},
-						{
-							"name": "Bill Of Materials",
-							"id": "CAT015",
-							"shortDescription": {
-								"text": "List of resources provisioned"
-							},
-							"fullDescription": {
-								"text": "List of resources provisioned"
+								"text": "Resource and privilege limit configuration"
 							}
 						}
 					]
