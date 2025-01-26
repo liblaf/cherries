@@ -35,36 +35,6 @@
 							}
 						},
 						{
-							"name": "Access Control",
-							"id": "CAT001",
-							"shortDescription": {
-								"text": "Service permission and identity management"
-							},
-							"fullDescription": {
-								"text": "Service permission and identity management"
-							}
-						},
-						{
-							"name": "Backup",
-							"id": "CAT003",
-							"shortDescription": {
-								"text": "Survivability and Recovery"
-							},
-							"fullDescription": {
-								"text": "Survivability and Recovery"
-							}
-						},
-						{
-							"name": "Best Practices",
-							"id": "CAT004",
-							"shortDescription": {
-								"text": "Metadata management"
-							},
-							"fullDescription": {
-								"text": "Metadata management"
-							}
-						},
-						{
 							"name": "Encryption",
 							"id": "CAT006",
 							"shortDescription": {
@@ -72,6 +42,16 @@
 							},
 							"fullDescription": {
 								"text": "Data Security and Encryption configuration"
+							}
+						},
+						{
+							"name": "Resource Management",
+							"id": "CAT011",
+							"shortDescription": {
+								"text": "Resource and privilege limit configuration"
+							},
+							"fullDescription": {
+								"text": "Resource and privilege limit configuration"
 							}
 						},
 						{
@@ -95,13 +75,33 @@
 							}
 						},
 						{
-							"name": "Availability",
-							"id": "CAT002",
+							"name": "Bill Of Materials",
+							"id": "CAT015",
 							"shortDescription": {
-								"text": "Reliability and Scalability"
+								"text": "List of resources provisioned"
 							},
 							"fullDescription": {
-								"text": "Reliability and Scalability"
+								"text": "List of resources provisioned"
+							}
+						},
+						{
+							"name": "Access Control",
+							"id": "CAT001",
+							"shortDescription": {
+								"text": "Service permission and identity management"
+							},
+							"fullDescription": {
+								"text": "Service permission and identity management"
+							}
+						},
+						{
+							"name": "Best Practices",
+							"id": "CAT004",
+							"shortDescription": {
+								"text": "Metadata management"
+							},
+							"fullDescription": {
+								"text": "Metadata management"
 							}
 						},
 						{
@@ -145,23 +145,23 @@
 							}
 						},
 						{
-							"name": "Secret Management",
-							"id": "CAT012",
+							"name": "Availability",
+							"id": "CAT002",
 							"shortDescription": {
-								"text": "Secret and Key management"
+								"text": "Reliability and Scalability"
 							},
 							"fullDescription": {
-								"text": "Secret and Key management"
+								"text": "Reliability and Scalability"
 							}
 						},
 						{
-							"name": "Resource Management",
-							"id": "CAT011",
+							"name": "Backup",
+							"id": "CAT003",
 							"shortDescription": {
-								"text": "Resource and privilege limit configuration"
+								"text": "Survivability and Recovery"
 							},
 							"fullDescription": {
-								"text": "Resource and privilege limit configuration"
+								"text": "Survivability and Recovery"
 							}
 						},
 						{
@@ -175,13 +175,13 @@
 							}
 						},
 						{
-							"name": "Bill Of Materials",
-							"id": "CAT015",
+							"name": "Secret Management",
+							"id": "CAT012",
 							"shortDescription": {
-								"text": "List of resources provisioned"
+								"text": "Secret and Key management"
 							},
 							"fullDescription": {
-								"text": "List of resources provisioned"
+								"text": "Secret and Key management"
 							}
 						}
 					]
