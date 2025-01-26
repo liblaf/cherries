@@ -35,23 +35,43 @@
 							}
 						},
 						{
-							"name": "Observability",
-							"id": "CAT010",
+							"name": "Insecure Defaults",
+							"id": "CAT008",
 							"shortDescription": {
-								"text": "Logging and Monitoring"
+								"text": "Configurations that are insecure by default"
 							},
 							"fullDescription": {
-								"text": "Logging and Monitoring"
+								"text": "Configurations that are insecure by default"
 							}
 						},
 						{
-							"name": "Access Control",
-							"id": "CAT001",
+							"name": "Resource Management",
+							"id": "CAT011",
 							"shortDescription": {
-								"text": "Service permission and identity management"
+								"text": "Resource and privilege limit configuration"
 							},
 							"fullDescription": {
-								"text": "Service permission and identity management"
+								"text": "Resource and privilege limit configuration"
+							}
+						},
+						{
+							"name": "Secret Management",
+							"id": "CAT012",
+							"shortDescription": {
+								"text": "Secret and Key management"
+							},
+							"fullDescription": {
+								"text": "Secret and Key management"
+							}
+						},
+						{
+							"name": "Best Practices",
+							"id": "CAT004",
+							"shortDescription": {
+								"text": "Metadata management"
+							},
+							"fullDescription": {
+								"text": "Metadata management"
 							}
 						},
 						{
@@ -65,26 +85,6 @@
 							}
 						},
 						{
-							"name": "Encryption",
-							"id": "CAT006",
-							"shortDescription": {
-								"text": "Data Security and Encryption configuration"
-							},
-							"fullDescription": {
-								"text": "Data Security and Encryption configuration"
-							}
-						},
-						{
-							"name": "Insecure Defaults",
-							"id": "CAT008",
-							"shortDescription": {
-								"text": "Configurations that are insecure by default"
-							},
-							"fullDescription": {
-								"text": "Configurations that are insecure by default"
-							}
-						},
-						{
 							"name": "Supply-Chain",
 							"id": "CAT013",
 							"shortDescription": {
@@ -95,6 +95,16 @@
 							}
 						},
 						{
+							"name": "Networking and Firewall",
+							"id": "CAT009",
+							"shortDescription": {
+								"text": "Network port exposure and firewall configuration"
+							},
+							"fullDescription": {
+								"text": "Network port exposure and firewall configuration"
+							}
+						},
+						{
 							"name": "Bill Of Materials",
 							"id": "CAT015",
 							"shortDescription": {
@@ -102,6 +112,26 @@
 							},
 							"fullDescription": {
 								"text": "List of resources provisioned"
+							}
+						},
+						{
+							"name": "Structure and Semantics",
+							"id": "CAT014",
+							"shortDescription": {
+								"text": "Malformed document structure or inadequate semantics"
+							},
+							"fullDescription": {
+								"text": "Malformed document structure or inadequate semantics"
+							}
+						},
+						{
+							"name": "Access Control",
+							"id": "CAT001",
+							"shortDescription": {
+								"text": "Service permission and identity management"
+							},
+							"fullDescription": {
+								"text": "Service permission and identity management"
 							}
 						},
 						{
@@ -125,23 +155,13 @@
 							}
 						},
 						{
-							"name": "Networking and Firewall",
-							"id": "CAT009",
+							"name": "Encryption",
+							"id": "CAT006",
 							"shortDescription": {
-								"text": "Network port exposure and firewall configuration"
+								"text": "Data Security and Encryption configuration"
 							},
 							"fullDescription": {
-								"text": "Network port exposure and firewall configuration"
-							}
-						},
-						{
-							"name": "Secret Management",
-							"id": "CAT012",
-							"shortDescription": {
-								"text": "Secret and Key management"
-							},
-							"fullDescription": {
-								"text": "Secret and Key management"
+								"text": "Data Security and Encryption configuration"
 							}
 						},
 						{
@@ -155,33 +175,13 @@
 							}
 						},
 						{
-							"name": "Best Practices",
-							"id": "CAT004",
+							"name": "Observability",
+							"id": "CAT010",
 							"shortDescription": {
-								"text": "Metadata management"
+								"text": "Logging and Monitoring"
 							},
 							"fullDescription": {
-								"text": "Metadata management"
-							}
-						},
-						{
-							"name": "Resource Management",
-							"id": "CAT011",
-							"shortDescription": {
-								"text": "Resource and privilege limit configuration"
-							},
-							"fullDescription": {
-								"text": "Resource and privilege limit configuration"
-							}
-						},
-						{
-							"name": "Structure and Semantics",
-							"id": "CAT014",
-							"shortDescription": {
-								"text": "Malformed document structure or inadequate semantics"
-							},
-							"fullDescription": {
-								"text": "Malformed document structure or inadequate semantics"
+								"text": "Logging and Monitoring"
 							}
 						}
 					]
