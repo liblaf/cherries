@@ -1,13 +1,13 @@
 {
     "recommendations": [
-        "streetsidesoftware.code-spell-checker",
         "AquaSecurityOfficial.trivy-vulnerability-scanner",
-        "Bridgecrew.checkov",
-        "charliermarsh.ruff",
+        "esbenp.prettier-vscode",
+        "MS-CST-E.vscode-devskim",
         "foxundermoon.shell-format",
         "ms-pyright.pyright",
-        "MS-CST-E.vscode-devskim",
+        "charliermarsh.ruff",
         "timonwong.shellcheck",
-        "esbenp.prettier-vscode"
+        "streetsidesoftware.code-spell-checker",
+        "Bridgecrew.checkov"
     ]
 }
