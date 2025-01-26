@@ -45,13 +45,33 @@
 							}
 						},
 						{
-							"name": "Supply-Chain",
-							"id": "CAT013",
+							"name": "Insecure Defaults",
+							"id": "CAT008",
 							"shortDescription": {
-								"text": "Dependency version management"
+								"text": "Configurations that are insecure by default"
 							},
 							"fullDescription": {
-								"text": "Dependency version management"
+								"text": "Configurations that are insecure by default"
+							}
+						},
+						{
+							"name": "Availability",
+							"id": "CAT002",
+							"shortDescription": {
+								"text": "Reliability and Scalability"
+							},
+							"fullDescription": {
+								"text": "Reliability and Scalability"
+							}
+						},
+						{
+							"name": "Build Process",
+							"id": "CAT005",
+							"shortDescription": {
+								"text": "Insecure configurations when building/deploying"
+							},
+							"fullDescription": {
+								"text": "Insecure configurations when building/deploying"
 							}
 						},
 						{
@@ -62,36 +82,6 @@
 							},
 							"fullDescription": {
 								"text": "List of resources provisioned"
-							}
-						},
-						{
-							"name": "Backup",
-							"id": "CAT003",
-							"shortDescription": {
-								"text": "Survivability and Recovery"
-							},
-							"fullDescription": {
-								"text": "Survivability and Recovery"
-							}
-						},
-						{
-							"name": "Observability",
-							"id": "CAT010",
-							"shortDescription": {
-								"text": "Logging and Monitoring"
-							},
-							"fullDescription": {
-								"text": "Logging and Monitoring"
-							}
-						},
-						{
-							"name": "Best Practices",
-							"id": "CAT004",
-							"shortDescription": {
-								"text": "Metadata management"
-							},
-							"fullDescription": {
-								"text": "Metadata management"
 							}
 						},
 						{
@@ -125,33 +115,23 @@
 							}
 						},
 						{
-							"name": "Access Control",
-							"id": "CAT001",
+							"name": "Best Practices",
+							"id": "CAT004",
 							"shortDescription": {
-								"text": "Service permission and identity management"
+								"text": "Metadata management"
 							},
 							"fullDescription": {
-								"text": "Service permission and identity management"
+								"text": "Metadata management"
 							}
 						},
 						{
-							"name": "Availability",
-							"id": "CAT002",
+							"name": "Supply-Chain",
+							"id": "CAT013",
 							"shortDescription": {
-								"text": "Reliability and Scalability"
+								"text": "Dependency version management"
 							},
 							"fullDescription": {
-								"text": "Reliability and Scalability"
-							}
-						},
-						{
-							"name": "Build Process",
-							"id": "CAT005",
-							"shortDescription": {
-								"text": "Insecure configurations when building/deploying"
-							},
-							"fullDescription": {
-								"text": "Insecure configurations when building/deploying"
+								"text": "Dependency version management"
 							}
 						},
 						{
@@ -165,13 +145,13 @@
 							}
 						},
 						{
-							"name": "Insecure Defaults",
-							"id": "CAT008",
+							"name": "Observability",
+							"id": "CAT010",
 							"shortDescription": {
-								"text": "Configurations that are insecure by default"
+								"text": "Logging and Monitoring"
 							},
 							"fullDescription": {
-								"text": "Configurations that are insecure by default"
+								"text": "Logging and Monitoring"
 							}
 						},
 						{
@@ -182,6 +162,26 @@
 							},
 							"fullDescription": {
 								"text": "Resource and privilege limit configuration"
+							}
+						},
+						{
+							"name": "Access Control",
+							"id": "CAT001",
+							"shortDescription": {
+								"text": "Service permission and identity management"
+							},
+							"fullDescription": {
+								"text": "Service permission and identity management"
+							}
+						},
+						{
+							"name": "Backup",
+							"id": "CAT003",
+							"shortDescription": {
+								"text": "Survivability and Recovery"
+							},
+							"fullDescription": {
+								"text": "Survivability and Recovery"
 							}
 						}
 					]
