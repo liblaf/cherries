@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:e732f0b6-f959-49e9-8b2e-6d4afe2afefb",
+  "serialNumber": "urn:uuid:abfb3905-914d-4241-8fa6-e5c7cf086ca6",
   "version": 1,
   "metadata": {
-    "timestamp": "2025-01-26T03:52:07+00:00",
+    "timestamp": "2025-01-26T03:55:17+00:00",
     "tools": {
       "components": [
         {
@@ -17,7 +17,7 @@
       ]
     },
     "component": {
-      "bom-ref": "5acdffe1-5fef-49aa-ae11-d9ad4e8d56ed",
+      "bom-ref": "0644b5c4-4c50-427a-966a-923cd99084c6",
       "type": "application",
       "name": ".",
       "properties": [
@@ -31,7 +31,7 @@
   "components": [],
   "dependencies": [
     {
-      "ref": "5acdffe1-5fef-49aa-ae11-d9ad4e8d56ed",
+      "ref": "0644b5c4-4c50-427a-966a-923cd99084c6",
       "dependsOn": []
     }
   ],

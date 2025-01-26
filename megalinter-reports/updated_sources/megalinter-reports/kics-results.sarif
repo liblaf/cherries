@@ -35,6 +35,26 @@
 							}
 						},
 						{
+							"name": "Build Process",
+							"id": "CAT005",
+							"shortDescription": {
+								"text": "Insecure configurations when building/deploying"
+							},
+							"fullDescription": {
+								"text": "Insecure configurations when building/deploying"
+							}
+						},
+						{
+							"name": "Insecure Defaults",
+							"id": "CAT008",
+							"shortDescription": {
+								"text": "Configurations that are insecure by default"
+							},
+							"fullDescription": {
+								"text": "Configurations that are insecure by default"
+							}
+						},
+						{
 							"name": "Access Control",
 							"id": "CAT001",
 							"shortDescription": {
@@ -52,36 +72,6 @@
 							},
 							"fullDescription": {
 								"text": "Metadata management"
-							}
-						},
-						{
-							"name": "Encryption",
-							"id": "CAT006",
-							"shortDescription": {
-								"text": "Data Security and Encryption configuration"
-							},
-							"fullDescription": {
-								"text": "Data Security and Encryption configuration"
-							}
-						},
-						{
-							"name": "Insecure Configurations",
-							"id": "CAT007",
-							"shortDescription": {
-								"text": "Configurations which expose the application unnecessarily"
-							},
-							"fullDescription": {
-								"text": "Configurations which expose the application unnecessarily"
-							}
-						},
-						{
-							"name": "Secret Management",
-							"id": "CAT012",
-							"shortDescription": {
-								"text": "Secret and Key management"
-							},
-							"fullDescription": {
-								"text": "Secret and Key management"
 							}
 						},
 						{
@@ -105,16 +95,6 @@
 							}
 						},
 						{
-							"name": "Build Process",
-							"id": "CAT005",
-							"shortDescription": {
-								"text": "Insecure configurations when building/deploying"
-							},
-							"fullDescription": {
-								"text": "Insecure configurations when building/deploying"
-							}
-						},
-						{
 							"name": "Networking and Firewall",
 							"id": "CAT009",
 							"shortDescription": {
@@ -122,6 +102,16 @@
 							},
 							"fullDescription": {
 								"text": "Network port exposure and firewall configuration"
+							}
+						},
+						{
+							"name": "Resource Management",
+							"id": "CAT011",
+							"shortDescription": {
+								"text": "Resource and privilege limit configuration"
+							},
+							"fullDescription": {
+								"text": "Resource and privilege limit configuration"
 							}
 						},
 						{
@@ -155,13 +145,23 @@
 							}
 						},
 						{
-							"name": "Insecure Defaults",
-							"id": "CAT008",
+							"name": "Encryption",
+							"id": "CAT006",
 							"shortDescription": {
-								"text": "Configurations that are insecure by default"
+								"text": "Data Security and Encryption configuration"
 							},
 							"fullDescription": {
-								"text": "Configurations that are insecure by default"
+								"text": "Data Security and Encryption configuration"
+							}
+						},
+						{
+							"name": "Insecure Configurations",
+							"id": "CAT007",
+							"shortDescription": {
+								"text": "Configurations which expose the application unnecessarily"
+							},
+							"fullDescription": {
+								"text": "Configurations which expose the application unnecessarily"
 							}
 						},
 						{
@@ -175,13 +175,13 @@
 							}
 						},
 						{
-							"name": "Resource Management",
-							"id": "CAT011",
+							"name": "Secret Management",
+							"id": "CAT012",
 							"shortDescription": {
-								"text": "Resource and privilege limit configuration"
+								"text": "Secret and Key management"
 							},
 							"fullDescription": {
-								"text": "Resource and privilege limit configuration"
+								"text": "Secret and Key management"
 							}
 						}
 					]
