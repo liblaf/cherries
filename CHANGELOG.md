@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.6](https://github.com/liblaf/cherries/compare/v0.0.5...v0.0.6) (2025-03-11)
+
+
+### 👷 Build System
+
+* enhance build and linting process ([e0ef806](https://github.com/liblaf/cherries/commit/e0ef8063063fddd43aa53b3ef7257b865e7f2fce))
+
 ## [0.0.5](https://github.com/liblaf/cherries/compare/v0.0.4..v0.0.5) - 2025-03-11
 
 ### ♻ Code Refactoring
