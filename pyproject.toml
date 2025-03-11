@@ -30,6 +30,10 @@ test = ["pytest", "pytest-codspeed", "pytest-cov", "pytest-xdist"]
 authors = [
   { email = "30631553+liblaf@users.noreply.github.com", name = "liblaf" },
 ]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: MIT License",
+]
 dependencies = [
   "comet-ml>=3.49.4,<4",
   "gitpython>=3.1.44,<4",
@@ -42,12 +46,12 @@ dependencies = [
   "pydantic>=2.10.6,<3",
 ]
 description = "Add your description here"
+dynamic = ["version"]
 keywords = []
 license = "MIT"
 name = "liblaf-cherries"
 readme = "docs/README.md"
 requires-python = ">=3.12"
-version = "0.0.5"
 
 [project.urls]
 "Changelog" = "https://github.com/liblaf/cherries/blob/main/CHANGELOG.md"

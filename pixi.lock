@@ -1205,8 +1205,8 @@ packages:
   timestamp: 1729027639220
 - pypi: .
   name: liblaf-cherries
-  version: 0.0.4
-  sha256: 0c3214f2948aa2e7cf08c6b69b2ee7727241bc34150d6f431eca60472b3d0cb6
+  version: 0.0.6.dev0+gc430938.d20250311
+  sha256: 343f44025a43580376f4c91b8a332ad73a4696206c5bd910561ac7e8c52b8e3d
   requires_dist:
   - comet-ml>=3.49.4,<4
   - gitpython>=3.1.44,<4
