@@ -2,12 +2,14 @@
 # DO NOT EDIT!
 # -*- mode: yaml; -*-
 # prettier-ignore
-_commit: 7fc0f8c
+_commit: 8e85058
 _src_path: gh:liblaf/copier-python
 author: liblaf
 email: 30631553+liblaf@users.noreply.github.com
 license: MIT
-name: liblaf.cherries
+name: liblaf-cherries
 owner: liblaf
+package: liblaf
 package_manager: pixi
 repo: cherries
+subpackage: liblaf/cherries

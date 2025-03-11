@@ -3,24 +3,43 @@
 
 [build-system]
 build-backend = "hatchling.build"
-requires = ["hatchling"]
+requires = ["hatch-vcs", "hatchling"]
 
 [dependency-groups]
-dev = ["icecream>=2.1.4,<3"]
+build = ["check-wheel-contents", "hatch", "twine"]
+dev = ["icecream"]
+docs = [
+  "gitpython",
+  "mdx-truly-sane-lists",
+  "mkdocs",
+  "mkdocs-autorefs",
+  "mkdocs-gen-files",
+  "mkdocs-git-committers-plugin-2",
+  "mkdocs-git-revision-date-localized-plugin",
+  "mkdocs-literate-nav",
+  "mkdocs-material[imaging]",
+  "mkdocs-section-index",
+  "mkdocstrings",
+  "mkdocstrings-python",
+  "pymdown-extensions",
+  "ruff",
+]
+test = ["pytest", "pytest-codspeed", "pytest-cov", "pytest-xdist"]
 
 [project]
 authors = [
   { email = "30631553+liblaf@users.noreply.github.com", name = "liblaf" },
 ]
 dependencies = [
-  "comet-ml>=3.47.6,<4",
+  "comet-ml>=3.49.4,<4",
   "gitpython>=3.1.44,<4",
+  "giturlparse>=0.12.0,<0.13",
   "lazy-loader>=0.4,<0.5",
-  "liblaf-grapes>=0.1.2,<0.1.3",
+  "liblaf-grapes>=0.1.7,<0.2",
   "loguru>=0.7.3,<0.8",
   "neptune>=1.13.0,<2",
-  "pydantic-settings>=2.7.1,<3",
-  "pydantic>=2.10.5,<3",
+  "pydantic-settings>=2.8.1,<3",
+  "pydantic>=2.10.6,<3",
 ]
 description = "Add your description here"
 keywords = []
@@ -40,11 +59,24 @@ version = "0.0.4"
 [tool.check-wheel-contents]
 ignore = ["W002"]
 
+[tool.coverage.run]
+branch = true
+source = ["src/"]
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/liblaf/cherries/_version.py"
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src/"]
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/liblaf"]
+packages = ["src/liblaf/"]
+
+[tool.hatch.version]
+source = "vcs"
 
 [tool.pixi.environments]
-default = { features = ["dev"] }
+default = { features = ["build", "dev", "docs", "test"] }
 
 [tool.pixi.project]
 channel-priority = "disabled"
@@ -56,5 +88,10 @@ liblaf-cherries = { editable = true, path = "." }
 
 [tool.pixi.system-requirements]
 cuda = "12"
-libc = { family = "glibc", version = "2.40" }
-linux = "6.6"
+libc = { family = "glibc", version = "2.41" }
+linux = "6.13"
+
+[tool.pytest.ini_options]
+addopts = ["--numprocesses=auto"]
+junit_family = "legacy"
+testpaths = ["tests/"]

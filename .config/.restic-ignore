@@ -176,4 +176,6 @@ poetry.toml
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
-.pixi/
+_version.py
+junit.xml
+playground/

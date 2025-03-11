@@ -4,7 +4,6 @@
   "language": "en",
   "words": [
     "asyncio",
-    "bdabdac",
     "cuda",
     "customise",
     "cython",
@@ -17,7 +16,9 @@
     "libc",
     "liblaf",
     "mkdocs",
+    "mkdocstrings",
     "mypy",
+    "numprocesses",
     "numpy",
     "pipenv",
     "pixi",
@@ -27,6 +28,7 @@
     "pydocstyle",
     "pyenv",
     "pyflow",
+    "pymdownx",
     "pypa",
     "pypackages",
     "pypi",
@@ -41,7 +43,8 @@
     "stefanzweifel",
     "trimesh",
     "ubelt",
-    "venv"
+    "venv",
+    "xdist"
   ],
   "ignorePaths": [
     "**/.cspell.*",
