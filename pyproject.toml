@@ -47,7 +47,7 @@ license = "MIT"
 name = "liblaf-cherries"
 readme = "docs/README.md"
 requires-python = ">=3.12"
-version = "0.0.4"
+version = "0.0.5"
 
 [project.urls]
 "Changelog" = "https://github.com/liblaf/cherries/blob/main/CHANGELOG.md"

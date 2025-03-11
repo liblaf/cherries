@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.5](https://github.com/liblaf/cherries/compare/v0.0.4...v0.0.5) (2025-03-11)
+
+
+### ♻ Code Refactoring
+
+* streamline git repository handling and logging configuration ([08d2dc3](https://github.com/liblaf/cherries/commit/08d2dc3879af78da7441b02f831e55d3fb982a4b))
+
 ## [0.0.4](https://github.com/liblaf/cherries/compare/v0.0.3..v0.0.4) - 2025-02-23
 
 ### ⬆️ Dependencies
