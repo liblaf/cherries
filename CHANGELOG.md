@@ -1,21 +1,20 @@
 # Changelog
 
-## [0.0.6](https://github.com/liblaf/cherries/compare/v0.0.5...v0.0.6) (2025-03-11)
-
+## [0.0.6](https://github.com/liblaf/cherries/compare/v0.0.5..v0.0.6) - 2025-03-11
 
 ### 👷 Build System
 
-* enhance build and linting process ([e0ef806](https://github.com/liblaf/cherries/commit/e0ef8063063fddd43aa53b3ef7257b865e7f2fce))
+- enhance build and linting process - ([e0ef806](https://github.com/liblaf/cherries/commit/e0ef8063063fddd43aa53b3ef7257b865e7f2fce))
+
+### ❤️ New Contributors
+
+- @liblaf made their first contribution
 
 ## [0.0.5](https://github.com/liblaf/cherries/compare/v0.0.4..v0.0.5) - 2025-03-11
 
 ### ♻ Code Refactoring
 
 - streamline git repository handling and logging configuration - ([08d2dc3](https://github.com/liblaf/cherries/commit/08d2dc3879af78da7441b02f831e55d3fb982a4b))
-
-### ❤️ New Contributors
-
-- @liblaf made their first contribution
 
 ## [0.0.4](https://github.com/liblaf/cherries/compare/v0.0.3..v0.0.4) - 2025-02-24
 
