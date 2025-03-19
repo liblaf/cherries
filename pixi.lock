@@ -99,7 +99,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d1/0f/8910b19ac0670a0f80ce1008e5e751c4a57e14d2c4c13a482aa6079fa9d6/jsonschema_specifications-2024.10.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d3/32/da7f44bcb1105d3e88a0b74ebdca50c59121d2ddf71c9e34ba47df7f3a56/keyring-25.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/83/60/d497a310bde3f01cb805196ac61b7ad6dc5dcf8dce66634dc34364b20b4f/lazy_loader-0.4-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/75/d9/7abc5746aa0b294a66f1c5b516aa459ff6738c124e7ad14970ce619ac6d8/liblaf_grapes-0.1.9-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/77/0e/172822269131764a81a9af5845dea1adc0e9c3d7fd2921b15805da2d23eb/liblaf_grapes-0.1.10-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/29/0348de65b8cc732daa3e33e67806420b2ae89bdce2b04af740289c5c6c8c/loguru-0.7.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3f/08/83871f3c50fc983b88547c196d11cf8c3340e37c32d2e9d6152abe2c61f7/Markdown-3.7-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/42/d7/1ec15b46af6af88f19b8e5ffea08fa375d433c998b8a7639e76935c14f1f/markdown_it_py-3.0.0-py3-none-any.whl
@@ -1229,24 +1229,24 @@ packages:
   timestamp: 1729027639220
 - pypi: .
   name: liblaf-cherries
-  version: 0.0.7.dev0+g59c7149.d20250319
-  sha256: c5ca80810bb03a040246627c9a868731916cdbc2240b2080196a6879cb296655
+  version: 0.0.8.dev0+g697712a.d20250319
+  sha256: f86bd5ab52f93b24bd7eee1a2b927a53d1e2625a7735122aac3cc3c9d59a1d7c
   requires_dist:
   - comet-ml>=3.49.5,<4
   - gitpython>=3.1.44,<4
   - giturlparse>=0.12.0,<0.13
   - lazy-loader>=0.4,<0.5
-  - liblaf-grapes>=0.1.9,<0.2
+  - liblaf-grapes>=0.1.10,<0.2
   - loguru>=0.7.3,<0.8
   - neptune>=1.13.0,<2
   - pydantic-settings>=2.8.1,<3
   - pydantic>=2.10.6,<3
   requires_python: '>=3.12'
   editable: true
-- pypi: https://files.pythonhosted.org/packages/75/d9/7abc5746aa0b294a66f1c5b516aa459ff6738c124e7ad14970ce619ac6d8/liblaf_grapes-0.1.9-py3-none-any.whl
+- pypi: https://files.pythonhosted.org/packages/77/0e/172822269131764a81a9af5845dea1adc0e9c3d7fd2921b15805da2d23eb/liblaf_grapes-0.1.10-py3-none-any.whl
   name: liblaf-grapes
-  version: 0.1.9
-  sha256: 040418603a064ddab40756d7b0807f51c126adb71ecb4c060b32c9e98384ce8d
+  version: 0.1.10
+  sha256: 3271834535deacd6efba7c45484af947639731266009471508cc22ebce8aa3c2
   requires_dist:
   - about-time>=4.2.1,<5
   - autoregistry>=1.1.2,<2
