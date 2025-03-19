@@ -28,8 +28,8 @@ jobs:
         name: Release Please
         uses: googleapis/release-please-action@v4
         with:
-          config-file: .copier/release-please/config.json
-          manifest-file: .copier/release-please/.manifest.json
+          config-file: .config/release-please/config.json
+          manifest-file: .config/release-please/.manifest.json
           token: ${{ github.token }}
 
   changelog-pr:
