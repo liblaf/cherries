@@ -52,13 +52,13 @@ jobs:
           delete-other-labels: false
 
   repo-edit:
-    name: Repo Edit
+    name: Edit Repository Setttings
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-repo-edit
       cancel-in-progress: true
     steps:
-      - name: Repo Edit
+      - name: Edit Repository Setttings
         run: |-
           gh repo edit ${{ github.repository }} \
             --allow-update-branch \

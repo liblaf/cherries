@@ -178,6 +178,3 @@ poetry.toml
 _version.py
 junit.xml
 playground/
-
-*.log
-*.log.jsonl

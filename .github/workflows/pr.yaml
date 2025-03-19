@@ -29,7 +29,7 @@ jobs:
         with:
           add-label: automerge
           label: "autorelease: pending"
-          token: ${{ secrets.GH_PAT || github.token }}
+          token: ${{ github.token }}
 
   review:
     name: Review
