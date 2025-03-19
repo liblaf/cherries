@@ -1,21 +1,20 @@
 # Changelog
 
-## [0.0.8](https://github.com/liblaf/cherries/compare/v0.0.7...v0.0.8) (2025-03-19)
-
+## [0.0.8](https://github.com/liblaf/cherries/compare/v0.0.7..v0.0.8) - 2025-03-19
 
 ### ⬆️ Dependencies
 
-* **deps:** update liblaf-grapes to v0.1.10 ([4cc961b](https://github.com/liblaf/cherries/commit/4cc961b2b1bff865cc6c5edb1f3a4e36f60c6bf6))
+- **deps:** update liblaf-grapes to v0.1.10 - ([4cc961b](https://github.com/liblaf/cherries/commit/4cc961b2b1bff865cc6c5edb1f3a4e36f60c6bf6))
+
+### ❤️ New Contributors
+
+- @liblaf made their first contribution
 
 ## [0.0.7](https://github.com/liblaf/cherries/compare/v0.0.6..v0.0.7) - 2025-03-19
 
 ### 🔧 Continuous Integration
 
 - update release-please config and manifest file paths - ([2bdd359](https://github.com/liblaf/cherries/commit/2bdd359c8644742c67e03e69af21e92c739f1d32))
-
-### ❤️ New Contributors
-
-- @liblaf made their first contribution
 
 ## [0.0.6](https://github.com/liblaf/cherries/compare/v0.0.5..v0.0.6) - 2025-03-16
 
