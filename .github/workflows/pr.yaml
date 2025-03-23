@@ -24,12 +24,18 @@ jobs:
       group: ${{ github.workflow }}-merge
       cancel-in-progress: true
     steps:
+      - id: auth
+        name: Auth App
+        uses: liblaf/actions/auth-app@main
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
       - name: Merge
         uses: liblaf/actions/pr-label@main
         with:
           add-label: automerge
           label: "autorelease: pending"
-          token: ${{ github.token }}
+          token: ${{ steps.auth.outputs.token }}
 
   review:
     name: Review
