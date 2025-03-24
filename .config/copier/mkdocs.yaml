@@ -11,8 +11,8 @@ site_url:
     "https://liblaf.github.io/cherries/"
   ]
 site_author: "liblaf"
-repo_name: "/cherries"
-repo_url: "https://github.com//cherries"
+repo_name: "liblaf/cherries"
+repo_url: "https://github.com/liblaf/cherries"
 edit_uri: blob/main/docs/
 
 extra_css:
@@ -87,7 +87,7 @@ plugins:
       - docs/scripts/gen-ref-pages.py
   git-committers:
     enabled: !ENV [READTHEDOCS, CI, false]
-    repository: "/cherries"
+    repository: "liblaf/cherries"
     branch: main
   literate-nav:
   section-index:
@@ -99,7 +99,7 @@ plugins:
     enable_inventory: true
     handlers:
       python:
-        import:
+        inventories:
           - https://docs.python.org/3/objects.inv
         options:
           # General
@@ -125,6 +125,7 @@ plugins:
           signature_crossrefs: true
   # External plugins, schema not provided
   autorefs:
+  mike:
 
 markdown_extensions:
   admonition:
@@ -137,6 +138,10 @@ markdown_extensions:
     alternate_style: true
   toc:
     permalink: ¤
+
+extra:
+  version:
+    provider: mike
 
 watch:
   - docs/

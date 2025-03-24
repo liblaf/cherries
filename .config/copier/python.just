@@ -23,6 +23,6 @@ test:
     pytest
 
 upgrade:
-    [[ -f "pixi.lock" ]] && pixi upgrade
-    [[ -f "uv.lock" ]] && uv sync --upgrade
+    if [[ -f "pixi.lock" ]]; then pixi upgrade; fi
+    if [[ -f "uv.lock" ]]; then uv sync --upgrade; fi
     "{{ just_executable() }}" --justfile "{{ justfile() }}" lint

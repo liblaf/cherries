@@ -1,13 +1,12 @@
-# -*- mode: yaml; -*-
 # yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
 
 INHERIT: .config/copier/mkdocs.yaml
-site_name: "Cherries"
+site_name: Cherries
 site_description: TODO
 
 plugins:
   mkdocstrings:
     handlers:
       python:
-        import:
+        inventories:
           - https://docs.python.org/3/objects.inv
