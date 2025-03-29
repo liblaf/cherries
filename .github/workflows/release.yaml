@@ -5,6 +5,9 @@ name: Release
 
 on:
   push:
+    branches-ignore:
+      - assets**
+      - gh-pages
   release:
     types:
       - published

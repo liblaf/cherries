@@ -6,7 +6,7 @@ from liblaf import cherries
 
 class PluginGit(cherries.Plugin):
     model_config = ps.SettingsConfigDict(env_prefix=cherries.ENV_PREFIX + "GIT_")
-    auto_commit: bool = True
+    auto_commit: bool = False
     auto_commit_message: str = cherries.git.DEFAULT_COMMIT_MESSAGE
 
     def _pre_start(self) -> None:

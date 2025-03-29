@@ -3,6 +3,7 @@ from ._config import BaseConfig
 from ._env import ENV_PREFIX, env
 from ._experiment import Experiment, current_experiment, set_current_experiment
 from ._main import main
+from ._run import run
 from ._start import end, start
 from .git import entrypoint
 from .integration import Backend, BackendNeptune, backend_factory
@@ -28,6 +29,7 @@ __all__ = [
     "integration",
     "main",
     "plugin",
+    "run",
     "set_current_experiment",
     "start",
     "utils",

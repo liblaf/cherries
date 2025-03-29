@@ -2,7 +2,7 @@
 # DO NOT EDIT!
 # -*- mode: yaml -*-
 # prettier-ignore
-_commit: d424b1d
+_commit: 82e2eb3
 _src_path: gh:liblaf/copier-share
 author_email: 30631553+liblaf@users.noreply.github.com
 author_name: liblaf
@@ -10,4 +10,4 @@ github_repo: cherries
 github_user: liblaf
 license: MIT
 project_name: Cherries
-project_name_slug: liblaf-cherries
+project_name_slug: cherries
