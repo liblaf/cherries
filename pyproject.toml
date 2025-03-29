@@ -1,5 +1,4 @@
-# -*- mode: toml; -*-
-# :schema https://json.schemastore.org/pyproject.json
+#:schema https://json.schemastore.org/pyproject.json
 # ref: <https://packaging.python.org/en/latest/specifications/pyproject-toml/>
 
 [build-system]
