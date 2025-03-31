@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.0.9](https://github.com/liblaf/cherries/compare/v0.0.8...v0.0.9) (2025-03-31)
+
+
+### ✨ Features
+
+* enhance project configuration and testing setup ([70c0f7b](https://github.com/liblaf/cherries/commit/70c0f7bce25df2569037e7466936d2a18bcaa222))
+
+
+### ⬆️ Dependencies
+
+* **deps:** update dependency rich to v14 ([#21](https://github.com/liblaf/cherries/issues/21)) ([1b6793c](https://github.com/liblaf/cherries/commit/1b6793cac5ee6462c6772ec33293a81c8968009b))
+
+
+### 🐛 Bug Fixes
+
+* update dependencies and improve type hint handling ([39bd70d](https://github.com/liblaf/cherries/commit/39bd70d03574f708640a21160ef31ab9f9af5f63))
+
+
+### 🔧 Continuous Integration
+
+* update docs workflows and dependencies ([64e3619](https://github.com/liblaf/cherries/commit/64e36192ec71967f911beba70ad31047f1958178))
+
 ## [0.0.8](https://github.com/liblaf/cherries/compare/v0.0.7..v0.0.8) - 2025-03-19
 
 ### ⬆️ Dependencies
