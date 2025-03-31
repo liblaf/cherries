@@ -19,7 +19,7 @@ def run[T: cherries.BaseConfig](
         backend=backend, enabled=enabled, plugins=plugins
     )
     type_hints: dict[str, type[T]] = get_type_hints(main)
-    cls: type[T] = type_hints["cfg"]
+    cls: type[T] = next(iter(type_hints.values()))
     cfg: T = cls()
     exp.log_other("cherries/config", cfg)
     main(cfg)
