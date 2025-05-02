@@ -2,6 +2,6 @@
 # DO NOT EDIT!
 # -*- mode: yaml -*-
 # prettier-ignore
-_commit: '7199620'
+_commit: 7ab040a
 _src_path: gh:liblaf/copier-release
 release_type: python
