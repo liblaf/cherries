@@ -1,21 +1,20 @@
 # Changelog
 
-## [0.0.12](https://github.com/liblaf/cherries/compare/v0.0.11...v0.0.12) (2025-05-06)
-
+## [0.0.12](https://github.com/liblaf/cherries/compare/v0.0.11..v0.0.12) - 2025-05-06
 
 ### ✨ Features
 
-* **cherries:** add run status tracking and progress monitoring ([c6d31a2](https://github.com/liblaf/cherries/commit/c6d31a22606397953678a570f8bd25c9e5b266c7))
+- **cherries:** add run status tracking and progress monitoring - ([c6d31a2](https://github.com/liblaf/cherries/commit/c6d31a22606397953678a570f8bd25c9e5b266c7))
+
+### ❤️ New Contributors
+
+- @liblaf made their first contribution
 
 ## [0.0.11](https://github.com/liblaf/cherries/compare/v0.0.10..v0.0.11) - 2025-05-06
 
 ### ✨ Features
 
 - **plugin:** add log_src function to track source files - ([513a025](https://github.com/liblaf/cherries/commit/513a0252ac4dcf6aa54863e214436e3df1f3d541))
-
-### ❤️ New Contributors
-
-- @liblaf made their first contribution
 
 ## [0.0.10](https://github.com/liblaf/cherries/compare/v0.0.9..v0.0.10) - 2025-05-06
 
