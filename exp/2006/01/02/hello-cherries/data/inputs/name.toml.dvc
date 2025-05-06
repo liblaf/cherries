@@ -1,0 +1,5 @@
+outs:
+- md5: 00dbac5b943bbfbcf5c21e7b3320e611
+  size: 15
+  hash: md5
+  path: name.toml

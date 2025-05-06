@@ -9,7 +9,7 @@ from ._abc import End, Start
 from ._run import run
 
 
-@attrs.define(eq=True, order=True)
+@attrs.define
 class GitEnd(End):
     dry_run: bool = env.bool("LIBLAF_CHERRIES_GIT_DRY_RUN", default=False)
 
@@ -20,7 +20,7 @@ class GitEnd(End):
         )
 
 
-@attrs.define(eq=True, order=True)
+@attrs.define
 class GitStart(Start):
     dry_run: bool = env.bool("LIBLAF_CHERRIES_GIT_DRY_RUN", default=False)
 
@@ -41,3 +41,6 @@ def git_auto_commit(
         body += f"🧪 View experiment {run.exp_name} at: {run.exp_url}\n"
     message: str = f"{header}\n\n{body}" if body else header
     _info.git_auto_commit(message, dry_run=dry_run)
+    run.set_tag("cherries.git.branch", _info.git_branch())
+    run.set_tag("cherries.git.sha", _info.git_commit_sha())
+    run.set_tag("cherries.git.url", _info.git_commit_url())

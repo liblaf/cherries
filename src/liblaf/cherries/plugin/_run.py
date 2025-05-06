@@ -1,7 +1,12 @@
 import datetime
+import functools
+from pathlib import Path
 
 import attrs
 import mlflow
+
+from liblaf.cherries import pathutils as _path
+from liblaf.cherries.typed import PathLike
 
 from ._abc import End, LogArtifact, LogArtifacts, LogMetric, LogParam, SetTag, Start
 
@@ -19,6 +24,10 @@ class Run:
     @property
     def active_run(self) -> mlflow.ActiveRun:
         return mlflow.active_run()  # pyright: ignore[reportReturnType]
+
+    @functools.cached_property
+    def exp_dir(self) -> Path:
+        return _path.exp_dir(absolute=True)
 
     @property
     def exp_id(self) -> str:
@@ -51,7 +60,34 @@ class Run:
 
     @property
     def start_time(self) -> datetime.datetime:
-        return datetime.datetime.fromtimestamp(self.active_run.info.start_time / 1000)  # noqa: DTZ006
+        return datetime.datetime.fromtimestamp(
+            self.active_run.info.start_time / 1000, tz=datetime.UTC
+        ).astimezone()
+
+    def log_input(
+        self, local_path: PathLike, artifact_path: PathLike | None = "inputs", **kwargs
+    ) -> Path:
+        return self.log_artifact(local_path, artifact_path, **kwargs)
+
+    def log_inputs(
+        self, local_dir: PathLike, artifact_path: PathLike | None = "inputs", **kwargs
+    ) -> Path:
+        return self.log_artifacts(local_dir, artifact_path, **kwargs)
+
+    def log_output(
+        self, local_path: PathLike, artifact_path: PathLike | None = "outputs", **kwargs
+    ) -> Path:
+        return self.log_artifact(local_path, artifact_path, **kwargs)
+
+    def log_outputs(
+        self, local_dir: PathLike, artifact_path: PathLike | None = "outputs", **kwargs
+    ) -> Path:
+        return self.log_artifacts(local_dir, artifact_path, **kwargs)
+
+    def log_src(
+        self, local_path: PathLike, artifact_path: PathLike | None = "src", **kwargs
+    ) -> Path:
+        return self.log_artifact(local_path, artifact_path, **kwargs)
 
 
 run = Run()
@@ -62,3 +98,7 @@ log_metric: LogMetric = run.log_metric
 log_param: LogParam = run.log_param
 set_tag: SetTag = run.set_tag
 start: Start = run.start
+log_input = run.log_input
+log_inputs = run.log_inputs
+log_output = run.log_output
+log_outputs = run.log_outputs

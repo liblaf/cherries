@@ -9,17 +9,23 @@ from ._abc import End, Start
 from ._run import run
 
 
-@attrs.define(eq=True, order=True)
+@attrs.define
 class LoggingEnd(End):
     @override
     def __call__(self) -> None:
         logger.complete()
-        run.log_artifact("run.log")
-        run.log_artifact("run.log.jsonl")
+        run.log_artifact(run.exp_dir / "run.log")
+        run.log_artifact(run.exp_dir / "run.log.jsonl")
 
 
-@attrs.define(eq=True, order=True)
+@attrs.define
 class LoggingStart(Start):
     @override
     def __call__(self) -> None:
-        grapes.init_logging()
+        grapes.init_logging(
+            handlers=[
+                grapes.logging.rich_handler(),
+                grapes.logging.file_handler(file=run.exp_dir / "run.log"),
+                grapes.logging.jsonl_handler(run.exp_dir / "run.log.jsonl"),
+            ]
+        )

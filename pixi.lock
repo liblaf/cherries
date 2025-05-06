@@ -2265,7 +2265,7 @@ packages:
   timestamp: 1740240588123
 - pypi: .
   name: liblaf-cherries
-  version: 0.0.10.dev19+ge4d7ca7.d20250506
+  version: 0.0.10.dev21+g45b1d7c.d20250506
   sha256: 66b4fabb3fa6a48cd65332ed9718738699d63d5f987fc1f31f5f721baa5688a9
   requires_dist:
   - dvc[webdav]>=3.59.2,<4

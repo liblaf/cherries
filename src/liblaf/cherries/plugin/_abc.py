@@ -1,33 +1,50 @@
 from __future__ import annotations
 
 import bisect
+import functools
+import operator
 from collections.abc import Iterable
-from typing import Any, Protocol, override
+from pathlib import Path
+from typing import Any, override
 
 import attrs
 from loguru import logger
 
+from liblaf.cherries import pathutils as _path
 from liblaf.cherries.typed import PathLike
 
 
-@attrs.define(eq=True, order=True)
-class Plugin[**P, T](Protocol):
+@functools.total_ordering
+@attrs.define
+class Plugin[**P, T]:
     priority: int = attrs.field(default=0, kw_only=True, eq=True, order=True)
     _children: list[Plugin] = attrs.field(
         factory=list, eq=False, order=False, alias="children"
     )
 
     def __attrs_post_init__(self) -> None:
-        self._children.sort()
+        self._children.sort(key=operator.attrgetter("priority"))
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
         ret: T | None = None
         for child in self._children:
             try:
                 ret = child(*args, **kwargs)
-            except AttributeError:
+            except BaseException as err:
+                if isinstance(err, (KeyboardInterrupt, SystemExit)):
+                    raise
                 logger.exception(child)
         return ret  # pyright: ignore[reportReturnType]
+
+    def __lt__(self, other: Plugin) -> bool:
+        if not isinstance(other, Plugin):
+            return NotImplemented
+        return self.priority < other.priority
+
+    def __eq__(self, other: Plugin) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
+        if not isinstance(other, Plugin):
+            return NotImplemented
+        return self.priority == other.priority
 
     @property
     def children(self) -> list[Plugin]:
@@ -35,7 +52,7 @@ class Plugin[**P, T](Protocol):
 
     def add(self, *child: Plugin) -> None:
         for c in child:
-            bisect.insort(self._children, c)
+            bisect.insort(self._children, c, key=operator.attrgetter("priority"))
 
     def extend(self, children: Iterable[Plugin]) -> None:
         self.add(*children)
@@ -44,56 +61,62 @@ class Plugin[**P, T](Protocol):
         self._children.remove(child)
 
 
-@attrs.define(eq=True, order=True)
+@attrs.define
 class End(Plugin):
     @override
     def __call__(self) -> None:
-        return super()()
+        return super().__call__()
 
 
-@attrs.define(eq=True, order=True)
+@attrs.define
 class LogArtifact(Plugin):
     @override
     def __call__(
         self, local_path: PathLike, artifact_path: PathLike | None = None, **kwargs
-    ) -> None:
-        return super()(local_path, artifact_path, **kwargs)
+    ) -> Path:
+        ret: Path | None = super().__call__(local_path, artifact_path, **kwargs)
+        if ret is None:
+            ret = _path.as_path(local_path)
+        return ret
 
 
-@attrs.define(eq=True, order=True)
+@attrs.define
 class LogArtifacts(Plugin):
     @override
     def __call__(
         self, local_dir: PathLike, artifact_path: PathLike | None = None, **kwargs
-    ) -> None:
-        return super()(local_dir, artifact_path, **kwargs)
+    ) -> Path:
+        ret: Path | None = super().__call__(local_dir, artifact_path, **kwargs)
+        if ret is None:
+            ret = _path.as_path(local_dir)
+        return ret
 
 
-@attrs.define(eq=True, order=True)
+@attrs.define
 class LogMetric(Plugin):
     @override
     def __call__(
         self, key: str, value: float, step: int | None = None, **kwargs
     ) -> None:
-        return super()(key, value, step, **kwargs)
+        return super().__call__(key, value, step, **kwargs)
 
 
-@attrs.define(eq=True, order=True)
+@attrs.define
 class LogParam(Plugin):
     @override
     def __call__(self, key: str, value: Any, **kwargs) -> None:
-        return super()(key, value, **kwargs)
+        return super().__call__(key, value, **kwargs)
 
 
-@attrs.define(eq=True, order=True)
+@attrs.define
 class SetTag(Plugin):
     @override
     def __call__(self, key: str, value: Any, **kwargs) -> None:
-        return super()(key, value, **kwargs)
+        return super().__call__(key, value, **kwargs)
 
 
-@attrs.define(eq=True, order=True)
+@attrs.define
 class Start(Plugin):
     @override
     def __call__(self) -> None:
-        return super()()
+        return super().__call__()

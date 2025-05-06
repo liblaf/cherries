@@ -3,7 +3,7 @@ import subprocess as sp
 import git
 
 from liblaf import grapes
-from liblaf.cherries import path as _path
+from liblaf.cherries import pathutils as _path
 
 
 def git_auto_commit(
