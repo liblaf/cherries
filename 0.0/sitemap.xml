@@ -2,38 +2,42 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://liblaf.github.io/cherries/0.0/</loc>
-         <lastmod>2025-03-31</lastmod>
+         <lastmod>2025-05-06</lastmod>
     </url>
     <url>
          <loc>https://liblaf.github.io/cherries/0.0/SUMMARY/</loc>
-         <lastmod>2025-03-31</lastmod>
+         <lastmod>2025-05-06</lastmod>
     </url>
     <url>
          <loc>https://liblaf.github.io/cherries/0.0/api/SUMMARY/</loc>
-         <lastmod>2025-03-31</lastmod>
+         <lastmod>2025-05-06</lastmod>
     </url>
     <url>
          <loc>https://liblaf.github.io/cherries/0.0/api/liblaf/cherries/</loc>
-         <lastmod>2025-03-31</lastmod>
+         <lastmod>2025-05-06</lastmod>
     </url>
     <url>
-         <loc>https://liblaf.github.io/cherries/0.0/api/liblaf/cherries/git/</loc>
-         <lastmod>2025-03-31</lastmod>
+         <loc>https://liblaf.github.io/cherries/0.0/api/liblaf/cherries/typed/</loc>
+         <lastmod>2025-05-06</lastmod>
     </url>
     <url>
-         <loc>https://liblaf.github.io/cherries/0.0/api/liblaf/cherries/git/github/</loc>
-         <lastmod>2025-03-31</lastmod>
+         <loc>https://liblaf.github.io/cherries/0.0/api/liblaf/cherries/info/</loc>
+         <lastmod>2025-05-06</lastmod>
     </url>
     <url>
-         <loc>https://liblaf.github.io/cherries/0.0/api/liblaf/cherries/integration/</loc>
-         <lastmod>2025-03-31</lastmod>
+         <loc>https://liblaf.github.io/cherries/0.0/api/liblaf/cherries/pathutils/</loc>
+         <lastmod>2025-05-06</lastmod>
     </url>
     <url>
          <loc>https://liblaf.github.io/cherries/0.0/api/liblaf/cherries/plugin/</loc>
-         <lastmod>2025-03-31</lastmod>
+         <lastmod>2025-05-06</lastmod>
+    </url>
+    <url>
+         <loc>https://liblaf.github.io/cherries/0.0/api/liblaf/cherries/presets/</loc>
+         <lastmod>2025-05-06</lastmod>
     </url>
     <url>
          <loc>https://liblaf.github.io/cherries/0.0/api/liblaf/cherries/utils/</loc>
-         <lastmod>2025-03-31</lastmod>
+         <lastmod>2025-05-06</lastmod>
     </url>
 </urlset>
