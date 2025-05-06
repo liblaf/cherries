@@ -1,12 +1,16 @@
 # Changelog
 
-## [0.0.10](https://github.com/liblaf/cherries/compare/v0.0.9...v0.0.10) (2025-05-06)
-
+## [0.0.10](https://github.com/liblaf/cherries/compare/v0.0.9..v0.0.10) - 2025-05-06
 
 ### ✨ Features
 
-* **cherries:** enhance experiment tracking and path handling ([3bc705e](https://github.com/liblaf/cherries/commit/3bc705ebf7eb6eea42d488f4f6e353ed09bc9db4))
-* **cherries:** migrate from neptune to mlflow and dvc ([f5143c1](https://github.com/liblaf/cherries/commit/f5143c13b1d6d4b5cb0d227a9dc5f2a0505a508d))
+- **cherries:** enhance experiment tracking and path handling - ([3bc705e](https://github.com/liblaf/cherries/commit/3bc705ebf7eb6eea42d488f4f6e353ed09bc9db4))
+- **cherries:** migrate from neptune to mlflow and dvc - ([f5143c1](https://github.com/liblaf/cherries/commit/f5143c13b1d6d4b5cb0d227a9dc5f2a0505a508d))
+
+### ❤️ New Contributors
+
+- @liblaf made their first contribution
+- @liblaf-bot[bot] made their first contribution
 
 ## [0.0.9](https://github.com/liblaf/cherries/compare/v0.0.8..v0.0.9) - 2025-03-31
 
@@ -25,11 +29,6 @@
 ### 🔧 Continuous Integration
 
 - update docs workflows and dependencies - ([64e3619](https://github.com/liblaf/cherries/commit/64e36192ec71967f911beba70ad31047f1958178))
-
-### ❤️ New Contributors
-
-- @liblaf made their first contribution
-- @renovate[bot] made their first contribution in [#21](https://github.com/liblaf/cherries/pull/21)
 
 ## [0.0.8](https://github.com/liblaf/cherries/compare/v0.0.7..v0.0.8) - 2025-03-19
 
