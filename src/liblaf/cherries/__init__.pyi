@@ -1,6 +1,6 @@
 from . import info, pathutils, plugin, presets, utils
 from ._config import BaseConfig
-from ._run import run
+from ._run import end, run, start
 from .pathutils import (
     as_os_path,
     as_path,
@@ -28,7 +28,6 @@ from .plugin import (
     Plugin,
     Run,
     Start,
-    end,
     log_artifact,
     log_artifacts,
     log_input,
@@ -37,8 +36,8 @@ from .plugin import (
     log_output,
     log_outputs,
     log_param,
+    log_src,
     set_tag,
-    start,
 )
 
 __all__ = [
@@ -73,6 +72,7 @@ __all__ = [
     "log_output",
     "log_outputs",
     "log_param",
+    "log_src",
     "outputs",
     "params",
     "path",

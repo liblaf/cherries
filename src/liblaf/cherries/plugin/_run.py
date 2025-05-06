@@ -102,3 +102,4 @@ log_input = run.log_input
 log_inputs = run.log_inputs
 log_output = run.log_output
 log_outputs = run.log_outputs
+log_src = run.log_src
