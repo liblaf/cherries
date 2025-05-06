@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.11](https://github.com/liblaf/cherries/compare/v0.0.10...v0.0.11) (2025-05-06)
+
+
+### ✨ Features
+
+* **plugin:** add log_src function to track source files ([513a025](https://github.com/liblaf/cherries/commit/513a0252ac4dcf6aa54863e214436e3df1f3d541))
+
 ## [0.0.10](https://github.com/liblaf/cherries/compare/v0.0.9..v0.0.10) - 2025-05-06
 
 ### ✨ Features
