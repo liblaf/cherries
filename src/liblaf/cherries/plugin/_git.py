@@ -5,7 +5,7 @@ from environs import env
 
 from liblaf.cherries import info as _info
 
-from ._abc import End, Start
+from ._abc import End, RunStatus, Start
 from ._run import run
 
 
@@ -14,7 +14,7 @@ class GitEnd(End):
     dry_run: bool = env.bool("LIBLAF_CHERRIES_GIT_DRY_RUN", default=False)
 
     @override
-    def __call__(self) -> None:
+    def __call__(self, status: RunStatus = RunStatus.FINISHED) -> None:
         git_auto_commit(
             "chore(cherries): auto commit (on run end)", dry_run=self.dry_run
         )

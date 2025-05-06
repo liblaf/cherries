@@ -3,19 +3,29 @@ from typing import Any, override
 
 import attrs
 import mlflow
+import mlflow.entities
 
 from liblaf.cherries import info as _info
 from liblaf.cherries import pathutils as _path
 from liblaf.cherries.typed import PathLike
 
-from ._abc import End, LogArtifact, LogArtifacts, LogMetric, LogParam, SetTag, Start
+from ._abc import (
+    End,
+    LogArtifact,
+    LogArtifacts,
+    LogMetric,
+    LogParam,
+    RunStatus,
+    SetTag,
+    Start,
+)
 
 
 @attrs.define
 class MlflowEnd(End):
     @override
-    def __call__(self) -> None:
-        mlflow.end_run()
+    def __call__(self, status: RunStatus = RunStatus.FINISHED) -> None:
+        mlflow.end_run(status)
 
 
 @attrs.define

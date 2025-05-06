@@ -7,13 +7,13 @@ import attrs
 from liblaf.cherries import pathutils as _path
 from liblaf.cherries.typed import PathLike
 
-from ._abc import End, LogArtifact, LogArtifacts
+from ._abc import End, LogArtifact, LogArtifacts, RunStatus
 
 
 @attrs.define
 class DvcEnd(End):
     @override
-    def __call__(self) -> None:
+    def __call__(self, status: RunStatus = RunStatus.FINISHED) -> None:
         sp.run(["dvc", "status"], check=True)
         sp.run(["dvc", "push"], check=True)
 

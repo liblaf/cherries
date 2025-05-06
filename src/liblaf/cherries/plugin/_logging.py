@@ -5,14 +5,14 @@ from loguru import logger
 
 from liblaf import grapes
 
-from ._abc import End, Start
+from ._abc import End, RunStatus, Start
 from ._run import run
 
 
 @attrs.define
 class LoggingEnd(End):
     @override
-    def __call__(self) -> None:
+    def __call__(self, status: RunStatus = RunStatus.FINISHED) -> None:
         logger.complete()
         run.log_artifact(run.exp_dir / "run.log")
         run.log_artifact(run.exp_dir / "run.log.jsonl")

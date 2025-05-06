@@ -5,6 +5,7 @@ from ._abc import (
     LogMetric,
     LogParam,
     Plugin,
+    RunStatus,
     Start,
 )
 from ._dvc import DvcEnd, DvcLogArtifact, DvcLogArtifacts
@@ -58,6 +59,7 @@ __all__ = [
     "MlflowStart",
     "Plugin",
     "Run",
+    "RunStatus",
     "Start",
     "end",
     "log_artifact",

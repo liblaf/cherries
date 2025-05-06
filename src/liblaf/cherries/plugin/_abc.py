@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import bisect
+import enum
 import functools
 import operator
 from collections.abc import Iterable
@@ -8,10 +9,18 @@ from pathlib import Path
 from typing import Any, override
 
 import attrs
+import mlflow
+import mlflow.entities
 from loguru import logger
 
 from liblaf.cherries import pathutils as _path
 from liblaf.cherries.typed import PathLike
+
+
+class RunStatus(enum.StrEnum):
+    FAILED = mlflow.entities.RunStatus.to_string(mlflow.entities.RunStatus.FAILED)
+    FINISHED = mlflow.entities.RunStatus.to_string(mlflow.entities.RunStatus.FINISHED)
+    KILLED = mlflow.entities.RunStatus.to_string(mlflow.entities.RunStatus.KILLED)
 
 
 @functools.total_ordering
@@ -64,8 +73,8 @@ class Plugin[**P, T]:
 @attrs.define
 class End(Plugin):
     @override
-    def __call__(self) -> None:
-        return super().__call__()
+    def __call__(self, status: RunStatus = RunStatus.FINISHED) -> None:
+        return super().__call__(status)
 
 
 @attrs.define

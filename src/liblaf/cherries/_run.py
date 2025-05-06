@@ -13,9 +13,17 @@ def run[C: pydantic.BaseModel, T](main: Callable[[C], T]) -> T:
     cls: type[C] = next(iter(type_hints.values()))
     cfg: C = cls()
     run.log_param("cherries.config", cfg.model_dump(mode="json"))
-    ret: T = main(cfg)
-    run.end()
-    return ret
+    try:
+        ret: T = main(cfg)
+    except BaseException as e:
+        if isinstance(e, KeyboardInterrupt):
+            run.end("KILLED")
+            raise
+        run.end("FAILED")
+        raise
+    else:
+        run.end()
+        return ret
 
 
 def start() -> plugin.Run:
