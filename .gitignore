@@ -182,6 +182,11 @@ poetry.toml
 .benchmarks/
 
 _version.py
-*.log.*
+*.log
+*.log.gz
+*.log.jsonl
+*.log.jsonl.gz
 junit.xml
 playground/
+
+mlruns/

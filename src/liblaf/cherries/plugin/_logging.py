@@ -1,39 +1,25 @@
-from pathlib import Path
+from typing import override
 
-import loguru
-import pydantic_settings as ps
+import attrs
 from loguru import logger
 
-import liblaf.cherries as cherries  # noqa: PLR0402
 from liblaf import grapes
 
-DEFAULT_FILTER: "loguru.FilterDict" = {
-    "": "INFO",
-    "__main__": "TRACE",
-    "liblaf": "DEBUG",
-}
-DEFAULT_FILE_FILTER: "loguru.FilterDict" = {
-    **DEFAULT_FILTER,
-    "liblaf.cherries": "SUCCESS",
-}
+from ._abc import End, Start
+from ._run import run
 
 
-class PluginLogging(cherries.Plugin):
-    model_config = ps.SettingsConfigDict(env_prefix=cherries.ENV_PREFIX + "LOGGING_")
-    file: Path | None = Path("run.log")
-    jsonl: Path | None = Path("run.log.jsonl")
-
-    def _pre_start(self) -> None:
-        handlers: list[loguru.HandlerConfig] = [grapes.logging.rich_handler()]
-        if self.file is not None:
-            handlers.append(grapes.logging.file_handler(self.file))
-        if self.jsonl is not None:
-            handlers.append(grapes.logging.jsonl_handler(self.jsonl))
-        grapes.init_logging(handlers=handlers)
-
-    def _pre_end(self, run: cherries.Experiment) -> None:
+@attrs.define(eq=True, order=True)
+class LoggingEnd(End):
+    @override
+    def __call__(self) -> None:
         logger.complete()
-        if self.file is not None:
-            run.upload_file("cherries/logging/run.log", self.file)
-        if self.jsonl is not None:
-            run.upload_file("cherries/logging/run.log.jsonl", self.jsonl)
+        run.log_artifact("run.log")
+        run.log_artifact("run.log.jsonl")
+
+
+@attrs.define(eq=True, order=True)
+class LoggingStart(Start):
+    @override
+    def __call__(self) -> None:
+        grapes.init_logging()

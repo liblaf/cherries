@@ -17,6 +17,8 @@
     "liblaf",
     "mkdocs",
     "mkdocstrings",
+    "mlflow",
+    "mlruns",
     "mypy",
     "numprocesses",
     "numpy",
@@ -41,9 +43,11 @@
     "scrapy",
     "sdist",
     "stefanzweifel",
+    "taiki",
     "trimesh",
     "ubelt",
     "venv",
+    "webdav",
     "xdist"
   ],
   "ignorePaths": [

@@ -1,26 +1,17 @@
-from collections.abc import Sequence
-from typing import Protocol, get_type_hints
+from collections.abc import Callable
+from typing import get_type_hints
 
-from liblaf import cherries
+import pydantic
 
-
-class MainFunction[T: cherries.BaseConfig](Protocol):
-    def __call__(self, cfg: T) -> None: ...
+from liblaf.cherries import plugin, presets
 
 
-def run[T: cherries.BaseConfig](
-    main: MainFunction[T],
-    *,
-    backend: cherries.Backend | None = None,
-    enabled: bool | None = None,
-    plugins: Sequence[cherries.Plugin] | None = None,
-) -> None:
-    exp: cherries.Experiment = cherries.start(
-        backend=backend, enabled=enabled, plugins=plugins
-    )
-    type_hints: dict[str, type[T]] = get_type_hints(main)
-    cls: type[T] = next(iter(type_hints.values()))
-    cfg: T = cls()
-    exp.log_other("cherries/config", cfg)
-    main(cfg)
-    exp.end()
+def run[C: pydantic.BaseModel, T](main: Callable[[C], T]) -> T:
+    run: plugin.Run = presets.default()
+    type_hints: dict[str, type[C]] = get_type_hints(main)
+    cls: type[C] = next(iter(type_hints.values()))
+    cfg: C = cls()
+    run.log_param("cherries.config", cfg.model_dump(mode="json"))
+    ret: T = main(cfg)
+    run.end()
+    return ret

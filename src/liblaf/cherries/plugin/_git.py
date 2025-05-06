@@ -1,23 +1,43 @@
-import git
-import pydantic_settings as ps
+from typing import override
 
-from liblaf import cherries
+import attrs
+from environs import env
+
+from liblaf.cherries import info as _info
+
+from ._abc import End, Start
+from ._run import run
 
 
-class PluginGit(cherries.Plugin):
-    model_config = ps.SettingsConfigDict(env_prefix=cherries.ENV_PREFIX + "GIT_")
-    auto_commit: bool = False
-    auto_commit_message: str = cherries.git.DEFAULT_COMMIT_MESSAGE
+@attrs.define(eq=True, order=True)
+class GitEnd(End):
+    dry_run: bool = env.bool("LIBLAF_CHERRIES_GIT_DRY_RUN", default=False)
 
-    def _pre_start(self) -> None:
-        if self.auto_commit:
-            cherries.git.commit(self.auto_commit_message)
+    @override
+    def __call__(self) -> None:
+        git_auto_commit(
+            "chore(cherries): auto commit (on run end)", dry_run=self.dry_run
+        )
 
-    def _post_start(self, run: cherries.Experiment) -> None:
-        r = git.Repo(search_parent_directories=True)
-        sha: str = r.head.commit.hexsha
-        run.log_other("cherries/git/sha", sha)
-        if browse := cherries.git.permalink(repo=r):
-            run.log_other("cherries/git/browse", browse)
-        if entrypoint := cherries.git.permalink(repo=r, filepath=run.entrypoint):
-            run.log_other("cherries/git/entrypoint", entrypoint)
+
+@attrs.define(eq=True, order=True)
+class GitStart(Start):
+    dry_run: bool = env.bool("LIBLAF_CHERRIES_GIT_DRY_RUN", default=False)
+
+    @override
+    def __call__(self) -> None:
+        git_auto_commit(
+            "chore(cherries): auto commit (on run start)", dry_run=self.dry_run
+        )
+
+
+def git_auto_commit(
+    header: str = "chore(cherries): auto commit", *, dry_run: bool = False
+) -> None:
+    body: str = ""
+    if run.run_name and run.run_url:
+        body += f"🏃 View run {run.run_name} at: {run.run_url}\n"
+    if run.exp_name and run.exp_url:
+        body += f"🧪 View experiment {run.exp_name} at: {run.exp_url}\n"
+    message: str = f"{header}\n\n{body}" if body else header
+    _info.git_auto_commit(message, dry_run=dry_run)

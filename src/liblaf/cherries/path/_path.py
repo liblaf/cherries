@@ -1,0 +1,46 @@
+import sys
+from pathlib import Path
+
+import git
+import git.exc
+from loguru import logger
+
+
+def entrypoint(*, absolute: bool = False) -> Path:
+    if absolute:
+        return _entrypoint_absolute()
+    return _entrypoint_relative()
+
+
+def exp_dir() -> Path:
+    entrypoint: Path = _entrypoint_absolute()
+    for path in entrypoint.parents:
+        if (path / "exp.cherries.toml").is_file():
+            return path
+        if (path / "src").is_dir():
+            return path
+    return git_root_safe()
+
+
+def git_root() -> Path:
+    entrypoint: Path = _entrypoint_absolute()
+    repo = git.Repo(entrypoint, search_parent_directories=True)
+    return Path(repo.working_dir)
+
+
+def git_root_safe() -> Path:
+    try:
+        return git_root()
+    except git.exc.InvalidGitRepositoryError:
+        logger.warning("Not in a git repository, using current directory")
+        return _entrypoint_absolute().parent
+
+
+def _entrypoint_absolute() -> Path:
+    path = Path(sys.argv[0])
+    return path.absolute()
+
+
+def _entrypoint_relative() -> Path:
+    path: Path = _entrypoint_absolute()
+    return path.relative_to(git_root_safe())

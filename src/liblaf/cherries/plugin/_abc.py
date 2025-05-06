@@ -1,31 +1,99 @@
 from __future__ import annotations
 
-import pydantic_settings as ps
+import bisect
+from collections.abc import Iterable
+from typing import Any, Protocol, override
 
-from liblaf import cherries
+import attrs
+from loguru import logger
+
+from liblaf.cherries.typed import PathLike
 
 
-class Plugin(ps.BaseSettings):
-    enabled: bool = True
-    priority: float = 0.0
+@attrs.define(eq=True, order=True)
+class Plugin[**P, T](Protocol):
+    priority: int = attrs.field(default=0, kw_only=True, eq=True, order=True)
+    _children: list[Plugin] = attrs.field(
+        factory=list, eq=False, order=False, alias="children"
+    )
 
-    def pre_start(self) -> None:
-        if self.enabled:
-            self._pre_start()
+    def __attrs_post_init__(self) -> None:
+        self._children.sort()
 
-    def post_start(self, run: cherries.Experiment) -> None:
-        if self.enabled:
-            self._post_start(run)
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
+        ret: T | None = None
+        for child in self._children:
+            try:
+                ret = child(*args, **kwargs)
+            except AttributeError:
+                logger.exception(child)
+        return ret  # pyright: ignore[reportReturnType]
 
-    def pre_end(self, run: cherries.Experiment) -> None:
-        if self.enabled:
-            self._pre_end(run)
+    @property
+    def children(self) -> list[Plugin]:
+        return self._children
 
-    def post_end(self, run: cherries.Experiment) -> None:
-        if self.enabled:
-            self._post_end(run)
+    def add(self, *child: Plugin) -> None:
+        for c in child:
+            bisect.insort(self._children, c)
 
-    def _pre_start(self) -> None: ...
-    def _post_start(self, run: cherries.Experiment) -> None: ...
-    def _pre_end(self, run: cherries.Experiment) -> None: ...
-    def _post_end(self, run: cherries.Experiment) -> None: ...
+    def extend(self, children: Iterable[Plugin]) -> None:
+        self.add(*children)
+
+    def remove(self, child: Plugin) -> None:
+        self._children.remove(child)
+
+
+@attrs.define(eq=True, order=True)
+class End(Plugin):
+    @override
+    def __call__(self) -> None:
+        return super()()
+
+
+@attrs.define(eq=True, order=True)
+class LogArtifact(Plugin):
+    @override
+    def __call__(
+        self, local_path: PathLike, artifact_path: PathLike | None = None, **kwargs
+    ) -> None:
+        return super()(local_path, artifact_path, **kwargs)
+
+
+@attrs.define(eq=True, order=True)
+class LogArtifacts(Plugin):
+    @override
+    def __call__(
+        self, local_dir: PathLike, artifact_path: PathLike | None = None, **kwargs
+    ) -> None:
+        return super()(local_dir, artifact_path, **kwargs)
+
+
+@attrs.define(eq=True, order=True)
+class LogMetric(Plugin):
+    @override
+    def __call__(
+        self, key: str, value: float, step: int | None = None, **kwargs
+    ) -> None:
+        return super()(key, value, step, **kwargs)
+
+
+@attrs.define(eq=True, order=True)
+class LogParam(Plugin):
+    @override
+    def __call__(self, key: str, value: Any, **kwargs) -> None:
+        return super()(key, value, **kwargs)
+
+
+@attrs.define(eq=True, order=True)
+class SetTag(Plugin):
+    @override
+    def __call__(self, key: str, value: Any, **kwargs) -> None:
+        return super()(key, value, **kwargs)
+
+
+@attrs.define(eq=True, order=True)
+class Start(Plugin):
+    @override
+    def __call__(self) -> None:
+        return super()()
