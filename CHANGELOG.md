@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.12](https://github.com/liblaf/cherries/compare/v0.0.11...v0.0.12) (2025-05-06)
+
+
+### ✨ Features
+
+* **cherries:** add run status tracking and progress monitoring ([c6d31a2](https://github.com/liblaf/cherries/commit/c6d31a22606397953678a570f8bd25c9e5b266c7))
+
 ## [0.0.11](https://github.com/liblaf/cherries/compare/v0.0.10..v0.0.11) - 2025-05-06
 
 ### ✨ Features
