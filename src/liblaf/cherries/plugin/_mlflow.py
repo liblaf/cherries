@@ -3,7 +3,6 @@ from typing import Any, override
 
 import attrs
 import mlflow
-import mlflow.entities
 
 from liblaf.cherries import info as _info
 from liblaf.cherries import pathutils as _path
@@ -34,6 +33,9 @@ class MlflowLogArtifact(LogArtifact):
     def __call__(
         self, local_path: PathLike, artifact_path: PathLike | None = None, **kwargs
     ) -> Path:
+        local_path: Path = _path.as_path(local_path)
+        if (dvc_file := local_path.with_name(local_path.name + ".dvc")).is_file():
+            local_path = dvc_file
         mlflow.log_artifact(
             _path.as_os_path(local_path), _path.as_posix(artifact_path), **kwargs
         )
@@ -46,6 +48,9 @@ class MlflowLogArtifacts(LogArtifacts):
     def __call__(
         self, local_dir: PathLike, artifact_path: PathLike | None = None, **kwargs
     ) -> Path:
+        local_dir: Path = _path.as_path(local_dir)
+        if (dvc_file := local_dir.with_name(local_dir.name + ".dvc")).is_file():
+            local_dir = dvc_file
         mlflow.log_artifact(
             _path.as_os_path(local_dir), _path.as_posix(artifact_path), **kwargs
         )
@@ -80,4 +85,4 @@ class MlflowStart(Start):
     @override
     def __call__(self) -> None:
         mlflow.set_experiment(_info.exp_name())
-        mlflow.start_run()
+        mlflow.start_run(run_name=_info.run_name())

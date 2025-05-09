@@ -27,7 +27,7 @@ class Run:
 
     @functools.cached_property
     def exp_dir(self) -> Path:
-        return _path.exp_dir(absolute=True)
+        return _path.run_dir(absolute=True)
 
     @property
     def exp_id(self) -> str:

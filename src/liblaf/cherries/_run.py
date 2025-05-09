@@ -31,7 +31,7 @@ def start() -> plugin.Run:
     run.start()
     run.log_src(_path.entrypoint(absolute=True))
     run.set_tag("cherries.entrypoint", _path.entrypoint(absolute=False))
-    run.set_tag("cherries.exp-dir", _path.exp_dir(absolute=False))
+    run.set_tag("cherries.exp-dir", _path.run_dir(absolute=False))
     return plugin.run
 
 
