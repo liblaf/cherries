@@ -1,26 +1,25 @@
 # Changelog
 
-## [0.0.13](https://github.com/liblaf/cherries/compare/v0.0.12...v0.0.13) (2025-05-09)
-
+## [0.0.13](https://github.com/liblaf/cherries/compare/v0.0.12..v0.0.13) - 2025-05-09
 
 ### 🐛 Bug Fixes
 
-* use enum for run status and rename exp-dir tag ([358ccfd](https://github.com/liblaf/cherries/commit/358ccfda5b5827e614109241a999a6d3b78b6bce))
-
+- use enum for run status and rename exp-dir tag - ([358ccfd](https://github.com/liblaf/cherries/commit/358ccfda5b5827e614109241a999a6d3b78b6bce))
 
 ### ♻ Code Refactoring
 
-* **cherries:** rename exp_dir to run_dir and enhance DVC/MLflow integration ([cd04a2f](https://github.com/liblaf/cherries/commit/cd04a2f1f617c8e05b2d655fc9ee76499b686e83))
+- **cherries:** rename exp_dir to run_dir and enhance DVC/MLflow integration - ([cd04a2f](https://github.com/liblaf/cherries/commit/cd04a2f1f617c8e05b2d655fc9ee76499b686e83))
 
-## [0.0.12](https://github.com/liblaf/cherries/compare/v0.0.11..v0.0.12) - 2025-05-06
+### ❤️ New Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
+
+## [0.0.12](https://github.com/liblaf/cherries/compare/v0.0.11..v0.0.12) - 2025-05-07
 
 ### ✨ Features
 
 - **cherries:** add run status tracking and progress monitoring - ([c6d31a2](https://github.com/liblaf/cherries/commit/c6d31a22606397953678a570f8bd25c9e5b266c7))
-
-### ❤️ New Contributors
-
-- @liblaf made their first contribution
 
 ## [0.0.11](https://github.com/liblaf/cherries/compare/v0.0.10..v0.0.11) - 2025-05-06
 
@@ -101,8 +100,8 @@
 
 ### ❤️ New Contributors
 
-- @github-actions[bot] made their first contribution in [#6](https://github.com/liblaf/cherries/pull/6)
-- @renovate[bot] made their first contribution in [#7](https://github.com/liblaf/cherries/pull/7)
+- [@github-actions[bot]](https://github.com/apps/github-actions) made their first contribution in [#6](https://github.com/liblaf/cherries/pull/6)
+- [@renovate[bot]](https://github.com/apps/renovate) made their first contribution in [#7](https://github.com/liblaf/cherries/pull/7)
 
 ## [0.0.1](https://github.com/liblaf/cherries/compare/v0.0.0..v0.0.1) - 2025-01-19
 
@@ -121,7 +120,7 @@
 
 ### ❤️ New Contributors
 
-- @liblaf-bot[bot] made their first contribution
+- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
 
 ## [0.0.0] - 2025-01-16
 
@@ -140,5 +139,5 @@
 
 ### ❤️ New Contributors
 
-- @release-please[bot] made their first contribution in [#1](https://github.com/liblaf/cherries/pull/1)
-- @liblaf made their first contribution
+- [@release-please[bot]](https://github.com/apps/release-please) made their first contribution in [#1](https://github.com/liblaf/cherries/pull/1)
+- [@liblaf](https://github.com/liblaf) made their first contribution
