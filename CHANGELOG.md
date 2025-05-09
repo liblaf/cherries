@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.13](https://github.com/liblaf/cherries/compare/v0.0.12...v0.0.13) (2025-05-09)
+
+
+### 🐛 Bug Fixes
+
+* use enum for run status and rename exp-dir tag ([358ccfd](https://github.com/liblaf/cherries/commit/358ccfda5b5827e614109241a999a6d3b78b6bce))
+
+
+### ♻ Code Refactoring
+
+* **cherries:** rename exp_dir to run_dir and enhance DVC/MLflow integration ([cd04a2f](https://github.com/liblaf/cherries/commit/cd04a2f1f617c8e05b2d655fc9ee76499b686e83))
+
 ## [0.0.12](https://github.com/liblaf/cherries/compare/v0.0.11..v0.0.12) - 2025-05-06
 
 ### ✨ Features
