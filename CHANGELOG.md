@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.14](https://github.com/liblaf/cherries/compare/v0.0.13...v0.0.14) (2025-05-22)
+
+
+### 🐛 Bug Fixes
+
+* migrate from just to mise for task management ([54ca742](https://github.com/liblaf/cherries/commit/54ca742dd74fb908f27842526d53c46350ef71e9))
+
 ## [0.0.13](https://github.com/liblaf/cherries/compare/v0.0.12..v0.0.13) - 2025-05-09
 
 ### 🐛 Bug Fixes
