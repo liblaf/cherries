@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.14](https://github.com/liblaf/cherries/compare/v0.0.13..v0.0.14) - 2025-05-22
+
+### 🐛 Bug Fixes
+
+- migrate from just to mise for task management - ([54ca742](https://github.com/liblaf/cherries/commit/54ca742dd74fb908f27842526d53c46350ef71e9))
+
+### ❤️ New Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
+
 ## [0.0.13](https://github.com/liblaf/cherries/compare/v0.0.12..v0.0.13) - 2025-05-09
 
 ### 🐛 Bug Fixes
@@ -9,11 +20,6 @@
 ### ♻ Code Refactoring
 
 - **cherries:** rename exp_dir to run_dir and enhance DVC/MLflow integration - ([cd04a2f](https://github.com/liblaf/cherries/commit/cd04a2f1f617c8e05b2d655fc9ee76499b686e83))
-
-### ❤️ New Contributors
-
-- [@liblaf](https://github.com/liblaf) made their first contribution
-- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
 
 ## [0.0.12](https://github.com/liblaf/cherries/compare/v0.0.11..v0.0.12) - 2025-05-07
 
