@@ -25,7 +25,7 @@ class LoggingStart(Start):
         grapes.init_logging(
             handlers=[
                 grapes.logging.rich_handler(),
-                grapes.logging.file_handler(run.exp_dir / "run.log"),
-                grapes.logging.jsonl_handler(run.exp_dir / "run.log.jsonl"),
+                grapes.logging.file_handler(sink=run.exp_dir / "run.log"),
+                grapes.logging.jsonl_handler(sink=run.exp_dir / "run.log.jsonl"),
             ]
         )
