@@ -73,14 +73,14 @@ jobs:
         with:
           args: --tag "${{ steps.tag.outputs.tag }}"
           output: CHANGELOG.md
+      - name: Git Add
+        run: git add "CHANGELOG.md"
       - name: Commit
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: dsanders11/github-app-commit-action@v1
         with:
-          commit_message: "chore(docs): update CHANGELOG.md"
-          file_pattern: CHANGELOG.md
-          commit_user_name: ${{ steps.auth.outputs.committer-name }}
-          commit_user_email: ${{ steps.auth.outputs.committer-email }}
-          commit_author: ${{ steps.auth.outputs.author }}
+          fail-on-no-changes: false
+          message: "chore(docs): update CHANGELOG.md"
+          token: ${{ steps.auth.outputs.token }}
 
   changelog-release:
     name: Changelog (Release)
