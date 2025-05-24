@@ -11,8 +11,6 @@ def as_os_path(path: None) -> None: ...
 def as_os_path(path: PathLike | None) -> str | None:
     if path is None:
         return None
-    if isinstance(path, str):
-        return path
     return str(path)
 
 
@@ -20,8 +18,6 @@ def as_os_path(path: PathLike | None) -> str | None:
 def as_path(path: PathLike) -> Path: ...
 @overload
 def as_path(path: None) -> None: ...
-
-
 def as_path(path: PathLike | None) -> Path | None:
     if path is None:
         return None

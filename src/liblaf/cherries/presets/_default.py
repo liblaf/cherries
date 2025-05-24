@@ -1,32 +1,46 @@
-from liblaf.cherries import plugin
+from liblaf.cherries import integration
 
 
-def default() -> plugin.Run:
-    plugin.run.end.add(
-        plugin.LoggingEnd(),
-        plugin.GitEnd(),
-        plugin.DvcEnd(),
-        plugin.MlflowEnd(),
+def default(exp: integration.Experiment) -> integration.Experiment:
+    exp.add_tag.add(
+        integration.comet.AddTag(),
     )
-    plugin.run.log_artifact.add(
-        plugin.DvcLogArtifact(),
-        plugin.MlflowLogArtifact(),
+    exp.add_tags.add(
+        integration.comet.AddTags(),
     )
-    plugin.run.log_artifacts.add(
-        plugin.DvcLogArtifacts(),
-        plugin.MlflowLogArtifacts(),
+    exp.end.add(
+        integration.git.End(),
+        integration.dvc.End(),
+        integration.logging.End(),
+        integration.comet.End(),
     )
-    plugin.run.log_metric.add(
-        plugin.MlflowLogMetric(),
+    exp.log_asset.add(
+        integration.dvc.LogAsset(),
+        integration.comet.LogAsset(),
     )
-    plugin.run.log_param.add(
-        plugin.MlflowLogParam(),
+    exp.log_code.add(
+        integration.comet.LogCode(),
     )
-    plugin.run.set_tag.add(
-        plugin.MlflowSetTag(),
+    exp.log_metric.add(
+        integration.comet.LogMetric(),
     )
-    plugin.run.start.add(
-        plugin.LoggingStart(),
-        plugin.MlflowStart(),
+    exp.log_metrics.add(
+        integration.comet.LogMetrics(),
     )
-    return plugin.run
+    exp.log_other.add(
+        integration.comet.LogOther(),
+    )
+    exp.log_others.add(
+        integration.comet.LogOthers(),
+    )
+    exp.log_param.add(
+        integration.comet.LogParam(),
+    )
+    exp.log_params.add(
+        integration.comet.LogParams(),
+    )
+    exp.start.add(
+        integration.logging.Start(),
+        integration.comet.Start(),
+    )
+    return integration.exp

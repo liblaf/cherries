@@ -3,37 +3,49 @@ from typing import get_type_hints
 
 import pydantic
 
+from liblaf.cherries import config, integration, presets
 from liblaf.cherries import pathutils as _path
-from liblaf.cherries import plugin, presets
 
 
-def run[C: pydantic.BaseModel, T](main: Callable[[C], T]) -> T:
-    run: plugin.Run = start()
+def run[C: pydantic.BaseModel, T](
+    main: Callable[[], T] | Callable[[C], T],
+    *,
+    play: bool = False,
+    preset: presets.Preset = presets.default,
+) -> T:
+    exp: integration.Experiment = start(preset=preset, play=play)
     type_hints: dict[str, type[C]] = get_type_hints(main)
-    cls: type[C] = next(iter(type_hints.values()))
-    cfg: C = cls()
-    run.log_param("cherries.config", cfg.model_dump(mode="json"))
+    del type_hints["return"]
+    args: list[C] = []
+    if len(type_hints) == 1:
+        cls: type[C] = next(iter(type_hints.values()))
+        cfg: C = cls()
+        args.append(cfg)
+        for path in config.get_inputs(cfg):
+            exp.log_input(path)
     try:
-        ret: T = main(cfg)
-    except BaseException as e:
-        if isinstance(e, KeyboardInterrupt):
-            run.end(plugin.RunStatus.KILLED)
-            raise
-        run.end(plugin.RunStatus.FAILED)
-        raise
-    else:
-        run.end()
-        return ret
+        result: T = main(*args)
+    finally:
+        if len(type_hints) == 1:
+            cfg: C = args[0]
+            for path in config.get_outputs(cfg):
+                exp.log_output(path)
+        exp.end()
+    return result
 
 
-def start() -> plugin.Run:
-    run: plugin.Run = presets.default()
-    run.start()
-    run.log_src(_path.entrypoint(absolute=True))
-    run.set_tag("cherries.entrypoint", _path.entrypoint(absolute=False))
-    run.set_tag("cherries.run-dir", _path.run_dir(absolute=False))
-    return plugin.run
+def start(
+    preset: presets.Preset = presets.default, *, play: bool = False
+) -> integration.Experiment:
+    if play:
+        preset = presets.playground
+    exp: integration.Experiment = preset(integration.exp)
+    exp.start()
+    exp.log_other("cherries.entrypoint", _path.entrypoint(absolute=False))
+    exp.log_other("cherries.exp-dir", _path.exp_dir(absolute=False))
+    exp.log_other("cherries.start-time", exp.start_time)
+    return exp
 
 
 def end() -> None:
-    plugin.run.end()
+    integration.exp.end()

@@ -1,5 +1,5 @@
 from ._git import git_auto_commit, git_branch, git_commit_sha, git_commit_url, git_info
-from ._name import exp_name, run_name
+from ._name import exp_name, project_name
 
 __all__ = [
     "exp_name",
@@ -8,5 +8,5 @@ __all__ = [
     "git_commit_sha",
     "git_commit_url",
     "git_info",
-    "run_name",
+    "project_name",
 ]

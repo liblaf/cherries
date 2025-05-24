@@ -2,7 +2,7 @@ from pathlib import Path
 
 from liblaf.grapes.typed import PathLike
 
-from ._path import run_dir
+from ._path import exp_dir
 
 
 def config(
@@ -44,7 +44,7 @@ def src(path: PathLike = "", *, mkdir: bool = True, prefix: PathLike = "src") ->
 def _path(path: PathLike = "", *, mkdir: bool = True, prefix: PathLike = "") -> Path:
     path = Path(path)
     if not path.is_absolute():
-        path = run_dir(absolute=True) / prefix / path
+        path = exp_dir(absolute=True) / prefix / path
     if mkdir:
         path.parent.mkdir(parents=True, exist_ok=True)
     return path

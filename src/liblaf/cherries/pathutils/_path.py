@@ -32,10 +32,10 @@ def git_root_safe() -> Path:
 
 
 @utils.cache
-def run_dir(*, absolute: bool = False) -> Path:
+def exp_dir(*, absolute: bool = False) -> Path:
     if absolute:
-        return _run_dir_absolute()
-    return _run_dir_relative()
+        return _exp_dir_absolute()
+    return _exp_dir_relative()
 
 
 @utils.cache
@@ -51,7 +51,7 @@ def _entrypoint_relative() -> Path:
 
 
 @utils.cache
-def _run_dir_absolute() -> Path:
+def _exp_dir_absolute() -> Path:
     entrypoint: Path = _entrypoint_absolute()
     for path in entrypoint.parents:
         if (path / "exp.cherries.toml").is_file():
@@ -62,7 +62,7 @@ def _run_dir_absolute() -> Path:
 
 
 @utils.cache
-def _run_dir_relative() -> Path:
-    absolute: Path = _run_dir_absolute()
+def _exp_dir_relative() -> Path:
+    absolute: Path = _exp_dir_absolute()
     root: Path = git_root_safe()
     return absolute.relative_to(root)
