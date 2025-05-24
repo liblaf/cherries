@@ -175,18 +175,23 @@ poetry.toml
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
+*.log
+*.log.gz
+*.log.jsonl
+*.log.jsonl.gz
+playground/
+
+# hatch-vcs
+_version.py
+
+# pytest
+junit.xml
+
 # pytest-codspeed
 .codspeed/
 
 # pytest-benchmark
 .benchmarks/
 
-_version.py
-*.log
-*.log.gz
-*.log.jsonl
-*.log.jsonl.gz
-junit.xml
-playground/
-
+# MLflow
 mlruns/
