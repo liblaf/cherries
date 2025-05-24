@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.0](https://github.com/liblaf/cherries/compare/v0.0.14...v0.1.0) (2025-05-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cherries:** refactor experiment tracking and add Comet.ml integration
+
+### ✨ Features
+
+* **cherries:** refactor experiment tracking and add Comet.ml integration ([aa4d02d](https://github.com/liblaf/cherries/commit/aa4d02da2c7d6ea64129e3f8b2c0a32902fc0d5e))
+
+
+### 📝 Documentation
+
+* update copier configuration files ([025bf1f](https://github.com/liblaf/cherries/commit/025bf1f47dc133b2245887617bb160230eac5ac7))
+
 ## [0.0.14](https://github.com/liblaf/cherries/compare/v0.0.13..v0.0.14) - 2025-05-22
 
 ### 🐛 Bug Fixes
