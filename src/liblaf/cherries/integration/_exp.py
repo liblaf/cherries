@@ -95,3 +95,15 @@ log_others: LogOthers = exp.log_others
 log_param: LogParam = exp.log_param
 log_params: LogParams = exp.log_params
 start: Start = exp.start
+
+
+def current_exp() -> Experiment:
+    return exp
+
+
+def log_input(path: PathLike, /, **kwargs) -> None:
+    exp.log_input(path, **kwargs)
+
+
+def log_output(path: PathLike, /, **kwargs) -> None:
+    exp.log_output(path, **kwargs)
