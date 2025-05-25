@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/liblaf/cherries/compare/v0.1.1...v0.1.2) (2025-05-25)
+
+
+### ✨ Features
+
+* **integration:** add current_exp and logging functions for inputs/outputs ([1713f7a](https://github.com/liblaf/cherries/commit/1713f7abec989fc9dc5e5288b29ebb1e017f33a1))
+
 ## [0.1.1](https://github.com/liblaf/cherries/compare/v0.1.0..v0.1.1) - 2025-05-24
 
 ### 🐛 Bug Fixes
