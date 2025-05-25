@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.1](https://github.com/liblaf/cherries/compare/v0.1.0..v0.1.1) - 2025-05-24
+
+### 🐛 Bug Fixes
+
+- improve DVC initialization and remote setup - ([321d203](https://github.com/liblaf/cherries/commit/321d203017bd2a1fc185574c566a20bd92c76ca5))
+
+### ❤️ New Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+
 ## [0.1.0](https://github.com/liblaf/cherries/compare/v0.0.14..v0.1.0) - 2025-05-24
 
 ### 💥 BREAKING CHANGES
@@ -9,10 +19,6 @@
 ### 📝 Documentation
 
 - update copier configuration files - ([025bf1f](https://github.com/liblaf/cherries/commit/025bf1f47dc133b2245887617bb160230eac5ac7))
-
-### ❤️ New Contributors
-
-- [@liblaf](https://github.com/liblaf) made their first contribution
 
 ## [0.0.14](https://github.com/liblaf/cherries/compare/v0.0.13..v0.0.14) - 2025-05-22
 
