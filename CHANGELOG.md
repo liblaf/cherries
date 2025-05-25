@@ -1,14 +1,21 @@
 # Changelog
 
-## [0.1.1](https://github.com/liblaf/cherries/compare/v0.1.0..v0.1.1) - 2025-05-24
+## [0.1.2](https://github.com/liblaf/cherries/compare/v0.1.1..v0.1.2) - 2025-05-25
 
-### 🐛 Bug Fixes
+### ✨ Features
 
-- improve DVC initialization and remote setup - ([321d203](https://github.com/liblaf/cherries/commit/321d203017bd2a1fc185574c566a20bd92c76ca5))
+- **integration:** add current_exp and logging functions for inputs/outputs - ([1713f7a](https://github.com/liblaf/cherries/commit/1713f7abec989fc9dc5e5288b29ebb1e017f33a1))
 
 ### ❤️ New Contributors
 
 - [@liblaf](https://github.com/liblaf) made their first contribution
+- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
+
+## [0.1.1](https://github.com/liblaf/cherries/compare/v0.1.0..v0.1.1) - 2025-05-25
+
+### 🐛 Bug Fixes
+
+- improve DVC initialization and remote setup - ([321d203](https://github.com/liblaf/cherries/commit/321d203017bd2a1fc185574c566a20bd92c76ca5))
 
 ## [0.1.0](https://github.com/liblaf/cherries/compare/v0.0.14..v0.1.0) - 2025-05-24
 
