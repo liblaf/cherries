@@ -73,12 +73,10 @@ jobs:
         with:
           args: --tag "${{ steps.tag.outputs.tag }}"
           output: CHANGELOG.md
-      - name: Git Add
-        run: git add "CHANGELOG.md"
       - name: Commit
-        uses: dsanders11/github-app-commit-action@v1
+        uses: liblaf/actions/commit@main
         with:
-          fail-on-no-changes: false
+          add-options: --verbose "CHANGELOG.md"
           message: "chore(docs): update CHANGELOG.md"
           token: ${{ steps.auth.outputs.token }}
 
