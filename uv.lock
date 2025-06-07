@@ -219,15 +219,6 @@ wheels = [
 ]
 
 [[package]]
-name = "beartype"
-version = "0.21.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0d/f9/21e5a9c731e14f08addd53c71fea2e70794e009de5b98e6a2c3d2f3015d6/beartype-0.21.0.tar.gz", hash = "sha256:f9a5078f5ce87261c2d22851d19b050b64f6a805439e8793aecf01ce660d3244", size = 1437066, upload-time = "2025-05-22T05:09:27.116Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/31/87045d1c66ee10a52486c9d2047bc69f00f2689f69401bb1e998afb4b205/beartype-0.21.0-py3-none-any.whl", hash = "sha256:b6a1bd56c72f31b0a496a36cc55df6e2f475db166ad07fa4acc7e74f4c7f34c0", size = 1191340, upload-time = "2025-05-22T05:09:24.606Z" },
-]
-
-[[package]]
 name = "billiard"
 version = "4.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1437,7 +1428,7 @@ requires-dist = [
     { name = "environs", specifier = ">=14.2.0,<15" },
     { name = "gitpython", specifier = ">=3.1.44,<4" },
     { name = "lazy-loader", specifier = ">=0.4,<0.5" },
-    { name = "liblaf-grapes", specifier = ">=0.1.26,<0.2" },
+    { name = "liblaf-grapes", specifier = ">=0.2,<0.3" },
     { name = "loguru", specifier = ">=0.7.3,<0.8" },
     { name = "pydantic", specifier = ">=2.11.5,<3" },
     { name = "pydantic-settings", specifier = ">=2.9.1,<3" },
@@ -1478,10 +1469,11 @@ test = [
 
 [[package]]
 name = "liblaf-grapes"
-version = "0.1.26"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "about-time" },
+    { name = "attrs" },
     { name = "autoregistry" },
     { name = "environs" },
     { name = "etils" },
@@ -1491,13 +1483,14 @@ dependencies = [
     { name = "lazy-loader" },
     { name = "loguru" },
     { name = "msgspec", extra = ["toml", "yaml"] },
-    { name = "plum-dispatch" },
     { name = "pydantic" },
     { name = "rich" },
+    { name = "sortedcontainers" },
+    { name = "sortedcontainers-stubs" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/db/4a/713fc78f0a0af0e22dad26886e6c4e2583cc775c0452a9146ee11e63568f/liblaf_grapes-0.1.26.tar.gz", hash = "sha256:441924c199efbc7cd41d059b424c06cfeb705e7295a7c570efc56a52d588b3cb", size = 26336, upload-time = "2025-05-24T05:22:42.177Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/20/92/339b1b8a0939dc9ac96fb4325892ba7c36fad2db5edd9e77516bfef33a05/liblaf_grapes-0.2.0.tar.gz", hash = "sha256:57063a1b9e136ca332f9459da89a4bb9b75c6af72ea5483f85a51bd49d237250", size = 29083, upload-time = "2025-06-05T14:02:12.316Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/36/5bffb1d82f9bf53fd0f6e177c703d16ef58b8169710f9d48c9522a6be26a/liblaf_grapes-0.1.26-py3-none-any.whl", hash = "sha256:da728812753381e434c02cfaeac307ac2b9dbb66b2aa4ca3d9ec4963262bb8b7", size = 51998, upload-time = "2025-05-24T05:22:40.693Z" },
+    { url = "https://files.pythonhosted.org/packages/15/b0/8a63c9a3913f9653350ecb231c30978b41e208740cf5631dd5069896091b/liblaf_grapes-0.2.0-py3-none-any.whl", hash = "sha256:c2b26e105d4881103ef220dac4ba9b856b27969c7e726516b74bd1cb677d01f3", size = 54485, upload-time = "2025-06-05T14:02:10.933Z" },
 ]
 
 [[package]]
@@ -2084,20 +2077,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
-]
-
-[[package]]
-name = "plum-dispatch"
-version = "2.5.7"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "beartype" },
-    { name = "rich" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f4/46/ab3928e864b0a88a8ae6987b3da3b7ae32fe0a610264f33272139275dab5/plum_dispatch-2.5.7.tar.gz", hash = "sha256:a7908ad5563b93f387e3817eb0412ad40cfbad04bc61d869cf7a76cd58a3895d", size = 35452, upload-time = "2025-01-17T20:07:31.026Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2b/31/21609a9be48e877bc33b089a7f495c853215def5aeb9564a31c210d9d769/plum_dispatch-2.5.7-py3-none-any.whl", hash = "sha256:06471782eea0b3798c1e79dca2af2165bafcfa5eb595540b514ddd81053b1ede", size = 42612, upload-time = "2025-01-17T20:07:26.461Z" },
 ]
 
 [[package]]
@@ -2880,6 +2859,28 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a2/87/a6771e1546d97e7e041b6ae58d80074f81b7d5121207425c964ddf5cfdbd/sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc", size = 20372, upload-time = "2024-02-25T23:20:04.057Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2", size = 10235, upload-time = "2024-02-25T23:20:01.196Z" },
+]
+
+[[package]]
+name = "sortedcontainers"
+version = "2.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/c4/ba2f8066cceb6f23394729afe52f3bf7adec04bf9ed2c820b39e19299111/sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88", size = 30594, upload-time = "2021-05-16T22:03:42.897Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/32/46/9cb0e58b2deb7f82b84065f37f3bffeb12413f947f9388e4cac22c4621ce/sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0", size = 29575, upload-time = "2021-05-16T22:03:41.177Z" },
+]
+
+[[package]]
+name = "sortedcontainers-stubs"
+version = "2.4.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sortedcontainers" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/19/13/2940fafc136048ec99c932bf0077613f1ae4693a313705162982335fe5fb/sortedcontainers_stubs-2.4.3.tar.gz", hash = "sha256:ba172daceda4bd617d2f6ffd24582261a494da92705409651967faa40ebc75dd", size = 6186, upload-time = "2025-04-23T07:42:00.238Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/3e/b0fbd7621e6430d33d234ad5e2dc9b0d4df575518f4790a2af934e1029ea/sortedcontainers_stubs-2.4.3-py3-none-any.whl", hash = "sha256:4496109dfa6645e4b675f57fbc7e42ec4d1bed2c74aab7fa379e0795e49fe406", size = 8816, upload-time = "2025-04-23T07:41:58.625Z" },
 ]
 
 [[package]]
