@@ -1,4 +1,4 @@
-from . import config, integration, meta, pathutils, presets, utils
+from . import config, core, integration, meta, pathutils, presets, utils
 from ._run import end, run, start
 from .config import (
     AssetKind,
@@ -11,6 +11,7 @@ from .config import (
     input,  # noqa: A004
     output,
 )
+from .core import ConcreteImpl, ImplDef, SpecDef, impl, spec
 from .integration import (
     AddTag,
     AddTags,
@@ -61,8 +62,10 @@ __all__ = [
     "AddTags",
     "AssetKind",
     "BaseConfig",
+    "ConcreteImpl",
     "End",
     "Experiment",
+    "ImplDef",
     "LogAsset",
     "LogCode",
     "LogMetric",
@@ -74,6 +77,7 @@ __all__ = [
     "MetaAsset",
     "PathProvider",
     "Plugin",
+    "SpecDef",
     "Start",
     "add_tag",
     "add_tags",
@@ -81,6 +85,7 @@ __all__ = [
     "as_path",
     "as_posix",
     "config",
+    "core",
     "current_exp",
     "data",
     "end",
@@ -93,6 +98,7 @@ __all__ = [
     "get_outputs",
     "git_root",
     "git_root_safe",
+    "impl",
     "input",
     "inputs",
     "integration",
@@ -115,6 +121,7 @@ __all__ = [
     "presets",
     "run",
     "run",
+    "spec",
     "src",
     "start",
     "start",
