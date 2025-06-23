@@ -1523,16 +1523,16 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "comet-ml", specifier = ">=3.49.11,<4" },
-    { name = "dvc", extras = ["webdav"], specifier = ">=3.60.1,<4" },
-    { name = "environs", specifier = ">=14.2.0,<15" },
-    { name = "gitpython", specifier = ">=3.1.44,<4" },
-    { name = "lazy-loader", specifier = ">=0.4,<0.5" },
+    { name = "comet-ml", specifier = ">=3.0.0,<4" },
+    { name = "dvc", extras = ["webdav"], specifier = ">=3.0.0,<4" },
+    { name = "environs", specifier = ">=14.0.0,<15" },
+    { name = "gitpython", specifier = ">=3.0.0,<4" },
+    { name = "lazy-loader", specifier = ">=0.4.0,<0.5" },
     { name = "liblaf-grapes", specifier = ">=0.3.0,<0.4" },
-    { name = "loguru", specifier = ">=0.7.3,<0.8" },
-    { name = "networkx", specifier = ">=3.5,<4" },
-    { name = "pydantic", specifier = ">=2.11.7,<3" },
-    { name = "pydantic-settings", specifier = ">=2.10.0,<3" },
+    { name = "loguru", specifier = ">=0.7.0,<0.8" },
+    { name = "networkx", specifier = ">=3.0.0,<4" },
+    { name = "pydantic", specifier = ">=2.0.0,<3" },
+    { name = "pydantic-settings", specifier = ">=2.0.0,<3" },
     { name = "rich", specifier = ">=14.0.0,<15" },
 ]
 

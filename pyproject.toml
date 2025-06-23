@@ -64,16 +64,16 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "comet-ml>=3.49.11,<4",
-  "dvc[webdav]>=3.60.1,<4",
-  "environs>=14.2.0,<15",
-  "gitpython>=3.1.44,<4",
-  "lazy-loader>=0.4,<0.5",
+  "comet-ml>=3.0.0,<4",
+  "dvc[webdav]>=3.0.0,<4",
+  "environs>=14.0.0,<15",
+  "gitpython>=3.0.0,<4",
+  "lazy-loader>=0.4.0,<0.5",
   "liblaf-grapes>=0.3.0,<0.4",
-  "loguru>=0.7.3,<0.8",
-  "networkx>=3.5,<4",
-  "pydantic-settings>=2.10.0,<3",
-  "pydantic>=2.11.7,<3",
+  "loguru>=0.7.0,<0.8",
+  "networkx>=3.0.0,<4",
+  "pydantic-settings>=2.0.0,<3",
+  "pydantic>=2.0.0,<3",
   "rich>=14.0.0,<15",
 ]
 description = "Add your description here"
