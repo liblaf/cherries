@@ -9,15 +9,20 @@ requires = ["hatch-vcs", "hatchling"]
 build = ["check-wheel-contents", "hatch", "twine"]
 dev = ["icecream"]
 docs = [
-  "gitpython",
+  "docstring-inheritance",
+  "griffe-fieldz",
+  "griffe-generics",
+  "griffe-inherited-docstrings",
+  "griffe-modernized-annotations",
+  "griffe-pydantic",
+  "griffe-warnings-deprecated",
   "mdx-truly-sane-lists",
   "mkdocs",
+  "mkdocs-api-autonav",
   "mkdocs-autorefs",
-  "mkdocs-gen-files",
   "mkdocs-git-committers-plugin-2",
   "mkdocs-git-revision-date-localized-plugin",
   "mkdocs-include-markdown-plugin",
-  "mkdocs-literate-nav",
   "mkdocs-material[imaging]",
   "mkdocs-section-index",
   "mkdocstrings",
@@ -59,16 +64,16 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "comet-ml>=3.49.10,<4",
-  "dvc[webdav]>=3.60.0,<4",
+  "comet-ml>=3.49.11,<4",
+  "dvc[webdav]>=3.60.1,<4",
   "environs>=14.2.0,<15",
   "gitpython>=3.1.44,<4",
   "lazy-loader>=0.4,<0.5",
-  "liblaf-grapes>=0.2,<0.3",
+  "liblaf-grapes>=0.3.0,<0.4",
   "loguru>=0.7.3,<0.8",
   "networkx>=3.5,<4",
-  "pydantic-settings>=2.9.1,<3",
-  "pydantic>=2.11.5,<3",
+  "pydantic-settings>=2.10.0,<3",
+  "pydantic>=2.11.7,<3",
   "rich>=14.0.0,<15",
 ]
 description = "Add your description here"
