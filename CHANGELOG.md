@@ -1,14 +1,21 @@
 # Changelog
 
-## [0.1.4](https://github.com/liblaf/cherries/compare/v0.1.3..v0.1.4) - 2025-06-08
+## [0.1.5](https://github.com/liblaf/cherries/compare/v0.1.4..v0.1.5) - 2025-06-23
 
-### ✨ Features
+### ⬆️ Dependencies
 
-- **core:** add plugin system and experiment base - ([d1cd38b](https://github.com/liblaf/cherries/commit/d1cd38b799464668529df5de52480d82c6639c65))
+- **deps:** update documentation and core dependencies - ([4b23e62](https://github.com/liblaf/cherries/commit/4b23e623779f3c50b6e89909bee735f52f1edf34))
 
 ### ❤️ New Contributors
 
 - [@liblaf](https://github.com/liblaf) made their first contribution
+- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
+
+## [0.1.4](https://github.com/liblaf/cherries/compare/v0.1.3..v0.1.4) - 2025-06-09
+
+### ✨ Features
+
+- **core:** add plugin system and experiment base - ([d1cd38b](https://github.com/liblaf/cherries/commit/d1cd38b799464668529df5de52480d82c6639c65))
 
 ## [0.1.3](https://github.com/liblaf/cherries/compare/v0.1.2..v0.1.3) - 2025-06-08
 
