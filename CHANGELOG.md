@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/liblaf/cherries/compare/v0.1.5...v0.1.6) (2025-06-23)
+
+
+### ⬆️ Dependencies
+
+* **deps:** relax dependency version constraints ([29ea5f3](https://github.com/liblaf/cherries/commit/29ea5f30ec2ff5ee6f7bdadb5b13f016ab0dc1fc))
+
 ## [0.1.5](https://github.com/liblaf/cherries/compare/v0.1.4..v0.1.5) - 2025-06-23
 
 ### ⬆️ Dependencies
