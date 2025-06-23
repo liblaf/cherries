@@ -1,22 +1,20 @@
 # Changelog
 
-## [0.1.6](https://github.com/liblaf/cherries/compare/v0.1.5...v0.1.6) (2025-06-23)
-
+## [0.1.6](https://github.com/liblaf/cherries/compare/v0.1.5..v0.1.6) - 2025-06-23
 
 ### ⬆️ Dependencies
 
-* **deps:** relax dependency version constraints ([29ea5f3](https://github.com/liblaf/cherries/commit/29ea5f30ec2ff5ee6f7bdadb5b13f016ab0dc1fc))
+- **deps:** relax dependency version constraints - ([29ea5f3](https://github.com/liblaf/cherries/commit/29ea5f30ec2ff5ee6f7bdadb5b13f016ab0dc1fc))
+
+### ❤️ New Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
 
 ## [0.1.5](https://github.com/liblaf/cherries/compare/v0.1.4..v0.1.5) - 2025-06-23
 
 ### ⬆️ Dependencies
 
 - **deps:** update documentation and core dependencies - ([4b23e62](https://github.com/liblaf/cherries/commit/4b23e623779f3c50b6e89909bee735f52f1edf34))
-
-### ❤️ New Contributors
-
-- [@liblaf](https://github.com/liblaf) made their first contribution
-- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
 
 ## [0.1.4](https://github.com/liblaf/cherries/compare/v0.1.3..v0.1.4) - 2025-06-09
 
