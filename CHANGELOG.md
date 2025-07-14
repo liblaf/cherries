@@ -1,14 +1,21 @@
 # Changelog
 
+## [0.1.7](https://github.com/liblaf/cherries/compare/v0.1.6..v0.1.7) - 2025-07-13
+
+### ⬆️ Dependencies
+
+- **deps:** update dependency liblaf-grapes to >=0.4,<0.5 (#39) - ([c34ce44](https://github.com/liblaf/cherries/commit/c34ce44cad668403f3f7780872aad7ff963b07c1))
+
+### ❤️ New Contributors
+
+- [@renovate[bot]](https://github.com/apps/renovate) made their first contribution in [#39](https://github.com/liblaf/cherries/pull/39)
+- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
+
 ## [0.1.6](https://github.com/liblaf/cherries/compare/v0.1.5..v0.1.6) - 2025-06-23
 
 ### ⬆️ Dependencies
 
 - **deps:** relax dependency version constraints - ([29ea5f3](https://github.com/liblaf/cherries/commit/29ea5f30ec2ff5ee6f7bdadb5b13f016ab0dc1fc))
-
-### ❤️ New Contributors
-
-- [@liblaf](https://github.com/liblaf) made their first contribution
 
 ## [0.1.5](https://github.com/liblaf/cherries/compare/v0.1.4..v0.1.5) - 2025-06-23
 
