@@ -30,13 +30,7 @@ docs = [
   "pymdown-extensions",
   "ruff",
 ]
-test = [
-  "pytest",
-  "pytest-benchmark",
-  "pytest-codspeed",
-  "pytest-cov",
-  "pytest-xdist",
-]
+test = ["pytest", "pytest-codspeed", "pytest-cov", "pytest-xdist"]
 
 [project]
 authors = [
@@ -64,17 +58,19 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
+  "attrs>=25.0.0,<26",
   "comet-ml>=3.0.0,<4",
   "dvc[webdav]>=3.0.0,<4",
   "environs>=14.0.0,<15",
   "gitpython>=3.0.0,<4",
-  "lazy-loader>=0.4.0,<0.5",
-  "liblaf-grapes>=0.4,<0.5",
+  "lazy-loader>=0.4,<0.5",
+  "liblaf-grapes>=0.6.0,<0.7",
   "loguru>=0.7.0,<0.8",
   "networkx>=3.0.0,<4",
   "pydantic-settings>=2.0.0,<3",
   "pydantic>=2.0.0,<3",
   "rich>=14.0.0,<15",
+  "wrapt>=1.0.0,<2",
 ]
 description = "Add your description here"
 dynamic = ["version"]

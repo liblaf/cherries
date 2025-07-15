@@ -3,7 +3,7 @@ from pathlib import Path
 import git.exc
 
 from liblaf import grapes
-from liblaf.cherries import pathutils as _path
+from liblaf.cherries import paths
 
 from ._git import git_info
 
@@ -18,8 +18,8 @@ def project_name() -> str:
 
 
 def exp_name() -> str:
-    exp_dir: Path = _path.entrypoint(absolute=False)
-    exp_name: str = _path.as_posix(exp_dir)
+    exp_dir: Path = paths.entrypoint(absolute=False)
+    exp_name: str = paths.as_posix(exp_dir)
     exp_name = exp_name.removeprefix("exp")
     exp_name = exp_name.removeprefix("/")
     return exp_name

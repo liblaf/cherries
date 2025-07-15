@@ -6,7 +6,7 @@ from typing import Any
 import pydantic
 
 from liblaf import grapes
-from liblaf.cherries import pathutils as _path
+from liblaf.cherries import paths
 from liblaf.cherries.typed import PathLike
 
 
@@ -61,12 +61,12 @@ def get_outputs(cfg: pydantic.BaseModel) -> list[Path]:
 
 
 def input(path: PathLike, extra: PathProvider | None = None, **kwargs) -> Path:  # noqa: A001
-    field_info: pydantic.fields.FieldInfo = pydantic.Field(_path.data(path), **kwargs)  # pyright: ignore[reportAssignmentType]
+    field_info: pydantic.fields.FieldInfo = pydantic.Field(paths.data(path), **kwargs)  # pyright: ignore[reportAssignmentType]
     field_info.metadata.append(MetaAsset(kind=AssetKind.INPUT, extra=extra))
     return field_info  # pyright: ignore[reportReturnType]
 
 
 def output(path: PathLike, extra: PathProvider | None = None, **kwargs) -> Path:
-    field_info: pydantic.fields.FieldInfo = pydantic.Field(_path.data(path), **kwargs)  # pyright: ignore[reportAssignmentType]
+    field_info: pydantic.fields.FieldInfo = pydantic.Field(paths.data(path), **kwargs)  # pyright: ignore[reportAssignmentType]
     field_info.metadata.append(MetaAsset(kind=AssetKind.OUTPUT, extra=extra))
     return field_info  # pyright: ignore[reportReturnType]

@@ -1,4 +1,5 @@
 import sys
+from collections.abc import Container
 from pathlib import Path
 
 import git
@@ -27,7 +28,7 @@ def git_root_safe() -> Path:
     try:
         return git_root()
     except git.exc.InvalidGitRepositoryError:
-        logger.warning("Not in a git repository, using current directory")
+        logger.warning("Not in a git repository, using current directory", once=True)
         return _entrypoint_absolute().parent
 
 
@@ -50,15 +51,16 @@ def _entrypoint_relative() -> Path:
     return path.relative_to(git_root_safe())
 
 
+EXP_DIR_NAMES: Container[str] = {"exp", "experiment", "experiments", "exps", "src"}
+
+
 @utils.cache
 def _exp_dir_absolute() -> Path:
     entrypoint: Path = _entrypoint_absolute()
-    for path in entrypoint.parents:
-        if (path / "exp.cherries.toml").is_file():
-            return path
-        if (path / "src").is_dir():
-            return path
-    return git_root_safe()
+    parent: Path = entrypoint.parent
+    if parent.name in EXP_DIR_NAMES:
+        return parent.parent
+    return parent
 
 
 @utils.cache
