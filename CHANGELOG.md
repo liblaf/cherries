@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/liblaf/cherries/compare/v0.1.7...v0.2.0) (2025-07-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* **core:** Existing plugin implementations must migrate to new architecture. Path utilities have been consolidated under `paths` module. Integration modules (comet, dvc, git) removed.
+
+### ♻ Code Refactoring
+
+* **core:** redesign plugin system architecture ([b437d45](https://github.com/liblaf/cherries/commit/b437d4526207008e73b9f3cb564635d5a008c6d9))
+
 ## [0.1.7](https://github.com/liblaf/cherries/compare/v0.1.6..v0.1.7) - 2025-07-13
 
 ### ⬆️ Dependencies
