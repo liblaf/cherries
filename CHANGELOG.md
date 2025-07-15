@@ -1,26 +1,20 @@
 # Changelog
 
-## [0.2.0](https://github.com/liblaf/cherries/compare/v0.1.7...v0.2.0) (2025-07-15)
+## [0.2.0](https://github.com/liblaf/cherries/compare/v0.1.7..v0.2.0) - 2025-07-15
 
+### 💥 BREAKING CHANGES
 
-### ⚠ BREAKING CHANGES
+- **core:** redesign plugin system architecture - ([b437d45](https://github.com/liblaf/cherries/commit/b437d4526207008e73b9f3cb564635d5a008c6d9))
 
-* **core:** Existing plugin implementations must migrate to new architecture. Path utilities have been consolidated under `paths` module. Integration modules (comet, dvc, git) removed.
+### ❤️ New Contributors
 
-### ♻ Code Refactoring
+- [@liblaf](https://github.com/liblaf) made their first contribution
 
-* **core:** redesign plugin system architecture ([b437d45](https://github.com/liblaf/cherries/commit/b437d4526207008e73b9f3cb564635d5a008c6d9))
-
-## [0.1.7](https://github.com/liblaf/cherries/compare/v0.1.6..v0.1.7) - 2025-07-13
+## [0.1.7](https://github.com/liblaf/cherries/compare/v0.1.6..v0.1.7) - 2025-07-14
 
 ### ⬆️ Dependencies
 
 - **deps:** update dependency liblaf-grapes to >=0.4,<0.5 (#39) - ([c34ce44](https://github.com/liblaf/cherries/commit/c34ce44cad668403f3f7780872aad7ff963b07c1))
-
-### ❤️ New Contributors
-
-- [@renovate[bot]](https://github.com/apps/renovate) made their first contribution in [#39](https://github.com/liblaf/cherries/pull/39)
-- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
 
 ## [0.1.6](https://github.com/liblaf/cherries/compare/v0.1.5..v0.1.6) - 2025-06-23
 
