@@ -1567,7 +1567,7 @@ requires-dist = [
     { name = "environs", specifier = ">=14.0.0,<15" },
     { name = "gitpython", specifier = ">=3.0.0,<4" },
     { name = "lazy-loader", specifier = ">=0.4.0,<0.5" },
-    { name = "liblaf-grapes", specifier = ">=0.4,<0.5" },
+    { name = "liblaf-grapes", specifier = ">=0.5,<0.6" },
     { name = "loguru", specifier = ">=0.7.0,<0.8" },
     { name = "networkx", specifier = ">=3.0.0,<4" },
     { name = "pydantic", specifier = ">=2.0.0,<3" },
@@ -1614,7 +1614,7 @@ test = [
 
 [[package]]
 name = "liblaf-grapes"
-version = "0.4.0"
+version = "0.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "about-time" },
@@ -1635,12 +1635,13 @@ dependencies = [
     { name = "rich" },
     { name = "sortedcontainers" },
     { name = "sortedcontainers-stubs" },
+    { name = "typing-extensions" },
     { name = "wadler-lindig" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/97/22/a6e5635e8b948f735599b6e3fb14c47d798178485a02256c900199693d88/liblaf_grapes-0.4.0.tar.gz", hash = "sha256:447d82e49513bffa1ee50ef0953e80a01f3af9c94291db2411bb52a4e71fcf4c", size = 31214, upload-time = "2025-07-12T01:52:10.529Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/62/91/03eeebb268cc82b46a205449413ae469ea520966ea9753aeefb1979552dc/liblaf_grapes-0.5.1.tar.gz", hash = "sha256:4aea197733d9077f5ee05fa1d27948fa6fe1153a0307d0bc5a6ebad488808ba2", size = 32334, upload-time = "2025-07-15T17:36:07.255Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/bb/3f6a7afc0fb50a5ba6f1f337f1043330aed167ee92f85d21420ddee925a5/liblaf_grapes-0.4.0-py3-none-any.whl", hash = "sha256:be7a6fdf460f42fd6477d65861c7449f94184f17e2db5fb469fa56150bea15f7", size = 60660, upload-time = "2025-07-12T01:52:08.879Z" },
+    { url = "https://files.pythonhosted.org/packages/39/bb/e6c2f975b07a2e7cd5b2c8be61fcf2c30f58a3d171d4a3d979d106389fe4/liblaf_grapes-0.5.1-py3-none-any.whl", hash = "sha256:16c50a59c04f3e94d2025638b2453369f825855bb5eefdb1510615ff1c9fe30b", size = 68217, upload-time = "2025-07-15T17:36:05.691Z" },
 ]
 
 [[package]]
