@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/liblaf/cherries/compare/v0.2.0...v0.2.1) (2025-07-18)
+
+
+### ⬆️ Dependencies
+
+* **deps:** update dependency liblaf-grapes to v1 ([#43](https://github.com/liblaf/cherries/issues/43)) ([1f20bd0](https://github.com/liblaf/cherries/commit/1f20bd020cba3403542288d6d3a23879208258ac))
+
 ## [0.2.0](https://github.com/liblaf/cherries/compare/v0.1.7..v0.2.0) - 2025-07-15
 
 ### 💥 BREAKING CHANGES
