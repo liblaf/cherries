@@ -1,21 +1,20 @@
 # Changelog
 
-## [0.2.1](https://github.com/liblaf/cherries/compare/v0.2.0...v0.2.1) (2025-07-18)
-
+## [0.2.1](https://github.com/liblaf/cherries/compare/v0.2.0..v0.2.1) - 2025-07-18
 
 ### ⬆️ Dependencies
 
-* **deps:** update dependency liblaf-grapes to v1 ([#43](https://github.com/liblaf/cherries/issues/43)) ([1f20bd0](https://github.com/liblaf/cherries/commit/1f20bd020cba3403542288d6d3a23879208258ac))
+- **deps:** update dependency liblaf-grapes to v1 (#43) - ([1f20bd0](https://github.com/liblaf/cherries/commit/1f20bd020cba3403542288d6d3a23879208258ac))
+
+### ❤️ New Contributors
+
+- [@renovate[bot]](https://github.com/apps/renovate) made their first contribution in [#43](https://github.com/liblaf/cherries/pull/43)
 
 ## [0.2.0](https://github.com/liblaf/cherries/compare/v0.1.7..v0.2.0) - 2025-07-15
 
 ### 💥 BREAKING CHANGES
 
 - **core:** redesign plugin system architecture - ([b437d45](https://github.com/liblaf/cherries/commit/b437d4526207008e73b9f3cb564635d5a008c6d9))
-
-### ❤️ New Contributors
-
-- [@liblaf](https://github.com/liblaf) made their first contribution
 
 ## [0.1.7](https://github.com/liblaf/cherries/compare/v0.1.6..v0.1.7) - 2025-07-14
 
