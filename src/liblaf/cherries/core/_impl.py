@@ -3,6 +3,7 @@ from collections.abc import Callable, Iterable
 from typing import Any, overload
 
 import attrs
+import wrapt
 
 from liblaf import grapes
 
@@ -41,18 +42,19 @@ def impl(
 ) -> Any:
     if func is None:
         return functools.partial(impl, priority=priority, after=after, before=before)
-    info = ImplInfo(after=after, before=before, priority=priority)
 
-    @grapes.decorator(attrs={"_self_impl": info})
+    @wrapt.decorator
     def wrapper(
         wrapped: Callable, _instance: Any, args: tuple, kwargs: dict[str, Any]
     ) -> Any:
         return wrapped(*args, **kwargs)
 
-    return wrapper(func)
+    proxy: Any = wrapper(func)  # pyright: ignore[reportCallIssue]
+    proxy._self_impl = ImplInfo(after=after, before=before, priority=priority)  # noqa: SLF001
+    return proxy
 
 
 def get_impl_info(func: Callable | None) -> ImplInfo | None:
     if func is None:
         return None
-    return getattr(func, "_self_impl", None)
+    return grapes.unbind_getattr(func, "_self_impl")

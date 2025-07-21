@@ -4,6 +4,7 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Protocol, overload
 
 import attrs
+import wrapt
 
 from liblaf import grapes
 
@@ -47,7 +48,7 @@ def spec(
 
     info = SpecInfo(delegate=delegate, first_result=first_result)
 
-    @grapes.decorator(attrs={"_self_spec": info})
+    @wrapt.decorator
     def wrapper(
         wrapped: Callable, instance: Plugin, args: tuple, kwargs: dict[str, Any]
     ) -> Any:
@@ -57,15 +58,17 @@ def spec(
             )
         return wrapped(*args, **kwargs)
 
-    return wrapper(func)
+    proxy: Any = wrapper(func)  # pyright: ignore[reportCallIssue]
+    proxy._self_spec = info  # noqa: SLF001
+    return proxy
 
 
 def collect_specs(cls: type[Plugin] | Plugin) -> dict[str, SpecInfo]:
     if isinstance(cls, type):
         cls = type(cls)
     return {
-        name: method._self_spec  # noqa: SLF001
+        name: grapes.unbind_getattr(method, "_self_spec")
         for name, method in inspect.getmembers(
-            cls, lambda m: getattr(m, "_self_spec", None) is not None
+            cls, lambda m: grapes.unbind_getattr(m, "_self_spec", None) is not None
         )
     }
