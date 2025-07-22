@@ -59,7 +59,7 @@ def spec(
         return wrapped(*args, **kwargs)
 
     proxy: Any = wrapper(func)  # pyright: ignore[reportCallIssue]
-    proxy._self_spec = info  # noqa: SLF001
+    proxy._self_spec = SpecInfo(delegate=delegate, first_result=first_result)  # noqa: SLF001
     return proxy
 
 

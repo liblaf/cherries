@@ -1,4 +1,3 @@
-import inspect
 from collections.abc import Mapping, MutableMapping, Sequence
 from typing import Any, Self
 
@@ -6,7 +5,7 @@ import attrs
 import networkx as nx
 
 from ._impl import ImplInfo, get_impl_info
-from ._spec import SpecInfo
+from ._spec import SpecInfo, collect_specs
 from .typed import MethodName
 
 
@@ -33,15 +32,6 @@ class Plugin:
             return self
         return self._plugin_parent.plugin_root
 
-    @property
-    def specs(self) -> dict[str, SpecInfo]:
-        return {
-            name: method._self_spec  # noqa: SLF001
-            for name, method in inspect.getmembers(
-                type(self), lambda m: getattr(m, "_self_spec", None) is not None
-            )
-        }
-
     def delegate(
         self,
         method: MethodName,
@@ -65,7 +55,9 @@ class Plugin:
         self.plugins[plugin.plugin_id] = plugin
 
     def _prepare(self) -> None:
-        for method in self.specs:
+        specs: dict[str, SpecInfo] = collect_specs(self)
+        ic(specs)
+        for method in specs:
             self._sort_plugins_cache[method] = self._sort_plugins(
                 method, refresh_cache=True
             )

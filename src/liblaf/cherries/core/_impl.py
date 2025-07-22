@@ -57,4 +57,4 @@ def impl(
 def get_impl_info(func: Callable | None) -> ImplInfo | None:
     if func is None:
         return None
-    return grapes.unbind_getattr(func, "_self_impl")
+    return grapes.unbind_getattr(func, "_self_impl", None)

@@ -1,4 +1,4 @@
-from . import config, core, meta, paths
+from . import config, core, meta, paths, plugins
 from ._entrypoint import end, run, start
 from .config import BaseConfig, input, output  # noqa: A004
 from .core import Plugin, Run, active_run, log_asset, log_metrics
@@ -44,6 +44,7 @@ __all__ = [
     "params",
     "path",
     "paths",
+    "plugins",
     "run",
     "src",
     "start",
