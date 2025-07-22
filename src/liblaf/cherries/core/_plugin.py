@@ -56,7 +56,6 @@ class Plugin:
 
     def _prepare(self) -> None:
         specs: dict[str, SpecInfo] = collect_specs(self)
-        ic(specs)
         for method in specs:
             self._sort_plugins_cache[method] = self._sort_plugins(
                 method, refresh_cache=True

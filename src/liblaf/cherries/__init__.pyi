@@ -1,7 +1,24 @@
 from . import config, core, meta, paths, plugins
 from ._entrypoint import end, run, start
 from .config import BaseConfig, input, output  # noqa: A004
-from .core import Plugin, Run, active_run, log_asset, log_metrics
+from .core import (
+    Plugin,
+    Run,
+    active_run,
+    log_asset,
+    log_asset_data,
+    log_asset_folder,
+    log_input,
+    log_input_folder,
+    log_metric,
+    log_metrics,
+    log_other,
+    log_others,
+    log_output,
+    log_output_folder,
+    log_parameter,
+    log_parameters,
+)
 from .paths import (
     as_os_path,
     as_path,
@@ -37,7 +54,18 @@ __all__ = [
     "input",
     "inputs",
     "log_asset",
+    "log_asset_data",
+    "log_asset_folder",
+    "log_input",
+    "log_input_folder",
+    "log_metric",
     "log_metrics",
+    "log_other",
+    "log_others",
+    "log_output",
+    "log_output_folder",
+    "log_parameter",
+    "log_parameters",
     "meta",
     "output",
     "outputs",
