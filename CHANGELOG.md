@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.2](https://github.com/liblaf/cherries/compare/v0.2.1...v0.2.2) (2025-07-22)
+
+
+### ✨ Features
+
+* **core:** expand logging and monitoring capabilities ([8c14c94](https://github.com/liblaf/cherries/commit/8c14c940d4fb2ffb04963b445dab0dc57c690dd1))
+* **plugins:** add Comet integration ([fa8b046](https://github.com/liblaf/cherries/commit/fa8b046bb887b3f334d1106865651a539a1fbdd6))
+
+
+### 🐛 Bug Fixes
+
+* **plugins:** ensure proper execution order and compatibility ([3f2d50a](https://github.com/liblaf/cherries/commit/3f2d50a9e3348d197bb5ebf28ec2885d9cf6ee0b))
+
+
+### ♻ Code Refactoring
+
+* **core:** replace custom decorators with wrapt ([9c88ce3](https://github.com/liblaf/cherries/commit/9c88ce3bf956ec38e22ce274c6a159fc0d5c211d))
+
 ## [0.2.1](https://github.com/liblaf/cherries/compare/v0.2.0..v0.2.1) - 2025-07-18
 
 ### ⬆️ Dependencies
