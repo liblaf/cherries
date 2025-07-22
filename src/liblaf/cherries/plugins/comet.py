@@ -13,6 +13,11 @@ class Comet(core.Run):
         return self._exp
 
     @override
-    @core.impl
+    @core.impl(after=("Logging",))
+    def end(self, *args, **kwargs) -> None:
+        return self._exp.end()
+
+    @override
+    @core.impl(after=("Logging",))
     def start(self, *args, **kwargs) -> None:
         self._exp = comet_ml.start()

@@ -10,7 +10,8 @@ class Logging(core.Run):
     def start(self, *args, **kwargs) -> None:
         profile = grapes.logging.profiles.ProfileCherries(
             handlers=[
-                grapes.logging.rich_handler(),
+                # Comet and many other services do not support links
+                grapes.logging.rich_handler(enable_link=False),
                 grapes.logging.file_handler(sink=self.plugin_root.exp_dir / "run.log"),
             ]
         )
