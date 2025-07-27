@@ -2,6 +2,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, override
 
+import attrs
 import comet_ml
 import cytoolz as toolz
 
@@ -10,8 +11,9 @@ from liblaf.cherries import core, paths
 from liblaf.cherries.typed import PathLike
 
 
+@attrs.define
 class Comet(core.Run):
-    exp: comet_ml.CometExperiment
+    exp: comet_ml.CometExperiment = attrs.field(default=None)
 
     @override
     @core.impl(after=("Logging",))

@@ -8,3 +8,5 @@
 *.log.jsonl
 *.log.jsonl.gz
 *.py
+
+.cherries/

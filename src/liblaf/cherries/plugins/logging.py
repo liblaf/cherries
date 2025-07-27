@@ -1,9 +1,12 @@
 from typing import override
 
+import attrs
+
 from liblaf import grapes
 from liblaf.cherries import core
 
 
+@attrs.define
 class Logging(core.Run):
     @override
     @core.impl
