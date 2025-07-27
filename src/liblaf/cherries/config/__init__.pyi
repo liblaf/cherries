@@ -6,6 +6,7 @@ from ._asset import (
     get_inputs,
     get_outputs,
     input,  # noqa: A004
+    model_dump_without_assets,
     output,
 )
 from ._config import BaseConfig
@@ -19,5 +20,6 @@ __all__ = [
     "get_inputs",
     "get_outputs",
     "input",
+    "model_dump_without_assets",
     "output",
 ]

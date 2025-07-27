@@ -1,7 +1,7 @@
 import enum
 from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pydantic
 
@@ -64,6 +64,25 @@ def input(path: PathLike, extra: PathGenerator | None = None, **kwargs) -> Path:
     field_info: pydantic.fields.FieldInfo = pydantic.Field(paths.data(path), **kwargs)  # pyright: ignore[reportAssignmentType]
     field_info.metadata.append(MetaAsset(kind=AssetKind.INPUT, extra=extra))
     return field_info  # pyright: ignore[reportReturnType]
+
+
+def model_dump_without_assets(
+    model: pydantic.BaseModel,
+    *,
+    mode: str | Literal["json", "python"] = "json",  # noqa: PYI051
+    **kwargs,
+) -> dict[str, Any]:
+    data: dict[str, Any] = model.model_dump(mode=mode, **kwargs)
+    for name, info in type(model).model_fields.items():
+        value: Any = getattr(model, name)
+        if isinstance(value, pydantic.BaseModel):
+            value = model_dump_without_assets(value)
+        for meta in info.metadata:
+            if isinstance(meta, MetaAsset):
+                break
+        else:
+            data[name] = value
+    return data
 
 
 def output(path: PathLike, extra: PathGenerator | None = None, **kwargs) -> Path:

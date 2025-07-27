@@ -98,7 +98,14 @@ class Run(Plugin):
         self.delegate("log_asset", (path, name), {"metadata": metadata, **kwargs})
 
     @spec
-    def log_input(self, *args, **kwargs) -> None: ...
+    def log_input(
+        self,
+        path: PathLike,
+        name: PathLike | None = None,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+        **kwargs,
+    ) -> None: ...
 
     @spec
     def log_metric(
@@ -129,7 +136,14 @@ class Run(Plugin):
     def log_others(self, dictionary: Mapping[Any, Any], /, **kwargs) -> None: ...
 
     @spec
-    def log_output(self, *args, **kwargs) -> None: ...
+    def log_output(
+        self,
+        path: PathLike,
+        name: PathLike | None = None,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+        **kwargs,
+    ) -> None: ...
 
     @spec
     def log_parameter(

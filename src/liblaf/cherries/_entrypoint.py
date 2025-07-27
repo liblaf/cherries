@@ -24,7 +24,7 @@ def run[T](main: Callable[..., T], *, profile: profiles.ProfileLike | None = Non
         if isinstance(arg, pydantic.BaseModel)
     ]
     for config in configs:
-        run.log_parameters(config.model_dump(mode="json"))
+        run.log_parameters(_config.model_dump_without_assets(config, mode="json"))
         for path in _config.get_inputs(config):
             run.log_input(path)
     result: T = main(*args, **kwargs)
