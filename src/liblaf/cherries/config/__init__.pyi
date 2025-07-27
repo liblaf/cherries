@@ -1,7 +1,7 @@
 from ._asset import (
     AssetKind,
     MetaAsset,
-    PathProvider,
+    PathGenerator,
     get_assets,
     get_inputs,
     get_outputs,
@@ -14,7 +14,7 @@ __all__ = [
     "AssetKind",
     "BaseConfig",
     "MetaAsset",
-    "PathProvider",
+    "PathGenerator",
     "get_assets",
     "get_inputs",
     "get_outputs",

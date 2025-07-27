@@ -10,7 +10,7 @@ class Logging(core.Run):
     def start(self, *args, **kwargs) -> None:
         profile = grapes.logging.profiles.ProfileCherries(
             handlers=[
-                # Comet and many other services do not support links
+                # Comet and many other experiment tracking platforms do not support links
                 grapes.logging.rich_handler(enable_link=False),
                 grapes.logging.file_handler(sink=self.plugin_root.exp_dir / "run.log"),
             ]
@@ -20,7 +20,4 @@ class Logging(core.Run):
     @override
     @core.impl
     def end(self, *args, **kwargs) -> None:
-        if (self.plugin_root.exp_dir / "run.log").exists():
-            self.plugin_root.log_asset(self.plugin_root.exp_dir / "run.log")
-        if (self.plugin_root.exp_dir / "run.log.jsonl").exists():
-            self.plugin_root.log_asset(self.plugin_root.exp_dir / "run.log.jsonl")
+        self.plugin_root.log_asset(self.plugin_root.exp_dir / "run.log")

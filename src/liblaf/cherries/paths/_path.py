@@ -10,7 +10,7 @@ from liblaf.cherries import utils
 
 
 @utils.cache
-def entrypoint(*, absolute: bool = False) -> Path:
+def entrypoint(*, absolute: bool = True) -> Path:
     if absolute:
         return _entrypoint_absolute()
     return _entrypoint_relative()
@@ -33,7 +33,7 @@ def git_root_safe() -> Path:
 
 
 @utils.cache
-def exp_dir(*, absolute: bool = False) -> Path:
+def exp_dir(*, absolute: bool = True) -> Path:
     if absolute:
         return _exp_dir_absolute()
     return _exp_dir_relative()

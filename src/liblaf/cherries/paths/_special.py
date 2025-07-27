@@ -15,18 +15,6 @@ def data(path: PathLike = "", *, mkdir: bool = True, prefix: PathLike = "data") 
     return _path(path, mkdir=mkdir, prefix=prefix)
 
 
-def inputs(
-    path: PathLike = "", *, mkdir: bool = True, prefix: PathLike = "data/inputs"
-) -> Path:
-    return _path(path, mkdir=mkdir, prefix=prefix)
-
-
-def outputs(
-    path: PathLike = "", *, mkdir: bool = True, prefix: PathLike = "data/outputs"
-) -> Path:
-    return _path(path, mkdir=mkdir, prefix=prefix)
-
-
 def params(
     path: PathLike = "", *, mkdir: bool = True, prefix: PathLike = "params"
 ) -> Path:

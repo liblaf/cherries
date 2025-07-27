@@ -10,4 +10,5 @@ class ProfileDefault(ProfilePlayground):
     def init(self) -> core.Run:
         run: core.Run = super().init()
         run.register(plugins.Comet())
+        run.register(plugins.Dvc())
         return run

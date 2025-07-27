@@ -1,7 +1,11 @@
 import inspect
+import itertools
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
+import pydantic
+
+from liblaf.cherries import config as _config
 from liblaf.cherries import core, profiles
 
 
@@ -14,9 +18,19 @@ def run[T](main: Callable[..., T], *, profile: profiles.ProfileLike | None = Non
     args: Sequence[Any]
     kwargs: Mapping[str, Any]
     args, kwargs = _make_args(main)
-    # TODO: log config & inputs
+    configs: list[pydantic.BaseModel] = [
+        arg
+        for arg in itertools.chain(args, *kwargs.values())
+        if isinstance(arg, pydantic.BaseModel)
+    ]
+    for config in configs:
+        run.log_parameters(config.model_dump(mode="json"))
+        for path in _config.get_inputs(config):
+            run.log_input(path)
     result: T = main(*args, **kwargs)
-    # TODO: log outputs
+    for config in configs:
+        for path in _config.get_outputs(config):
+            run.log_output(path)
     run.end()
     return result
 
@@ -26,7 +40,9 @@ def start(
 ) -> core.Run:
     run: core.Run = profiles.factory(profile).init()
     run.start()
-    # TODO: log metadata
+    run.log_other("cherries.entrypoint", run.entrypoint.relative_to(run.root_dir))
+    run.log_other("cherries.exp_dir", run.exp_dir.relative_to(run.root_dir))
+    run.log_other("cherries.start_time", run.start_time)
     return run
 
 

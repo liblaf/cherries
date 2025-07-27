@@ -11,9 +11,9 @@ from .typed import MethodName
 
 @attrs.define
 class Plugin:
-    plugins: dict[str, "Plugin"] = attrs.field(factory=dict)
+    plugins: dict[str, "Plugin"] = attrs.field(factory=dict, kw_only=True)
 
-    _plugin_parent: Self | None = attrs.field(default=None)
+    _plugin_parent: Self | None = attrs.field(default=None, kw_only=True)
     _sort_plugins_cache: MutableMapping[MethodName, Sequence["Plugin"]] = attrs.field(
         factory=dict, init=False
     )
@@ -40,8 +40,13 @@ class Plugin:
         *,
         first_result: bool = False,
     ) -> Any:
+        plugins: Sequence[Plugin] = self._plugins_sort(method)
+        if not plugins:
+            if first_result:
+                return None
+            return []
         results: list[Any] = []
-        for plugin in self._sort_plugins_cache.get(method, []):
+        for plugin in plugins:
             result: Any = getattr(plugin, method)(*args, **kwargs)
             if result is None:
                 continue
@@ -54,14 +59,14 @@ class Plugin:
         plugin._plugin_parent = self  # noqa: SLF001
         self.plugins[plugin.plugin_id] = plugin
 
-    def _prepare(self) -> None:
+    def _plugins_prepare(self) -> None:
         specs: dict[str, SpecInfo] = collect_specs(self)
         for method in specs:
-            self._sort_plugins_cache[method] = self._sort_plugins(
+            self._sort_plugins_cache[method] = self._plugins_sort(
                 method, refresh_cache=True
             )
 
-    def _sort_plugins(
+    def _plugins_sort(
         self, method: str, *, refresh_cache: bool = False
     ) -> Sequence["Plugin"]:
         if refresh_cache or method not in self._sort_plugins_cache:

@@ -15,16 +15,16 @@ class AssetKind(enum.StrEnum):
     OUTPUT = enum.auto()
 
 
-type PathProvider = (
+type PathGenerator = (
     PathLike | Iterable[PathLike] | Callable[[PathLike], PathLike | Iterable[PathLike]]
 )
 
 
 class MetaAsset:
     kind: AssetKind
-    _extra: PathProvider | None = None
+    _extra: PathGenerator | None = None
 
-    def __init__(self, kind: AssetKind, extra: PathProvider | None = None) -> None:
+    def __init__(self, kind: AssetKind, extra: PathGenerator | None = None) -> None:
         self.kind = kind
         self._extra = extra
 
@@ -60,13 +60,13 @@ def get_outputs(cfg: pydantic.BaseModel) -> list[Path]:
     return get_assets(cfg, AssetKind.OUTPUT)
 
 
-def input(path: PathLike, extra: PathProvider | None = None, **kwargs) -> Path:  # noqa: A001
+def input(path: PathLike, extra: PathGenerator | None = None, **kwargs) -> Path:  # noqa: A001
     field_info: pydantic.fields.FieldInfo = pydantic.Field(paths.data(path), **kwargs)  # pyright: ignore[reportAssignmentType]
     field_info.metadata.append(MetaAsset(kind=AssetKind.INPUT, extra=extra))
     return field_info  # pyright: ignore[reportReturnType]
 
 
-def output(path: PathLike, extra: PathProvider | None = None, **kwargs) -> Path:
+def output(path: PathLike, extra: PathGenerator | None = None, **kwargs) -> Path:
     field_info: pydantic.fields.FieldInfo = pydantic.Field(paths.data(path), **kwargs)  # pyright: ignore[reportAssignmentType]
     field_info.metadata.append(MetaAsset(kind=AssetKind.OUTPUT, extra=extra))
     return field_info  # pyright: ignore[reportReturnType]

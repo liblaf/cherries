@@ -1,8 +1,13 @@
-from typing import override
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Any, override
 
 import comet_ml
+import cytoolz as toolz
 
-from liblaf.cherries import core
+from liblaf import grapes
+from liblaf.cherries import core, paths
+from liblaf.cherries.typed import PathLike
 
 
 class Comet(core.Run):
@@ -17,6 +22,40 @@ class Comet(core.Run):
     @core.impl
     def get_url(self) -> str:
         return self.exp.url  # pyright: ignore[reportReturnType]
+
+    @override
+    @core.impl(after=("Dvc",))
+    def log_asset(
+        self,
+        path: PathLike,
+        name: PathLike | None = None,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+        **kwargs,
+    ) -> None:
+        path = Path(path)
+        name = paths.as_posix(name)
+        dvc_file: Path = path.with_name(path.name + ".dvc")
+        if dvc_file.exists():
+            path = dvc_file
+            dvc_meta: Mapping[str, Any] = grapes.yaml.load(dvc_file)
+            metadata = toolz.merge(metadata or {}, dvc_meta["outs"][0])
+        self.exp.log_asset(path, name, metadata=metadata, **kwargs)  # pyright: ignore[reportArgumentType]
+
+    @override
+    @core.impl(after=("Dvc",))
+    def log_input(
+        self,
+        path: PathLike,
+        name: PathLike | None = None,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+        **kwargs,
+    ) -> None:
+        if name is None:
+            name = f"inputs/{Path(path).name}"
+        metadata = toolz.assoc(metadata or {}, "type", "input")
+        self.log_asset(path, name, metadata=metadata, **kwargs)
 
     @override
     @core.impl
@@ -39,6 +78,21 @@ class Comet(core.Run):
         return self.exp.log_others(*args, **kwargs)
 
     @override
+    @core.impl(after=("Dvc",))
+    def log_output(
+        self,
+        path: PathLike,
+        name: PathLike | None = None,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+        **kwargs,
+    ) -> None:
+        if name is None:
+            name = f"outputs/{Path(path).name}"
+        metadata = toolz.assoc(metadata or {}, "type", "output")
+        self.log_asset(path, name, metadata=metadata, **kwargs)
+
+    @override
     @core.impl
     def log_parameter(self, *args, **kwargs) -> None:
         return self.exp.log_parameter(*args, **kwargs)
@@ -51,4 +105,7 @@ class Comet(core.Run):
     @override
     @core.impl(after=("Logging",))
     def start(self, *args, **kwargs) -> None:
-        self.exp = comet_ml.start()
+        self.exp = comet_ml.start(
+            project_name=self.plugin_root.project_name,
+            experiment_config=comet_ml.ExperimentConfig(name=self.plugin_root.name),
+        )

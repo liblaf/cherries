@@ -8,11 +8,11 @@ from liblaf.cherries import paths
 from ._git import git_info
 
 
-def project_name() -> str:
+def project_name() -> str | None:
     try:
         info: grapes.git.GitInfo = git_info()
     except git.exc.InvalidGitRepositoryError:
-        return "Default"
+        return None
     else:
         return info.repo
 

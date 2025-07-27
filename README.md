@@ -1,29 +1,39 @@
-<div align="center" markdown><a name="readme-top"></a>
+<!-- -*- mode: markdown; -*- -->
 
-<img src="https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Cherries/3D/cherries_3d.png" style="height: 120px" />
-<img src="https://gw.alipayobjects.com/zos/kitchen/qJ3l3EPsdW/split.svg" style="height: 120px" />
-<img src="https://api.iconify.design/logos/python.svg" style="height: 120px; padding: 12px" />
+<div align="center" markdown>
+<a name="readme-top"></a>
+
+<img
+  height="160"
+  src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji/assets/Cherries/3D/cherries_3d.png"
+/>
 
 # Cherries
 
 TODO: DESCRIPTION <br />
 [**Explore the docs »**](https://liblaf.github.io/cherries/)
 
+<!-- tangerine-start: badges/python.md.jinja -->
+
+[![Codecov](https://img.shields.io/codecov/c/github/liblaf/cherries?logo=Codecov&label=Coverage)](https://codecov.io/gh/liblaf/cherries)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/liblaf/cherries/test.yaml?logo=GitHub%20Actions&label=Test)](https://github.com/liblaf/cherries/actions/workflows/test.yaml)
+[![Lines of Code](https://tokei.rs/b1/github.com/liblaf/cherries?category=code&label=Lines%20of%20Code&style=flat)](https://github.com/liblaf/cherries)
+<br />
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/liblaf-cherries?logo=PyPI&label=Downloads)](https://pypi.org/project/liblaf-cherries)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/liblaf-cherries?logo=Python&label=Python)](https://pypi.org/project/liblaf-cherries)
 [![PyPI - Version](https://img.shields.io/pypi/v/liblaf-cherries?logo=PyPI&label=PyPI)](https://pypi.org/project/liblaf-cherries)
-[![Codecov](https://img.shields.io/codecov/c/github/liblaf/cherries?logo=Codecov&label=Coverage)](https://codecov.io/gh/liblaf/cherries)
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/liblaf/cherries/test.yaml?logo=GitHub%20Actions&label=Test)](https://github.com/liblaf/cherries/actions/workflows/test.yaml)
 <br />
 [![GitHub Contributors](https://img.shields.io/github/contributors/liblaf/cherries?logo=GitHub&label=Contributors)](https://github.com/liblaf/cherries/graphs/contributors)
-[![GitHub Forks](https://img.shields.io/github/forks/liblaf/cherries)](https://github.com/liblaf/cherries/forks)
-[![GitHub Repo Stars](https://img.shields.io/github/stars/liblaf/cherries)](https://github.com/liblaf/cherries/stargazers)
 [![GitHub Issues](https://img.shields.io/github/issues/liblaf/cherries?logo=GitHub&label=Issues)](https://github.com/liblaf/cherries/issues)
 [![GitHub License](https://img.shields.io/github/license/liblaf/cherries?label=License)](https://github.com/liblaf/cherries/blob/main/LICENSE)
+[![GitHub Forks](https://img.shields.io/github/forks/liblaf/cherries)](https://github.com/liblaf/cherries/forks)
+[![GitHub Repo Stars](https://img.shields.io/github/stars/liblaf/cherries)](https://github.com/liblaf/cherries/stargazers)
+
+<!-- tangerine-end -->
 
 [Changelog](https://github.com/liblaf/cherries/blob/main/CHANGELOG.md) · [Report Bug](https://github.com/liblaf/cherries/issues) · [Request Feature](https://github.com/liblaf/cherries/issues)
 
-![](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
+![](https://cdn.jsdelivr.net/gh/andreasbm/readme/assets/lines/rainbow.png)
 
 </div>
 
@@ -62,7 +72,7 @@ Or clone it for local development:
 ```bash
 $ gh repo clone liblaf/cherries
 $ cd cherries
-$ just test
+$ mise run test
 ```
 
 <div align="right" markdown>
