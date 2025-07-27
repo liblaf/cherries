@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/liblaf/cherries/compare/v0.2.2...v0.3.0) (2025-07-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **core:** 
+
+### ✨ Features
+
+* **config:** add model_dump_without_assets function ([b30a407](https://github.com/liblaf/cherries/commit/b30a4072ad5bdc96da440124d1b5d22cce4a011c))
+* **core:** add DVC integration and refactor logging ([3737462](https://github.com/liblaf/cherries/commit/37374627fa3a1eb7327dc8d32f2a0a63ae8bf5bf))
+* **plugins:** add Local plugin for file operations ([08349a1](https://github.com/liblaf/cherries/commit/08349a19ebaa64f7058ffddf5a829fd505c1d931))
+
 ## [0.2.2](https://github.com/liblaf/cherries/compare/v0.2.1..v0.2.2) - 2025-07-22
 
 ### ✨ Features
