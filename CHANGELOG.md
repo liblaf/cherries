@@ -1,6 +1,18 @@
 # Changelog
 
-## [unreleased]
+## [0.3.1](https://github.com/liblaf/cherries/compare/v0.3.0..v0.3.1) - 2025-08-19
+
+### ✨ Features
+
+- **plugins, profiles:** Add Git plugin for auto-commit and enhance profile configuration - ([2ddea7a](https://github.com/liblaf/cherries/commit/2ddea7afc3329ddc44e0d421e489cfaeffb5f2f9))
+
+### ❤️ New Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@renovate[bot]](https://github.com/apps/renovate) made their first contribution in [#49](https://github.com/liblaf/cherries/pull/49)
+- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
+
+## [0.3.0](https://github.com/liblaf/cherries/compare/v0.2.2..v0.3.0) - 2025-07-28
 
 ### 💥 BREAKING CHANGES
 
