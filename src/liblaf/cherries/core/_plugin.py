@@ -75,18 +75,22 @@ class Plugin:
                 for plugin_id, plugin in self.plugins.items()
                 if (info := get_impl_info(getattr(plugin, method, None))) is not None
             }
+
+            def key_fn(node: str) -> int:
+                return plugin_infos[node].priority
+
             graph = nx.DiGraph()
             for plugin_id, impl_info in plugin_infos.items():
                 graph.add_node(plugin_id)
                 for after in impl_info.after:
-                    graph.add_edge(after, plugin_id)
+                    if after in plugin_infos:
+                        graph.add_edge(after, plugin_id)
                 for before in impl_info.before:
-                    graph.add_edge(plugin_id, before)
+                    if before in plugin_infos:
+                        graph.add_edge(plugin_id, before)
             self._sort_plugins_cache[method] = tuple(
                 plugin
-                for plugin_id in nx.lexicographical_topological_sort(
-                    graph, key=lambda node: plugin_infos[node].priority
-                )
+                for plugin_id in nx.lexicographical_topological_sort(graph, key=key_fn)
                 if (plugin := self.plugins.get(plugin_id)) is not None
             )
         return self._sort_plugins_cache[method]

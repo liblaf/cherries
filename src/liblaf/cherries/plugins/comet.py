@@ -13,12 +13,23 @@ from liblaf.cherries.typed import PathLike
 
 @attrs.define
 class Comet(core.Run):
+    disabled: bool = attrs.field(default=False)
     exp: comet_ml.CometExperiment = attrs.field(default=None)
 
     @override
     @core.impl(after=("Logging",))
     def end(self, *args, **kwargs) -> None:
         return self.exp.end()
+
+    @override
+    @core.impl
+    def get_others(self) -> Mapping[str, Any]:
+        return self.exp.others
+
+    @override
+    @core.impl
+    def get_params(self) -> Mapping[str, Any]:
+        return self.exp.params
 
     @override
     @core.impl
@@ -55,7 +66,8 @@ class Comet(core.Run):
         **kwargs,
     ) -> None:
         if name is None:
-            name = f"inputs/{Path(path).name}"
+            path = Path(path)
+            name = f"inputs/{path.name}"
         metadata = toolz.assoc(metadata or {}, "type", "input")
         self.log_asset(path, name, metadata=metadata, **kwargs)
 
@@ -90,7 +102,8 @@ class Comet(core.Run):
         **kwargs,
     ) -> None:
         if name is None:
-            name = f"outputs/{Path(path).name}"
+            path = Path(path)
+            name = f"outputs/{path.name}"
         metadata = toolz.assoc(metadata or {}, "type", "output")
         self.log_asset(path, name, metadata=metadata, **kwargs)
 
@@ -109,5 +122,7 @@ class Comet(core.Run):
     def start(self, *args, **kwargs) -> None:
         self.exp = comet_ml.start(
             project_name=self.plugin_root.project_name,
-            experiment_config=comet_ml.ExperimentConfig(name=self.plugin_root.name),
+            experiment_config=comet_ml.ExperimentConfig(
+                disabled=self.disabled, name=self.plugin_root.name
+            ),
         )

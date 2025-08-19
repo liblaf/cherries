@@ -9,6 +9,7 @@ class ProfilePlayground(Profile):
     @override  # impl Profile
     def init(self) -> core.Run:
         run: core.Run = core.active_run
+        run.register(plugins.Comet(disabled=True))
         run.register(plugins.Local())
         run.register(plugins.Logging())
         return run

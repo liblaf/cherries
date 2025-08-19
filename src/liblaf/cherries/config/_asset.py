@@ -79,6 +79,7 @@ def model_dump_without_assets(
             value = model_dump_without_assets(value)
         for meta in info.metadata:
             if isinstance(meta, MetaAsset):
+                del data[name]
                 break
         else:
             data[name] = value

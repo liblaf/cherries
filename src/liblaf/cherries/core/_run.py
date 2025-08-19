@@ -13,7 +13,6 @@ from liblaf.cherries.typed import PathLike
 
 from ._plugin import Plugin
 from ._spec import spec
-from ._utils import delegate_property_to_root
 
 
 @attrs.define
@@ -27,28 +26,39 @@ class Run(Plugin):
     """
 
     @functools.cached_property
-    @delegate_property_to_root
     def data_dir(self) -> Path:
+        if self._plugin_parent is not None:
+            return self.plugin_root.data_dir
         return paths.data()
 
     @functools.cached_property
-    @delegate_property_to_root
     def entrypoint(self) -> Path:
+        if self._plugin_parent is not None:
+            return self.plugin_root.entrypoint
         return paths.entrypoint()
 
     @functools.cached_property
-    @delegate_property_to_root
     def exp_dir(self) -> Path:
+        if self._plugin_parent is not None:
+            return self.plugin_root.exp_dir
         return paths.exp_dir()
 
     @functools.cached_property
-    @delegate_property_to_root
     def name(self) -> str:
+        if self._plugin_parent is not None:
+            return self.plugin_root.name
         return self.start_time.strftime("%Y-%m-%dT%H%M%S")
 
+    @property
+    def params(self) -> Mapping[str, Any]:
+        if self._plugin_parent is not None:
+            return self.plugin_root.params
+        return self.get_params()
+
     @functools.cached_property
-    @delegate_property_to_root
     def project_name(self) -> str | None:
+        if self._plugin_parent is not None:
+            return self.plugin_root.project_name
         try:
             repo: git.Repo = git.Repo(search_parent_directories=True)
         except git.InvalidGitRepositoryError:
@@ -57,8 +67,9 @@ class Run(Plugin):
             return Path(repo.working_dir).name
 
     @functools.cached_property
-    @delegate_property_to_root
     def root_dir(self) -> Path:
+        if self._plugin_parent is not None:
+            return self.plugin_root.root_dir
         try:
             repo: git.Repo = git.Repo(search_parent_directories=True)
         except git.InvalidGitRepositoryError:
@@ -67,17 +78,25 @@ class Run(Plugin):
             return Path(repo.working_dir).absolute()
 
     @functools.cached_property
-    @delegate_property_to_root
     def start_time(self) -> datetime.datetime:
+        if self._plugin_parent is not None:
+            return self.plugin_root.start_time
         return datetime.datetime.now().astimezone()
 
     @functools.cached_property
-    @delegate_property_to_root
     def url(self) -> str:
+        if self._plugin_parent is not None:
+            return self.plugin_root.url
         return self.get_url()
 
     @spec
     def end(self, *args, **kwargs) -> None: ...
+
+    @spec(first_result=True)
+    def get_others(self) -> Mapping[str, Any]: ...
+
+    @spec(first_result=True)
+    def get_params(self) -> Mapping[str, Any]: ...
 
     @spec(first_result=True)
     def get_url(self) -> str: ...

@@ -1,3 +1,10 @@
+# -*- mode: ini; -*-
+# ref: <https://dvc.org/doc/user-guide/project-structure/configuration>
+
 [core]
-    autostage = true
-    analytics = false
+remote = ssh
+analytics = false
+autostage = true
+
+['remote "ssh"']
+url = ssh://dvc.liblaf.me:56499/cherries
