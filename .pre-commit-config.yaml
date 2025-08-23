@@ -24,22 +24,26 @@ repos:
     rev: v2.2.0
     hooks:
       - id: biome-check
-        exclude_types:
-          - json
-          - json5
+        exclude: \.jsonc?$
   - repo: https://github.com/iterative/dvc
     rev: 3.62.0
     hooks:
       - id: dvc-pre-commit
         stages:
           - pre-commit
+        additional_dependencies:
+          - .[all]
       - id: dvc-pre-push
         stages:
           - pre-push
+        additional_dependencies:
+          - .[all]
       - id: dvc-post-checkout
         always_run: true
         stages:
           - post-checkout
+        additional_dependencies:
+          - .[all]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -58,6 +62,8 @@ repos:
     rev: v0.11.0.1
     hooks:
       - id: shellcheck
+        args:
+          - --exclude=SC1091
 
 default_install_hook_types:
   - post-checkout

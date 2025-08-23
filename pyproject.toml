@@ -93,23 +93,30 @@ ignore = ["W002"]
 
 [tool.coverage.run]
 branch = true
-source = ["src/"]
+source = ["src"]
 
 [tool.hatch.build.hooks.vcs]
 version-file = "src/liblaf/cherries/_version.py"
 
 [tool.hatch.build.targets.sdist]
-only-include = ["src/"]
+only-include = ["src"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/liblaf/"]
+packages = ["src/liblaf"]
 
 [tool.hatch.version]
 source = "vcs"
 
+[tool.pyright]
+exclude = ["**/.*", "**/__pycache__", "**/marimo", "**/node_modules"]
+extends = ".config/linters/pyrightconfig.json"
+
 [tool.pytest.ini_options]
 addopts = ["--showlocals", "--strict-config", "--strict-markers"]
-testpaths = ["benches/", "tests/"]
+testpaths = ["benches", "tests"]
+
+[tool.ruff]
+extend = ".config/linters/.ruff.toml"
 
 [tool.uv]
 default-groups = "all"
