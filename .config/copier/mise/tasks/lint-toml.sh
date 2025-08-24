@@ -25,7 +25,7 @@ function pretty-toml() {
   fi
 }
 
-pretty-toml .ruff.toml pyproject.toml
+pretty-toml '.ruff.toml' 'pyproject.toml'
 
 if has tombi; then
   tombi lint
