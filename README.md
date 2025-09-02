@@ -52,7 +52,7 @@ TODO: DESCRIPTION <br />
 To install `liblaf-cherries`, run the following command:
 
 ```bash
-$ uv add liblaf-cherries
+uv add liblaf-cherries
 ```
 
 <div align="right" markdown>
@@ -70,9 +70,9 @@ You can use Github Codespaces for online development:
 Or clone it for local development:
 
 ```bash
-$ gh repo clone liblaf/cherries
-$ cd cherries
-$ mise run test
+gh repo clone liblaf/cherries
+cd cherries
+mise run test
 ```
 
 <div align="right" markdown>
