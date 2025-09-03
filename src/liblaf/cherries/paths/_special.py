@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from liblaf.grapes.typed import PathLike
+from liblaf.grapes.typing import PathLike
 
 from ._path import exp_dir
 
