@@ -1,16 +1,21 @@
 # Changelog
 
-## [0.4.0](https://github.com/liblaf/cherries/compare/v0.3.1..v0.4.0) - 2025-08-25
+## [0.4.1](https://github.com/liblaf/cherries/compare/v0.4.0..v0.4.1) - 2025-09-04
 
-### 💥 BREAKING CHANGES
+### 🐛 Bug Fixes
 
-- trigger release - ([8c55deb](https://github.com/liblaf/cherries/commit/8c55deb6b5472c35d6e02c61b7ebbb077e95380a))
+- trigger release - ([c885239](https://github.com/liblaf/cherries/commit/c8852398ad82bd1147b228a35e465743c4d3f10c))
 
 ### ❤️ New Contributors
 
 - [@liblaf](https://github.com/liblaf) made their first contribution
 - [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
-- [@renovate[bot]](https://github.com/apps/renovate) made their first contribution in [#52](https://github.com/liblaf/cherries/pull/52)
+
+## [0.4.0](https://github.com/liblaf/cherries/compare/v0.3.1..v0.4.0) - 2025-08-25
+
+### 💥 BREAKING CHANGES
+
+- trigger release - ([8c55deb](https://github.com/liblaf/cherries/commit/8c55deb6b5472c35d6e02c61b7ebbb077e95380a))
 
 ## [0.3.1](https://github.com/liblaf/cherries/compare/v0.3.0..v0.3.1) - 2025-08-19
 
