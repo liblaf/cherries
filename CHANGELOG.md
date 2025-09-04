@@ -1,15 +1,20 @@
 # Changelog
 
+## [0.4.2](https://github.com/liblaf/cherries/compare/v0.4.1..v0.4.2) - 2025-09-04
+
+### 🐛 Bug Fixes
+
+- update scripts to pass arguments correctly and improve CI workflow - ([fb7de6f](https://github.com/liblaf/cherries/commit/fb7de6f72e3a61bb8e2b5f2508be4a5213891958))
+
+### ❤️ New Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+
 ## [0.4.1](https://github.com/liblaf/cherries/compare/v0.4.0..v0.4.1) - 2025-09-04
 
 ### 🐛 Bug Fixes
 
 - trigger release - ([c885239](https://github.com/liblaf/cherries/commit/c8852398ad82bd1147b228a35e465743c4d3f10c))
-
-### ❤️ New Contributors
-
-- [@liblaf](https://github.com/liblaf) made their first contribution
-- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
 
 ## [0.4.0](https://github.com/liblaf/cherries/compare/v0.3.1..v0.4.0) - 2025-08-25
 
