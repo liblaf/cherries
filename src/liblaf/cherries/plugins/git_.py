@@ -23,6 +23,7 @@ class Git(core.Run):
     inputs: list[Path] = attrs.field(factory=list)
     outputs: list[Path] = attrs.field(factory=list)
     repo: git.Repo = attrs.field(default=None)
+    verify: bool = False
 
     @override
     @core.impl(after=("Dvc",))
@@ -32,7 +33,7 @@ class Git(core.Run):
         self.repo.git.add(all=True)
         subprocess.run(["git", "status"], check=False)
         message: str = self._make_commit_message()
-        self.repo.git.commit(message=message)
+        self.repo.git.commit(message=message, no_verify=not self.verify)
 
     @override
     @core.impl
