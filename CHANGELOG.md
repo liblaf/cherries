@@ -1,15 +1,29 @@
 # Changelog
 
-## [0.4.1](https://github.com/liblaf/cherries/compare/v0.4.0..v0.4.1) - 2025-09-04
+## [0.4.2](https://github.com/liblaf/cherries/compare/v0.4.1..v0.4.2) - 2025-09-15
 
 ### 🐛 Bug Fixes
 
-- trigger release - ([c885239](https://github.com/liblaf/cherries/commit/c8852398ad82bd1147b228a35e465743c4d3f10c))
+- update scripts to pass arguments correctly and improve CI workflow - ([fb7de6f](https://github.com/liblaf/cherries/commit/fb7de6f72e3a61bb8e2b5f2508be4a5213891958))
+
+### 📝 Documentation
+
+- update project documentation and metadata - ([7d5454c](https://github.com/liblaf/cherries/commit/7d5454c4495002c025c1b7f284a9f86b54f27d14))
+
+### ♻ Code Refactoring
+
+- **plugins/logging:** simplify logging initialization and update grapes dependency - ([ec1f5ee](https://github.com/liblaf/cherries/commit/ec1f5ee0e1117ad68c8b3d14b52ca3ad54fbfe56))
 
 ### ❤️ New Contributors
 
 - [@liblaf](https://github.com/liblaf) made their first contribution
 - [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
+
+## [0.4.1](https://github.com/liblaf/cherries/compare/v0.4.0..v0.4.1) - 2025-09-04
+
+### 🐛 Bug Fixes
+
+- trigger release - ([c885239](https://github.com/liblaf/cherries/commit/c8852398ad82bd1147b228a35e465743c4d3f10c))
 
 ## [0.4.0](https://github.com/liblaf/cherries/compare/v0.3.1..v0.4.0) - 2025-08-25
 
