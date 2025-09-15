@@ -39,11 +39,11 @@ dependencies = [
   "environs>=14,<15",
   "gitpython>=3,<4",
   "lazy-loader>=0.4,<0.5",
-  "liblaf-grapes>=2,<3",
+  "liblaf-grapes>=4,<5",
   "loguru>=0.7,<0.8",
   "networkx>=3,<4",
-  "pydantic-settings>=2,<3",
   "pydantic>=2,<3",
+  "pydantic-settings>=2,<3",
   "rich>=14,<15",
   "wrapt>=1,<2",
 ]

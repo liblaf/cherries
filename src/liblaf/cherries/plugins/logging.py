@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import override
 
 import attrs
@@ -8,19 +9,16 @@ from liblaf.cherries import core
 
 @attrs.define
 class Logging(core.Run):
+    @property
+    def log_file(self) -> Path:
+        return self.plugin_root.exp_dir / "run.log"
+
     @override
     @core.impl
     def start(self, *args, **kwargs) -> None:
-        profile = grapes.logging.profiles.ProfileCherries(
-            handlers=[
-                # Comet and many other experiment tracking platforms do not support links
-                grapes.logging.rich_handler(enable_link=False),
-                grapes.logging.file_handler(sink=self.plugin_root.exp_dir / "run.log"),
-            ]
-        )
-        grapes.logging.init(profile=profile)
+        grapes.logging.init(enable_link=False, file=self.log_file)
 
     @override
     @core.impl
     def end(self, *args, **kwargs) -> None:
-        self.plugin_root.log_asset(self.plugin_root.exp_dir / "run.log")
+        self.plugin_root.log_asset(self.log_file)
