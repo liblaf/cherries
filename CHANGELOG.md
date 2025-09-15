@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/liblaf/cherries/compare/v0.4.2...v0.4.3) (2025-09-15)
+
+
+### ✨ Features
+
+* **git:** add option to skip git hooks during auto-commit ([7ab310e](https://github.com/liblaf/cherries/commit/7ab310e17b9697180de29b34abd847b16c21c66b))
+
 ## [0.4.2](https://github.com/liblaf/cherries/compare/v0.4.1..v0.4.2) - 2025-09-15
 
 ### 🐛 Bug Fixes
