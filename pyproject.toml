@@ -3,7 +3,7 @@
 
 [project]
 name = "liblaf-cherries"
-description = ""
+description = "🍒 Sweet experiment tracking with Comet, DVC, and Git integration."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -87,17 +87,16 @@ packages = ["src/liblaf"]
 source = "vcs"
 
 [tool.pyright]
-exclude = ["**/.*", "**/__pycache__", "**/marimo", "**/node_modules"]
 extends = ".config/linters/pyrightconfig.json"
 
 [tool.pytest.ini_options]
 addopts = [
   "--doctest-modules",
   "--hypothesis-show-statistics",
+  "--import-mode=importlib",
   "--showlocals",
   "--strict-config",
   "--strict-markers",
-  "--suppress-no-test-exit-code",
 ]
 testpaths = ["benches", "src", "tests"]
 
