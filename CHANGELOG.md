@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.3](https://github.com/liblaf/cherries/compare/v0.4.2..v0.4.3) - 2025-09-15
+
+### ✨ Features
+
+- **git:** add option to skip git hooks during auto-commit - ([7ab310e](https://github.com/liblaf/cherries/commit/7ab310e17b9697180de29b34abd847b16c21c66b))
+
+### ❤️ New Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+
 ## [0.4.2](https://github.com/liblaf/cherries/compare/v0.4.1..v0.4.2) - 2025-09-15
 
 ### 🐛 Bug Fixes
@@ -13,11 +23,6 @@
 ### ♻ Code Refactoring
 
 - **plugins/logging:** simplify logging initialization and update grapes dependency - ([ec1f5ee](https://github.com/liblaf/cherries/commit/ec1f5ee0e1117ad68c8b3d14b52ca3ad54fbfe56))
-
-### ❤️ New Contributors
-
-- [@liblaf](https://github.com/liblaf) made their first contribution
-- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
 
 ## [0.4.1](https://github.com/liblaf/cherries/compare/v0.4.0..v0.4.1) - 2025-09-04
 
