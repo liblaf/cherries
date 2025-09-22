@@ -6,16 +6,10 @@ from typing import Any, override
 
 import attrs
 import git
-import msgspec
 
+from liblaf import grapes
 from liblaf.cherries import core
 from liblaf.cherries.typed import PathLike
-
-
-def enc_hook(obj: Any) -> Any:
-    if isinstance(obj, Path):
-        return str(obj)
-    raise NotImplementedError
 
 
 @attrs.define
@@ -39,7 +33,7 @@ class Git(core.Run):
     @core.impl
     def log_input(self, path: PathLike, *args, **kwargs) -> None:
         path: Path = Path(path)
-        self.inputs.append(path.relative_to(self.repo.working_dir))
+        self.inputs.append(path.relative_to(self.project_dir))
 
     @override
     @core.impl
@@ -50,12 +44,12 @@ class Git(core.Run):
         **kwargs,
     ) -> None:
         path: Path = Path(path)
-        self.outputs.append(path.relative_to(self.repo.working_dir))
+        self.outputs.append(path.relative_to(self.project_dir))
 
     @override
     @core.impl
     def start(self, *args, **kwargs) -> None:
-        self.repo = git.Repo(self.plugin_root.exp_dir, search_parent_directories=True)
+        self.repo = git.Repo(self.project_dir, search_parent_directories=True)
 
     def _make_commit_message(self) -> str:
         name: str = self.plugin_root.name
@@ -70,5 +64,5 @@ class Git(core.Run):
             metadata["inputs"] = inputs
         if outputs := self.outputs:
             metadata["outputs"] = outputs
-        message += msgspec.yaml.encode(metadata, enc_hook=enc_hook).decode()
+        message += grapes.yaml.encode(metadata).decode()
         return message

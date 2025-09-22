@@ -6,9 +6,8 @@ from pathlib import Path
 from typing import Any
 
 import attrs
-import git
 
-from liblaf.cherries import paths
+from liblaf.cherries import pathutils
 from liblaf.cherries.typed import PathLike
 
 from ._plugin import Plugin
@@ -29,19 +28,19 @@ class Run(Plugin):
     def data_dir(self) -> Path:
         if self._plugin_parent is not None:
             return self.plugin_root.data_dir
-        return paths.data()
+        return pathutils.data()
 
     @functools.cached_property
     def entrypoint(self) -> Path:
         if self._plugin_parent is not None:
             return self.plugin_root.entrypoint
-        return paths.entrypoint()
+        return pathutils.entrypoint()
 
     @functools.cached_property
     def exp_dir(self) -> Path:
         if self._plugin_parent is not None:
             return self.plugin_root.exp_dir
-        return paths.exp_dir()
+        return pathutils.exp_dir()
 
     @functools.cached_property
     def name(self) -> str:
@@ -59,23 +58,13 @@ class Run(Plugin):
     def project_name(self) -> str | None:
         if self._plugin_parent is not None:
             return self.plugin_root.project_name
-        try:
-            repo: git.Repo = git.Repo(search_parent_directories=True)
-        except git.InvalidGitRepositoryError:
-            return None
-        else:
-            return Path(repo.working_dir).name
+        return self.project_dir.name
 
     @functools.cached_property
-    def root_dir(self) -> Path:
+    def project_dir(self) -> Path:
         if self._plugin_parent is not None:
-            return self.plugin_root.root_dir
-        try:
-            repo: git.Repo = git.Repo(search_parent_directories=True)
-        except git.InvalidGitRepositoryError:
-            return self.entrypoint.parent
-        else:
-            return Path(repo.working_dir).absolute()
+            return self.plugin_root.project_dir
+        return pathutils.project_dir()
 
     @functools.cached_property
     def start_time(self) -> datetime.datetime:

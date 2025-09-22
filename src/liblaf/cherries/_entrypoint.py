@@ -40,8 +40,8 @@ def start(
 ) -> core.Run:
     run: core.Run = profiles.factory(profile).init()
     run.start()
-    run.log_other("cherries.entrypoint", run.entrypoint.relative_to(run.root_dir))
-    run.log_other("cherries.exp_dir", run.exp_dir.relative_to(run.root_dir))
+    run.log_other("cherries.entrypoint", run.entrypoint.relative_to(run.project_dir))
+    run.log_other("cherries.exp_dir", run.exp_dir.relative_to(run.project_dir))
     run.log_other("cherries.start_time", run.start_time)
     return run
 

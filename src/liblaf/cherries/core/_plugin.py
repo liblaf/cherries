@@ -1,4 +1,4 @@
-from collections.abc import Mapping, MutableMapping, Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, Self
 
 import attrs
@@ -6,15 +6,15 @@ import networkx as nx
 
 from ._impl import ImplInfo, get_impl_info
 from ._spec import SpecInfo, collect_specs
-from .typed import MethodName
+from .typed import MethodName, PluginId
 
 
 @attrs.define
 class Plugin:
-    plugins: dict[str, "Plugin"] = attrs.field(factory=dict, kw_only=True)
+    plugins: dict[PluginId, "Plugin"] = attrs.field(factory=dict, kw_only=True)
 
     _plugin_parent: Self | None = attrs.field(default=None, kw_only=True)
-    _sort_plugins_cache: MutableMapping[MethodName, Sequence["Plugin"]] = attrs.field(
+    _sort_plugins_cache: dict[MethodName, Sequence["Plugin"]] = attrs.field(
         factory=dict, init=False
     )
 

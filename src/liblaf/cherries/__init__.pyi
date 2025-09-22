@@ -1,4 +1,4 @@
-from . import config, core, meta, paths, plugins
+from . import config, core, meta, pathutils, plugins
 from ._entrypoint import end, run, start
 from .config import BaseConfig, input, output  # noqa: A004
 from .core import (
@@ -15,17 +15,16 @@ from .core import (
     log_parameter,
     log_parameters,
 )
-from .paths import (
+from .pathutils import (
     as_os_path,
     as_path,
     as_posix,
     data,
     entrypoint,
     exp_dir,
-    git_root,
-    git_root_safe,
     params,
     path,
+    project_dir,
     src,
 )
 
@@ -43,8 +42,6 @@ __all__ = [
     "end",
     "entrypoint",
     "exp_dir",
-    "git_root",
-    "git_root_safe",
     "input",
     "log_asset",
     "log_input",
@@ -59,8 +56,9 @@ __all__ = [
     "output",
     "params",
     "path",
-    "paths",
+    "pathutils",
     "plugins",
+    "project_dir",
     "run",
     "src",
     "start",

@@ -5,9 +5,11 @@ from typing import Any, override
 import attrs
 import comet_ml
 import cytoolz as toolz
+import dvc.api
+import dvc.exceptions
 
 from liblaf import grapes
-from liblaf.cherries import core, paths
+from liblaf.cherries import core, pathutils
 from liblaf.cherries.typed import PathLike
 
 
@@ -47,13 +49,16 @@ class Comet(core.Run):
         **kwargs,
     ) -> None:
         path = Path(path)
-        name = paths.as_posix(name)
-        dvc_file: Path = path.with_name(path.name + ".dvc")
-        if dvc_file.exists():
-            path = dvc_file
+        name = pathutils.as_posix(name)
+        try:
+            uri: str = dvc.api.get_url(str(path))
+        except dvc.exceptions.DvcException:
+            self.exp.log_asset(path, name, metadata=metadata, **kwargs)  # pyright: ignore[reportArgumentType]
+        else:
+            dvc_file: Path = path.with_name(path.name + ".dvc")
             dvc_meta: Mapping[str, Any] = grapes.yaml.load(dvc_file)
             metadata = toolz.merge(metadata or {}, dvc_meta["outs"][0])
-        self.exp.log_asset(path, name, metadata=metadata, **kwargs)  # pyright: ignore[reportArgumentType]
+            self.exp.log_remote_asset(uri, name, metadata=metadata, **kwargs)  # pyright: ignore[reportArgumentType]
 
     @override
     @core.impl(after=("Dvc",))

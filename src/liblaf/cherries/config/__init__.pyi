@@ -8,6 +8,7 @@ from ._asset import (
     input,  # noqa: A004
     model_dump_without_assets,
     output,
+    path_generators,
 )
 from ._config import BaseConfig
 
@@ -22,4 +23,5 @@ __all__ = [
     "input",
     "model_dump_without_assets",
     "output",
+    "path_generators",
 ]

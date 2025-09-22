@@ -6,7 +6,7 @@ from typing import Any, Literal
 import pydantic
 
 from liblaf import grapes
-from liblaf.cherries import paths
+from liblaf.cherries import pathutils
 from liblaf.cherries.typed import PathLike
 
 
@@ -20,6 +20,21 @@ type PathGenerator = (
 )
 
 
+path_generators: dict[str, PathGenerator] = {}
+
+
+def _path_generator_series(path: PathLike) -> list[Path]:
+    path = Path(path)
+    if (folder := path.with_suffix(".d")).exists():
+        return [folder]
+    if (folder := path.with_suffix("")).exists():
+        return [folder]
+    return []
+
+
+path_generators[".series"] = _path_generator_series
+
+
 class MetaAsset:
     kind: AssetKind
     _extra: PathGenerator | None = None
@@ -29,13 +44,25 @@ class MetaAsset:
         self._extra = extra
 
     def get_extra(self, value: Path) -> list[Path]:
-        if self._extra is None:
+        extra: PathGenerator | None = self._extra
+        if extra is None:
+            extra = path_generators.get(value.suffix)
+        if extra is None:
             return []
-        if callable(self._extra):
-            extra: Iterable[PathLike] = grapes.as_iterable(self._extra(value))
-            return [Path(p) for p in extra]
-        extra: Iterable[PathLike] = grapes.as_iterable(self._extra)
+        if callable(extra):
+            extra = extra(value)
+        extra = grapes.as_iterable(extra)
         return [Path(p) for p in extra]
+
+
+def asset(
+    path: PathLike, extra: PathGenerator | None = None, *, kind: AssetKind, **kwargs
+) -> Path:
+    field_info: pydantic.fields.FieldInfo = pydantic.Field(
+        pathutils.data(path), **kwargs
+    )  # pyright: ignore[reportAssignmentType]
+    field_info.metadata.append(MetaAsset(kind=kind, extra=extra))
+    return field_info  # pyright: ignore[reportReturnType]
 
 
 def get_assets(cfg: pydantic.BaseModel, kind: AssetKind) -> list[Path]:
@@ -61,9 +88,7 @@ def get_outputs(cfg: pydantic.BaseModel) -> list[Path]:
 
 
 def input(path: PathLike, extra: PathGenerator | None = None, **kwargs) -> Path:  # noqa: A001
-    field_info: pydantic.fields.FieldInfo = pydantic.Field(paths.data(path), **kwargs)  # pyright: ignore[reportAssignmentType]
-    field_info.metadata.append(MetaAsset(kind=AssetKind.INPUT, extra=extra))
-    return field_info  # pyright: ignore[reportReturnType]
+    return asset(path, extra=extra, kind=AssetKind.INPUT, **kwargs)
 
 
 def model_dump_without_assets(
@@ -87,6 +112,4 @@ def model_dump_without_assets(
 
 
 def output(path: PathLike, extra: PathGenerator | None = None, **kwargs) -> Path:
-    field_info: pydantic.fields.FieldInfo = pydantic.Field(paths.data(path), **kwargs)  # pyright: ignore[reportAssignmentType]
-    field_info.metadata.append(MetaAsset(kind=AssetKind.OUTPUT, extra=extra))
-    return field_info  # pyright: ignore[reportReturnType]
+    return asset(path, extra=extra, kind=AssetKind.OUTPUT, **kwargs)

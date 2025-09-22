@@ -54,8 +54,8 @@ class Local(core.Run):
     @override
     @core.impl
     def start(self, *args, **kwargs) -> None:
-        self.folder = self.plugin_root.exp_dir / ".cherries" / self.plugin_root.name
-        entrypoint: Path = self.plugin_root.entrypoint
+        self.folder = self.exp_dir / ".cherries" / self.name
+        entrypoint: Path = self.entrypoint
         self.log_asset(entrypoint, f"src/{entrypoint.name}")
 
     def _copy(self, source: PathLike, target: PathLike) -> None:

@@ -1,5 +1,5 @@
 from ._convert import as_os_path, as_path, as_posix
-from ._path import entrypoint, exp_dir, git_root, git_root_safe
+from ._path import entrypoint, exp_dir, project_dir
 from ._special import config, data, params, path, src
 
 __all__ = [
@@ -10,9 +10,8 @@ __all__ = [
     "data",
     "entrypoint",
     "exp_dir",
-    "git_root",
-    "git_root_safe",
     "params",
     "path",
+    "project_dir",
     "src",
 ]
