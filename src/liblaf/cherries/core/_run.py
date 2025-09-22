@@ -8,7 +8,7 @@ from typing import Any
 import attrs
 
 from liblaf.cherries import pathutils
-from liblaf.cherries.typed import PathLike
+from liblaf.cherries.typing import PathLike
 
 from ._plugin import Plugin
 from ._spec import spec

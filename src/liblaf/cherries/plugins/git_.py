@@ -9,7 +9,7 @@ import git
 
 from liblaf import grapes
 from liblaf.cherries import core
-from liblaf.cherries.typed import PathLike
+from liblaf.cherries.typing import PathLike
 
 
 @attrs.define

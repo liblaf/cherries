@@ -7,7 +7,7 @@ import pydantic
 
 from liblaf import grapes
 from liblaf.cherries import pathutils
-from liblaf.cherries.typed import PathLike
+from liblaf.cherries.typing import PathLike
 
 
 class AssetKind(enum.StrEnum):

@@ -5,7 +5,7 @@ from typing import override
 import attrs
 
 from liblaf.cherries import core
-from liblaf.cherries.typed import PathLike
+from liblaf.cherries.typing import PathLike
 
 
 @attrs.define

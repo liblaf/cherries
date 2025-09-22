@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import overload
 
-from liblaf.cherries.typed import PathLike
+from liblaf.cherries.typing import PathLike
 
 
 @overload
