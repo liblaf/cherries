@@ -51,8 +51,10 @@ class Comet(core.Run):
         path = Path(path)
         name = pathutils.as_posix(name)
         try:
-            uri: str = dvc.api.get_url(str(path))
-        except dvc.exceptions.DvcException:
+            # ? I don't know why, but `dvc.api.get_url` only works with this. Maybe a DVC bug?
+            dvc_path: Path = path.absolute().relative_to(Path.cwd())
+            uri: str = dvc.api.get_url(str(dvc_path))
+        except dvc.exceptions.OutputNotFoundError:
             self.exp.log_asset(path, name, metadata=metadata, **kwargs)  # pyright: ignore[reportArgumentType]
         else:
             dvc_file: Path = path.with_name(path.name + ".dvc")
