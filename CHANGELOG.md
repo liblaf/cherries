@@ -1,31 +1,29 @@
 # Changelog
 
-## [0.5.0](https://github.com/liblaf/cherries/compare/v0.4.3...v0.5.0) (2025-09-22)
+## [0.5.0](https://github.com/liblaf/cherries/compare/v0.4.3..v0.5.0) - 2025-09-22
 
+### 💥 BREAKING CHANGES
 
-### ⚠ BREAKING CHANGES
-
-* The `paths` module has been renamed to `pathutils` and `git_root`/`git_root_safe` functions have been removed. Update imports from `liblaf.cherries.paths` to `liblaf.cherries.pathutils` and use `project_dir` instead of `git_root`.
+- reorganize path utilities and enhance plugin integrations - ([76faff3](https://github.com/liblaf/cherries/commit/76faff39252277c38035882dc06949e9d5f003e1))
 
 ### 🐛 Bug Fixes
 
-* **plugins/comet:** correctly handle DVC asset paths in Comet integration ([16358b0](https://github.com/liblaf/cherries/commit/16358b0e0a46ebd0411b49ff123761be6ab215cc))
+- **plugins/comet:** correctly handle DVC asset paths in Comet integration - ([16358b0](https://github.com/liblaf/cherries/commit/16358b0e0a46ebd0411b49ff123761be6ab215cc))
 
+### ♻ Code Refactoring
 
-### ♻️ Code Refactoring
-
-* centralize type definitions in typing module ([6555f95](https://github.com/liblaf/cherries/commit/6555f95f81fdd9a6064fd647c170b5d1b769df81))
-* reorganize path utilities and enhance plugin integrations ([76faff3](https://github.com/liblaf/cherries/commit/76faff39252277c38035882dc06949e9d5f003e1))
-
-## [0.4.3](https://github.com/liblaf/cherries/compare/v0.4.2..v0.4.3) - 2025-09-15
-
-### ✨ Features
-
-- **git:** add option to skip git hooks during auto-commit - ([7ab310e](https://github.com/liblaf/cherries/commit/7ab310e17b9697180de29b34abd847b16c21c66b))
+- centralize type definitions in typing module - ([6555f95](https://github.com/liblaf/cherries/commit/6555f95f81fdd9a6064fd647c170b5d1b769df81))
 
 ### ❤️ New Contributors
 
 - [@liblaf](https://github.com/liblaf) made their first contribution
+- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
+
+## [0.4.3](https://github.com/liblaf/cherries/compare/v0.4.2..v0.4.3) - 2025-09-16
+
+### ✨ Features
+
+- **git:** add option to skip git hooks during auto-commit - ([7ab310e](https://github.com/liblaf/cherries/commit/7ab310e17b9697180de29b34abd847b16c21c66b))
 
 ## [0.4.2](https://github.com/liblaf/cherries/compare/v0.4.1..v0.4.2) - 2025-09-15
 
