@@ -1,6 +1,16 @@
 # Changelog
 
-## [0.5.0](https://github.com/liblaf/cherries/compare/v0.4.3..v0.5.0) - 2025-09-22
+## [0.5.1](https://github.com/liblaf/cherries/compare/v0.5.0..v0.5.1) - 2025-09-29
+
+### ♻ Code Refactoring
+
+- overhaul plugin system and introduce advanced asset management - ([63e2931](https://github.com/liblaf/cherries/commit/63e2931bdc2f30f96824d5a8277e3355015b09e9))
+
+### ❤️ New Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+
+## [0.5.0](https://github.com/liblaf/cherries/compare/v0.4.3..v0.5.0) - 2025-09-28
 
 ### 💥 BREAKING CHANGES
 
@@ -13,11 +23,6 @@
 ### ♻ Code Refactoring
 
 - centralize type definitions in typing module - ([6555f95](https://github.com/liblaf/cherries/commit/6555f95f81fdd9a6064fd647c170b5d1b769df81))
-
-### ❤️ New Contributors
-
-- [@liblaf](https://github.com/liblaf) made their first contribution
-- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
 
 ## [0.4.3](https://github.com/liblaf/cherries/compare/v0.4.2..v0.4.3) - 2025-09-16
 
