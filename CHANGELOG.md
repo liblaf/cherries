@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/liblaf/cherries/compare/v0.5.0...v0.5.1) (2025-09-29)
+
+
+### ♻️ Code Refactoring
+
+* overhaul plugin system and introduce advanced asset management ([63e2931](https://github.com/liblaf/cherries/commit/63e2931bdc2f30f96824d5a8277e3355015b09e9))
+
 ## [0.5.0](https://github.com/liblaf/cherries/compare/v0.4.3..v0.5.0) - 2025-09-22
 
 ### 💥 BREAKING CHANGES
