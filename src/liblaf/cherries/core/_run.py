@@ -1,17 +1,17 @@
 import contextlib
 import datetime
-import functools
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 import attrs
 
-from liblaf.cherries import pathutils
+from liblaf.cherries import path_utils
 from liblaf.cherries.typing import PathLike
 
 from ._plugin import Plugin
 from ._spec import spec
+from ._utils import plugin_cached_property, plugin_property
 
 
 @attrs.define
@@ -24,59 +24,41 @@ class Run(Plugin):
         3. [MLflow Tracking APIs | MLflow](https://www.mlflow.org/docs/latest/ml/tracking/tracking-api/)
     """
 
-    @functools.cached_property
+    @plugin_cached_property
     def data_dir(self) -> Path:
-        if self._plugin_parent is not None:
-            return self.plugin_root.data_dir
-        return pathutils.data()
+        return path_utils.data()
 
-    @functools.cached_property
+    @plugin_cached_property
     def entrypoint(self) -> Path:
-        if self._plugin_parent is not None:
-            return self.plugin_root.entrypoint
-        return pathutils.entrypoint()
+        return path_utils.entrypoint()
 
-    @functools.cached_property
+    @plugin_cached_property
     def exp_dir(self) -> Path:
-        if self._plugin_parent is not None:
-            return self.plugin_root.exp_dir
-        return pathutils.exp_dir()
+        return path_utils.exp_dir()
 
-    @functools.cached_property
+    @plugin_cached_property
     def name(self) -> str:
-        if self._plugin_parent is not None:
-            return self.plugin_root.name
         return self.start_time.strftime("%Y-%m-%dT%H%M%S")
 
-    @property
+    @plugin_property
     def params(self) -> Mapping[str, Any]:
-        if self._plugin_parent is not None:
-            return self.plugin_root.params
-        return self.get_params()
+        return self.plugin_root.get_params()
 
-    @functools.cached_property
+    @plugin_cached_property
     def project_name(self) -> str | None:
-        if self._plugin_parent is not None:
-            return self.plugin_root.project_name
         return self.project_dir.name
 
-    @functools.cached_property
+    @plugin_cached_property
     def project_dir(self) -> Path:
-        if self._plugin_parent is not None:
-            return self.plugin_root.project_dir
-        return pathutils.project_dir()
+        return path_utils.project_dir()
 
-    @functools.cached_property
+    @plugin_cached_property
     def start_time(self) -> datetime.datetime:
-        if self._plugin_parent is not None:
-            return self.plugin_root.start_time
         return datetime.datetime.now().astimezone()
 
-    @functools.cached_property
+    @plugin_property
     def url(self) -> str:
-        if self._plugin_parent is not None:
-            return self.plugin_root.url
-        return self.get_url()
+        return self.plugin_root.get_url()
 
     @spec
     def end(self, *args, **kwargs) -> None: ...
@@ -170,7 +152,6 @@ class Run(Plugin):
 
     @spec(delegate=False)
     def start(self, *args, **kwargs) -> None:
-        self._plugins_prepare()
         self.delegate("start", args, kwargs)
 
 

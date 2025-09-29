@@ -9,8 +9,8 @@ from liblaf.cherries import config as _config
 from liblaf.cherries import core, profiles
 
 
-def end() -> None:
-    core.active_run.end()
+def end(*args, **kwargs) -> None:
+    core.active_run.end(*args, **kwargs)
 
 
 def run[T](main: Callable[..., T], *, profile: profiles.ProfileLike | None = None) -> T:
@@ -27,12 +27,13 @@ def run[T](main: Callable[..., T], *, profile: profiles.ProfileLike | None = Non
         run.log_parameters(_config.model_dump_without_assets(config, mode="json"))
         for path in _config.get_inputs(config):
             run.log_input(path)
-    result: T = main(*args, **kwargs)
-    for config in configs:
-        for path in _config.get_outputs(config):
-            run.log_output(path)
-    run.end()
-    return result
+    try:
+        return main(*args, **kwargs)
+    finally:
+        for config in configs:
+            for path in _config.get_outputs(config):
+                run.log_output(path)
+        run.end()
 
 
 def start(

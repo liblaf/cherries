@@ -1,14 +1,9 @@
-from ._config import BaseConfig
-from .asset import (
+from . import resolvers
+from ._meta import (
     AssetKind,
-    AssetResolver,
-    AssetResolverRegistry,
-    AssetResolverSeries,
-    AssetResolverVtk,
     Extra,
     MetaAsset,
     asset,
-    asset_resolver_registry,
     get_assets,
     get_inputs,
     get_outputs,
@@ -16,6 +11,8 @@ from .asset import (
     model_dump_without_assets,
     output,
 )
+from ._registry import AssetResolverRegistry, asset_resolver_registry
+from .resolvers import AssetResolver, AssetResolverSeries, AssetResolverVtk
 
 __all__ = [
     "AssetKind",
@@ -23,7 +20,6 @@ __all__ = [
     "AssetResolverRegistry",
     "AssetResolverSeries",
     "AssetResolverVtk",
-    "BaseConfig",
     "Extra",
     "MetaAsset",
     "asset",
@@ -34,4 +30,5 @@ __all__ = [
     "input",
     "model_dump_without_assets",
     "output",
+    "resolvers",
 ]

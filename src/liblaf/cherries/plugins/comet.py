@@ -9,7 +9,7 @@ import dvc.api
 import dvc.exceptions
 
 from liblaf import grapes
-from liblaf.cherries import core, pathutils
+from liblaf.cherries import core, path_utils
 from liblaf.cherries.typing import PathLike
 
 
@@ -49,7 +49,7 @@ class Comet(core.Run):
         **kwargs,
     ) -> None:
         path = Path(path)
-        name = pathutils.as_posix(name)
+        name = path_utils.as_posix(name)
         try:
             # ? I don't know why, but `dvc.api.get_url` only works with this. Maybe a DVC bug?
             dvc_path: Path = path.absolute().relative_to(Path.cwd())
@@ -128,8 +128,8 @@ class Comet(core.Run):
     @core.impl(after=("Logging",))
     def start(self, *args, **kwargs) -> None:
         self.exp = comet_ml.start(
-            project_name=self.plugin_root.project_name,
+            project_name=self.project_name,
             experiment_config=comet_ml.ExperimentConfig(
-                disabled=self.disabled, name=self.plugin_root.name
+                disabled=self.disabled, name=self.name
             ),
         )

@@ -3,7 +3,7 @@ import subprocess as sp
 import git
 
 from liblaf import grapes
-from liblaf.cherries import pathutils
+from liblaf.cherries import path_utils
 
 
 def git_auto_commit(
@@ -40,10 +40,10 @@ def git_commit_url(sha: str | None = None) -> str:
 
 def git_info() -> grapes.git.GitInfo:
     info: grapes.git.GitInfo = grapes.git.info(
-        pathutils.exp_dir(absolute=True), search_parent_directories=True
+        path_utils.exp_dir(absolute=True), search_parent_directories=True
     )
     return info
 
 
 def _repo() -> git.Repo:
-    return git.Repo(pathutils.exp_dir(absolute=True), search_parent_directories=True)
+    return git.Repo(path_utils.exp_dir(absolute=True), search_parent_directories=True)

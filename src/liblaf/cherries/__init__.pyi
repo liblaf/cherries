@@ -1,4 +1,4 @@
-from . import config, core, meta, pathutils, plugins
+from . import config, core, meta, path_utils, plugins
 from ._entrypoint import end, run, start
 from .config import BaseConfig, input, output  # noqa: A004
 from .core import (
@@ -15,7 +15,7 @@ from .core import (
     log_parameter,
     log_parameters,
 )
-from .pathutils import (
+from .path_utils import (
     as_os_path,
     as_path,
     as_posix,
@@ -56,7 +56,7 @@ __all__ = [
     "output",
     "params",
     "path",
-    "pathutils",
+    "path_utils",
     "plugins",
     "project_dir",
     "run",

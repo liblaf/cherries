@@ -4,11 +4,10 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Protocol, overload
 
 import attrs
-import wrapt
 
 from liblaf import grapes
 
-from .typed import MethodName
+from .typing import MethodName
 
 
 class Plugin(Protocol):
@@ -48,27 +47,27 @@ def spec(
 
     info = SpecInfo(delegate=delegate, first_result=first_result)
 
-    @wrapt.decorator
-    def wrapper(
-        wrapped: Callable, instance: Plugin, args: tuple, kwargs: dict[str, Any]
-    ) -> Any:
+    @grapes.decorator
+    def wrapper[**P, T](
+        wrapped: Callable[P, T], instance: Plugin, args: tuple, kwargs: dict[str, Any]
+    ) -> T:
         if info.delegate:
             return instance.delegate(
                 wrapped.__name__, args, kwargs, first_result=info.first_result
             )
         return wrapped(*args, **kwargs)
 
-    proxy: Any = wrapper(func)  # pyright: ignore[reportCallIssue]
-    proxy._self_spec = SpecInfo(delegate=delegate, first_result=first_result)  # noqa: SLF001
-    return proxy
+    func: Any = wrapper(func)
+    grapes.wrapt_setattr(func, "spec", info)
+    return func
 
 
 def collect_specs(cls: type[Plugin] | Plugin) -> dict[str, SpecInfo]:
     if isinstance(cls, type):
         cls = type(cls)
     return {
-        name: grapes.unbind_getattr(method, "_self_spec")
+        name: grapes.wrapt_getattr(method, "spec")
         for name, method in inspect.getmembers(
-            cls, lambda m: grapes.unbind_getattr(m, "_self_spec", None) is not None
+            cls, lambda m: grapes.wrapt_getattr(m, "spec", None) is not None
         )
     }
