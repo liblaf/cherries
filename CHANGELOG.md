@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/liblaf/cherries/compare/v0.5.1...v0.5.2) (2025-09-29)
+
+
+### 🛠 Builds
+
+* **deps:** Add cachetools and refine dvc dependencies ([6989a98](https://github.com/liblaf/cherries/commit/6989a98994ed612476cde55c43c62984eaa5f4ff))
+
 ## [0.5.1](https://github.com/liblaf/cherries/compare/v0.5.0..v0.5.1) - 2025-09-29
 
 ### ♻ Code Refactoring
