@@ -1,21 +1,21 @@
 # Changelog
 
-## [0.5.3](https://github.com/liblaf/cherries/compare/v0.5.2...v0.5.3) (2025-10-07)
-
+## [0.5.3](https://github.com/liblaf/cherries/compare/v0.5.2..v0.5.3) - 2025-10-07
 
 ### ✨ Features
 
-* **profiles:** add Dvc plugin to playground profile ([2befcdd](https://github.com/liblaf/cherries/commit/2befcddac06f20430ef2c378fa9e0c8c6e0c1efb))
+- **profiles:** add Dvc plugin to playground profile - ([2befcdd](https://github.com/liblaf/cherries/commit/2befcddac06f20430ef2c378fa9e0c8c6e0c1efb))
+
+### ❤️ New Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
 
 ## [0.5.2](https://github.com/liblaf/cherries/compare/v0.5.1..v0.5.2) - 2025-09-29
 
 ### 👷 Build System
 
 - **deps:** Add cachetools and refine dvc dependencies - ([6989a98](https://github.com/liblaf/cherries/commit/6989a98994ed612476cde55c43c62984eaa5f4ff))
-
-### ❤️ New Contributors
-
-- [@liblaf](https://github.com/liblaf) made their first contribution
 
 ## [0.5.1](https://github.com/liblaf/cherries/compare/v0.5.0..v0.5.1) - 2025-09-29
 
