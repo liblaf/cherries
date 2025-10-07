@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.3](https://github.com/liblaf/cherries/compare/v0.5.2...v0.5.3) (2025-10-07)
+
+
+### ✨ Features
+
+* **profiles:** add Dvc plugin to playground profile ([2befcdd](https://github.com/liblaf/cherries/commit/2befcddac06f20430ef2c378fa9e0c8c6e0c1efb))
+
 ## [0.5.2](https://github.com/liblaf/cherries/compare/v0.5.1..v0.5.2) - 2025-09-29
 
 ### 👷 Build System
