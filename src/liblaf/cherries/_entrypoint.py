@@ -1,3 +1,4 @@
+import datetime
 import inspect
 import itertools
 from collections.abc import Callable, Mapping, Sequence
@@ -10,6 +11,7 @@ from liblaf.cherries import core, profiles
 
 
 def end(*args, **kwargs) -> None:
+    core.active_run.log_other("cherries.end_time", datetime.datetime.now().astimezone())
     core.active_run.end(*args, **kwargs)
 
 
