@@ -197,12 +197,7 @@ class Comet(core.Run):
                     path: Path = Path(asset.path).absolute()
                     path_rel: str = path.relative_to(repo.working_tree_dir).as_posix()  # pyright: ignore[reportArgumentType]
                     sha: str = repo.head.commit.hexsha
-                    path_raw: str
-                    if path.is_file():
-                        path_raw = f"/blob/{sha}/{path_rel}"  # pyright: ignore[reportArgumentType]
-                    else:
-                        path_raw = f"/tree/{sha}/{path_rel}"  # pyright: ignore[reportArgumentType]
-                    uri = f"https://{info.host}/{info.owner}/{info.repo}/{path_raw}"
+                    uri = f"https://{info.host}/{info.owner}/{info.repo}/raw/{sha}/{path_rel}"
                 case _:
                     uri = path_utils.as_posix(asset.path)
             self.exp.log_remote_asset(
