@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.5.4](https://github.com/liblaf/cherries/compare/v0.5.3...v0.5.4) (2025-10-13)
+
+
+### ✨ Features
+
+* **plugins:** log Git-tracked files as remote assets in Comet ([8f92b65](https://github.com/liblaf/cherries/commit/8f92b65cfe8d0771675f3cd633082e218835297b))
+
+
+### 🐛 Bug Fixes
+
+* **plugins/comet:** use raw GitHub URL for git-tracked assets ([71809f1](https://github.com/liblaf/cherries/commit/71809f1fad89b1df713b48df5c571c900ccd34e2))
+
+
+### ♻️ Code Refactoring
+
+* **core:** Overhaul experiment naming and artifact organization ([5421366](https://github.com/liblaf/cherries/commit/54213669171d33b9d4dadbcf87f79b831495b166))
+
 ## [0.5.3](https://github.com/liblaf/cherries/compare/v0.5.2..v0.5.3) - 2025-10-07
 
 ### ✨ Features
