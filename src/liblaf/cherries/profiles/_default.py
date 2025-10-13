@@ -10,7 +10,6 @@ class ProfileDefault(Profile):
     def init(self) -> core.Run:
         run: core.Run = core.active_run
         run.register(plugins.Comet())
-        run.register(plugins.Dvc())
         run.register(plugins.Git())
         run.register(plugins.Local())
         run.register(plugins.Logging())

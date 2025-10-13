@@ -52,7 +52,7 @@ class Git(core.Run):
         self.repo = git.Repo(self.project_dir, search_parent_directories=True)
 
     def _make_commit_message(self) -> str:
-        name: str = self.name
+        name: str = self.exp_name
         message: str = f"chore(cherries): {name}\n\n"
         meta: dict[str, Any] = {}
         if url := self.url:

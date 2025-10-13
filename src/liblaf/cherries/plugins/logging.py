@@ -11,7 +11,7 @@ from liblaf.cherries import core
 class Logging(core.Run):
     @property
     def log_file(self) -> Path:
-        return self.exp_dir / "run.log"
+        return self.exp_dir / "logs" / self.entrypoint.with_suffix(".log").name
 
     @override
     @core.impl
@@ -21,4 +21,4 @@ class Logging(core.Run):
     @override
     @core.impl
     def end(self, *args, **kwargs) -> None:
-        self.log_asset(self.log_file)
+        self.plugin_root.log_asset(self.log_file, "run.log")

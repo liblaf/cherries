@@ -10,7 +10,6 @@ class ProfilePlayground(Profile):
     def init(self) -> core.Run:
         run: core.Run = core.active_run
         run.register(plugins.Comet(disabled=True))
-        run.register(plugins.Dvc())
         run.register(plugins.Local())
         run.register(plugins.Logging())
         return run

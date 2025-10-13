@@ -1,4 +1,3 @@
-import contextlib
 import datetime
 from collections.abc import Mapping
 from pathlib import Path
@@ -37,8 +36,12 @@ class Run(Plugin):
         return path_utils.exp_dir()
 
     @plugin_cached_property
-    def name(self) -> str:
-        return self.start_time.strftime("%Y-%m-%dT%H%M%S")
+    def exp_name(self) -> str:
+        return (
+            self.entrypoint.relative_to(self.project_dir)
+            .as_posix()
+            .removeprefix("exp/")
+        )
 
     @plugin_property
     def params(self) -> Mapping[str, Any]:
@@ -72,7 +75,7 @@ class Run(Plugin):
     @spec(first_result=True)
     def get_url(self) -> str: ...
 
-    @spec(delegate=False)
+    @spec
     def log_asset(
         self,
         path: PathLike,
@@ -80,12 +83,7 @@ class Run(Plugin):
         *,
         metadata: Mapping[str, Any] | None = None,
         **kwargs,
-    ) -> None:
-        if name is None:
-            path = Path(path)
-            with contextlib.suppress(ValueError):
-                name = path.relative_to(self.data_dir)
-        self.delegate("log_asset", (path, name), {"metadata": metadata, **kwargs})
+    ) -> None: ...
 
     @spec
     def log_input(
@@ -150,9 +148,8 @@ class Run(Plugin):
         **kwargs,
     ) -> None: ...
 
-    @spec(delegate=False)
-    def start(self, *args, **kwargs) -> None:
-        self.delegate("start", args, kwargs)
+    @spec
+    def start(self, *args, **kwargs) -> None: ...
 
 
 active_run: Run = Run()

@@ -20,8 +20,13 @@ class Local(core.Run):
         name: PathLike | None = None,
         **kwargs,
     ) -> None:
+        path = Path(path)
         if name is None:
-            name = Path(path).name
+            path_absolute: Path = path.resolve()
+            if path_absolute.is_relative_to(self.exp_dir):
+                name = path_absolute.relative_to(self.exp_dir)
+            else:
+                name = path
         target: Path = self.folder / name
         self._copy(path, target)
 
@@ -54,7 +59,12 @@ class Local(core.Run):
     @override
     @core.impl
     def start(self, *args, **kwargs) -> None:
-        self.folder = self.exp_dir / ".cherries" / self.name
+        self.folder = (
+            self.exp_dir
+            / ".cherries"
+            / self.entrypoint.stem
+            / self.start_time.strftime("%Y-%m-%dT%H%M%S")
+        )
         entrypoint: Path = self.entrypoint
         self.log_asset(entrypoint, f"src/{entrypoint.name}")
 

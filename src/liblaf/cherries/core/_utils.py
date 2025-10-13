@@ -1,24 +1,6 @@
 import functools
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Self, overload, override
-
-import wrapt
-
-if TYPE_CHECKING:
-    from ._plugin import Plugin
-
-
-def delegate_property_to_root[C: Callable](func: C) -> C:
-    @wrapt.decorator
-    def wrapper(
-        wrapped: Callable, instance: "Plugin", args: tuple, kwargs: dict[str, Any]
-    ) -> None:
-        # TODO: make it work with `@functools.cached_property`
-        if instance.plugin_root is not instance:
-            return wrapped(*args, **kwargs)
-        return getattr(instance.plugin_root, wrapped.__name__)
-
-    return func
+from typing import Any, Self, overload, override
 
 
 class PluginCachedProperty[T](functools.cached_property[T]):
@@ -30,7 +12,7 @@ class PluginCachedProperty[T](functools.cached_property[T]):
     def __get__(self, instance: object | None, owner: type | None = None) -> Self | T:
         if instance is None:
             return super().__get__(instance, owner)
-        if (parent := getattr(instance, "_plugin_parent", None)) is not None:
+        while (parent := getattr(instance, "_plugin_parent", None)) is not None:
             instance = parent
         return super().__get__(instance, owner)
 
@@ -50,7 +32,7 @@ class PluginProperty[T](property):
     ) -> Self | T:
         if instance is None:
             return super().__get__(instance, owner)
-        if (parent := getattr(instance, "_plugin_parent", None)) is not None:
+        while (parent := getattr(instance, "_plugin_parent", None)) is not None:
             instance = parent
         return super().__get__(instance, owner)
 

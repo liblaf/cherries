@@ -130,6 +130,6 @@ class Comet(core.Run):
         self.exp = comet_ml.start(
             project_name=self.project_name,
             experiment_config=comet_ml.ExperimentConfig(
-                disabled=self.disabled, name=self.name
+                disabled=self.disabled, name=self.exp_name
             ),
         )
