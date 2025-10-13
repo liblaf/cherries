@@ -1,15 +1,29 @@
 # Changelog
 
-## [0.5.3](https://github.com/liblaf/cherries/compare/v0.5.2..v0.5.3) - 2025-10-07
+## [0.5.4](https://github.com/liblaf/cherries/compare/v0.5.3..v0.5.4) - 2025-10-13
 
 ### ✨ Features
 
-- **profiles:** add Dvc plugin to playground profile - ([2befcdd](https://github.com/liblaf/cherries/commit/2befcddac06f20430ef2c378fa9e0c8c6e0c1efb))
+- **plugins:** log Git-tracked files as remote assets in Comet - ([8f92b65](https://github.com/liblaf/cherries/commit/8f92b65cfe8d0771675f3cd633082e218835297b))
+
+### 🐛 Bug Fixes
+
+- **plugins/comet:** use raw GitHub URL for git-tracked assets - ([71809f1](https://github.com/liblaf/cherries/commit/71809f1fad89b1df713b48df5c571c900ccd34e2))
+
+### ♻ Code Refactoring
+
+- **core:** Overhaul experiment naming and artifact organization - ([5421366](https://github.com/liblaf/cherries/commit/54213669171d33b9d4dadbcf87f79b831495b166))
 
 ### ❤️ New Contributors
 
 - [@liblaf](https://github.com/liblaf) made their first contribution
 - [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
+
+## [0.5.3](https://github.com/liblaf/cherries/compare/v0.5.2..v0.5.3) - 2025-10-07
+
+### ✨ Features
+
+- **profiles:** add Dvc plugin to playground profile - ([2befcdd](https://github.com/liblaf/cherries/commit/2befcddac06f20430ef2c378fa9e0c8c6e0c1efb))
 
 ## [0.5.2](https://github.com/liblaf/cherries/compare/v0.5.1..v0.5.2) - 2025-09-29
 
