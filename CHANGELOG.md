@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.5](https://github.com/liblaf/cherries/compare/v0.5.4...v0.5.5) (2025-10-14)
+
+
+### 🐛 Bug Fixes
+
+* **plugins/comet:** make DVC asset logging conditional ([2bdeb1e](https://github.com/liblaf/cherries/commit/2bdeb1ecb2874d909a29f8967e729a6082306ab8))
+
 ## [0.5.4](https://github.com/liblaf/cherries/compare/v0.5.3..v0.5.4) - 2025-10-13
 
 ### ✨ Features
