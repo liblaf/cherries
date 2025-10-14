@@ -26,6 +26,7 @@ class Asset:
 @attrs.define
 class Comet(core.Run):
     disabled: bool = attrs.field(default=False)
+    enable_dvc: bool = False
     exp: comet_ml.CometExperiment = attrs.field(default=None)
     _assets_git: list[Asset] = attrs.field(factory=list)
 
@@ -63,7 +64,7 @@ class Comet(core.Run):
     ) -> None:
         if self._log_asset_git(path, name, **kwargs):
             return
-        if self._log_asset_dvc(path, name, **kwargs):
+        if self.enable_dvc and self._log_asset_dvc(path, name, **kwargs):
             return
         name = path_utils.as_posix(name)
         self.exp.log_asset(path, name, **kwargs)
