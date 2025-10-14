@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.5](https://github.com/liblaf/cherries/compare/v0.5.4..v0.5.5) - 2025-10-14
+
+### 🐛 Bug Fixes
+
+- **plugins/comet:** make DVC asset logging conditional - ([2bdeb1e](https://github.com/liblaf/cherries/commit/2bdeb1ecb2874d909a29f8967e729a6082306ab8))
+
+### ❤️ New Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+
 ## [0.5.4](https://github.com/liblaf/cherries/compare/v0.5.3..v0.5.4) - 2025-10-13
 
 ### ✨ Features
@@ -13,11 +23,6 @@
 ### ♻ Code Refactoring
 
 - **core:** Overhaul experiment naming and artifact organization - ([5421366](https://github.com/liblaf/cherries/commit/54213669171d33b9d4dadbcf87f79b831495b166))
-
-### ❤️ New Contributors
-
-- [@liblaf](https://github.com/liblaf) made their first contribution
-- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
 
 ## [0.5.3](https://github.com/liblaf/cherries/compare/v0.5.2..v0.5.3) - 2025-10-07
 
