@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.6](https://github.com/liblaf/cherries/compare/v0.5.5...v0.5.6) (2025-10-17)
+
+
+### 🐛 Bug Fixes
+
+* **comet:** Refactor experiment handling and logging ([2907d47](https://github.com/liblaf/cherries/commit/2907d47dcb86d84ca4f83c57b101206c81adbecf))
+
 ## [0.5.5](https://github.com/liblaf/cherries/compare/v0.5.4..v0.5.5) - 2025-10-14
 
 ### 🐛 Bug Fixes
