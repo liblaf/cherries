@@ -8,7 +8,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 authors = [
-  { name = "liblaf", email = "30631553+liblaf@users.noreply.github.com" },
+  { name = "liblaf", email = "30631553+liblaf@users.noreply.github.com" }
 ]
 keywords = []
 classifiers = [
@@ -30,7 +30,7 @@ classifiers = [
   "Topic :: System",
   "Topic :: System :: Logging",
   "Topic :: Utilities",
-  "Typing :: Typed",
+  "Typing :: Typed"
 ]
 dependencies = [
   "attrs>=25,<26",
@@ -46,7 +46,7 @@ dependencies = [
   "pydantic>=2,<3",
   "pydantic-settings>=2,<3",
   "rich>=14,<15",
-  "wrapt>=1,<2",
+  "wrapt>=1,<2"
 ]
 dynamic = ["version"]
 
@@ -97,7 +97,7 @@ addopts = [
   "--import-mode=importlib",
   "--showlocals",
   "--strict-config",
-  "--strict-markers",
+  "--strict-markers"
 ]
 testpaths = ["benches", "src", "tests"]
 

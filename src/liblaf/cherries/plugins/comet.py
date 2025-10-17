@@ -1,3 +1,4 @@
+import unittest.mock
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, override
@@ -27,7 +28,6 @@ class Asset:
 class Comet(core.Run):
     disabled: bool = attrs.field(default=False)
     enable_dvc: bool = False
-    exp: comet_ml.CometExperiment = attrs.field(default=None)
     _assets_git: list[Asset] = attrs.field(factory=list)
 
     @override
@@ -37,22 +37,22 @@ class Comet(core.Run):
             self._log_asset_git_end()
         except git.GitError as err:
             logger.exception(err)
-        self.exp.end()
+        self.experiment.end()
 
     @override
     @core.impl
     def get_others(self) -> Mapping[str, Any]:
-        return self.exp.others
+        return self.experiment.others
 
     @override
     @core.impl
     def get_params(self) -> Mapping[str, Any]:
-        return self.exp.params
+        return self.experiment.params
 
     @override
     @core.impl
     def get_url(self) -> str:
-        return self.exp.url  # pyright: ignore[reportReturnType]
+        return self.experiment.url  # pyright: ignore[reportReturnType]
 
     @override
     @core.impl(after=("Dvc",))
@@ -67,7 +67,7 @@ class Comet(core.Run):
         if self.enable_dvc and self._log_asset_dvc(path, name, **kwargs):
             return
         name = path_utils.as_posix(name)
-        self.exp.log_asset(path, name, **kwargs)
+        self.experiment.log_asset(path, name, **kwargs)
 
     @override
     @core.impl(after=("Dvc",))
@@ -88,22 +88,22 @@ class Comet(core.Run):
     @override
     @core.impl
     def log_metric(self, *args, **kwargs) -> None:
-        return self.exp.log_metric(*args, **kwargs)
+        return self.experiment.log_metric(*args, **kwargs)
 
     @override
     @core.impl
     def log_metrics(self, *args, **kwargs) -> None:
-        return self.exp.log_metrics(*args, **kwargs)
+        return self.experiment.log_metrics(*args, **kwargs)
 
     @override
     @core.impl
     def log_other(self, *args, **kwargs) -> None:
-        return self.exp.log_other(*args, **kwargs)
+        return self.experiment.log_other(*args, **kwargs)
 
     @override
     @core.impl
     def log_others(self, *args, **kwargs) -> None:
-        return self.exp.log_others(*args, **kwargs)
+        return self.experiment.log_others(*args, **kwargs)
 
     @override
     @core.impl(after=("Dvc",))
@@ -124,22 +124,31 @@ class Comet(core.Run):
     @override
     @core.impl
     def log_parameter(self, *args, **kwargs) -> None:
-        return self.exp.log_parameter(*args, **kwargs)
+        return self.experiment.log_parameter(*args, **kwargs)
 
     @override
     @core.impl
     def log_parameters(self, *args, **kwargs) -> None:
-        return self.exp.log_parameters(*args, **kwargs)
+        return self.experiment.log_parameters(*args, **kwargs)
 
     @override
     @core.impl(after=("Logging",))
     def start(self, *args, **kwargs) -> None:
-        self.exp = comet_ml.start(
-            project_name=self.project_name,
-            experiment_config=comet_ml.ExperimentConfig(
-                disabled=self.disabled, name=self.exp_name
-            ),
-        )
+        logger.disable("comet_ml")
+        try:
+            comet_ml.start(
+                project_name=self.project_name,
+                experiment_config=comet_ml.ExperimentConfig(
+                    disabled=self.disabled, name=self.exp_name
+                ),
+            )
+        except ValueError as err:
+            logger.warning(err)
+        logger.enable("comet_ml")
+
+    @property
+    def experiment(self) -> comet_ml.CometExperiment:
+        return comet_ml.get_running_experiment() or unittest.mock.MagicMock()
 
     def _log_asset_dvc(
         self,
@@ -160,7 +169,7 @@ class Comet(core.Run):
         dvc_file: Path = path.with_name(path.name + ".dvc")
         dvc_meta: Mapping[str, Any] = grapes.yaml.load(dvc_file)
         metadata: dict[str, Mapping] = toolz.merge(metadata or {}, dvc_meta["outs"][0])
-        self.exp.log_remote_asset(uri, name, metadata=metadata, **kwargs)
+        self.experiment.log_remote_asset(uri, name, metadata=metadata, **kwargs)
         return True
 
     def _log_asset_git(
@@ -201,9 +210,14 @@ class Comet(core.Run):
                     uri = f"https://{info.host}/{info.owner}/{info.repo}/raw/{sha}/{path_rel}"
                 case _:
                     uri = path_utils.as_posix(asset.path)
-            self.exp.log_remote_asset(
+            self.experiment.log_remote_asset(
                 uri,
                 path_utils.as_posix(asset.name),
                 metadata=dict(asset.metadata) if asset.metadata is not None else None,
                 **asset.kwargs,
             )
+
+
+def _get_api_key() -> str | None:
+    config: comet_ml.config.Config = comet_ml.get_config()
+    return comet_ml.get_api_key(None, config)
