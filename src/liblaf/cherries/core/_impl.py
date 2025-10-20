@@ -4,6 +4,7 @@ from collections.abc import Callable, Iterable
 from typing import Any, overload
 
 import attrs
+import wrapt
 
 from liblaf import grapes
 
@@ -33,8 +34,8 @@ def impl[C: Callable](
     after: Iterable[PluginId] = (),
     before: Iterable[PluginId] = (),
 ) -> Callable[[C], C]: ...
-def impl(
-    func: Callable | None = None,
+def impl[**P, T](
+    func: Callable[P, T] | None = None,
     /,
     priority: int = 0,
     after: Iterable[PluginId] = (),
@@ -45,10 +46,13 @@ def impl(
 
     info = ImplInfo(after=after, before=before, priority=priority)
 
-    @grapes.decorator
+    @wrapt.decorator
     def wrapper(
-        wrapped: Callable, _instance: Any, args: tuple, kwargs: dict[str, Any]
-    ) -> Any:
+        wrapped: Callable[P, T],
+        _instance: Any,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+    ) -> T:
         return wrapped(*args, **kwargs)
 
     func = wrapper(func)

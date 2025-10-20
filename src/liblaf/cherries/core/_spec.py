@@ -4,6 +4,7 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Protocol, overload
 
 import attrs
+import wrapt
 
 from liblaf import grapes
 
@@ -35,8 +36,8 @@ def spec[C: Callable](
 def spec[C: Callable](
     *, delegate: bool = True, first_result: bool = False
 ) -> Callable[[C], C]: ...
-def spec(
-    func: Callable | None = None,
+def spec[**P, T](
+    func: Callable[P, T] | None = None,
     /,
     *,
     delegate: bool = True,
@@ -47,9 +48,12 @@ def spec(
 
     info = SpecInfo(delegate=delegate, first_result=first_result)
 
-    @grapes.decorator
-    def wrapper[**P, T](
-        wrapped: Callable[P, T], instance: Plugin, args: tuple, kwargs: dict[str, Any]
+    @wrapt.decorator
+    def wrapper(
+        wrapped: Callable[P, T],
+        instance: Plugin,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
     ) -> T:
         if info.delegate:
             return instance.delegate(
