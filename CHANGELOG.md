@@ -1,14 +1,25 @@
 # Changelog
 
+## [0.6.0](https://github.com/liblaf/cherries/compare/v0.5.5..v0.6.0) - 2025-10-20
+
+### 💥 BREAKING CHANGES
+
+- Migrate decorator implementation to `wrapt` - ([eb62820](https://github.com/liblaf/cherries/commit/eb6282055c78ffbcde17cba3fa7f750d1b1a822d))
+
+### 🐛 Bug Fixes
+
+- **comet:** Refactor experiment handling and logging - ([2907d47](https://github.com/liblaf/cherries/commit/2907d47dcb86d84ca4f83c57b101206c81adbecf))
+
+### ❤️ New Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
+
 ## [0.5.5](https://github.com/liblaf/cherries/compare/v0.5.4..v0.5.5) - 2025-10-14
 
 ### 🐛 Bug Fixes
 
 - **plugins/comet:** make DVC asset logging conditional - ([2bdeb1e](https://github.com/liblaf/cherries/commit/2bdeb1ecb2874d909a29f8967e729a6082306ab8))
-
-### ❤️ New Contributors
-
-- [@liblaf](https://github.com/liblaf) made their first contribution
 
 ## [0.5.4](https://github.com/liblaf/cherries/compare/v0.5.3..v0.5.4) - 2025-10-13
 
