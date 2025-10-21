@@ -35,6 +35,8 @@ def run[T](main: Callable[..., T], *, profile: profiles.ProfileLike | None = Non
         for config in configs:
             for path in _config.get_outputs(config):
                 run.log_output(path)
+            for path in _config.get_temporaries(config):
+                run.log_temporary(path)
         run.end()
 
 

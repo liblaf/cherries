@@ -58,6 +58,19 @@ class Local(core.Run):
 
     @override
     @core.impl
+    def log_temporary(
+        self,
+        path: PathLike,
+        name: PathLike | None = None,
+        **kwargs,
+    ) -> None:
+        if name is None:
+            name = Path(path).name
+        name = f"temp/{name}"
+        self.log_asset(path, name, **kwargs)
+
+    @override
+    @core.impl
     def start(self, *args, **kwargs) -> None:
         cherries_dir: Path = self.exp_dir / ".cherries"
         cherries_dir.mkdir(parents=True, exist_ok=True)

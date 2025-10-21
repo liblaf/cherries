@@ -149,6 +149,16 @@ class Run(Plugin):
         **kwargs,
     ) -> None: ...
 
+    @spec
+    def log_temporary(
+        self,
+        path: PathLike,
+        name: PathLike | None = None,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+        **kwargs,
+    ) -> None: ...
+
     @spec(delegate=False)
     def start(self, *args, **kwargs) -> None:
         env.read_env(self.entrypoint.parent / ".env")

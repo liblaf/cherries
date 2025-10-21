@@ -7,9 +7,11 @@ from ._meta import (
     get_assets,
     get_inputs,
     get_outputs,
+    get_temporaries,
     input,  # noqa: A004
     model_dump_without_assets,
     output,
+    temporary,
 )
 from ._registry import AssetResolverRegistry, asset_resolver_registry
 from .resolvers import AssetResolver, AssetResolverSeries, AssetResolverVtk
@@ -27,8 +29,10 @@ __all__ = [
     "get_assets",
     "get_inputs",
     "get_outputs",
+    "get_temporaries",
     "input",
     "model_dump_without_assets",
     "output",
     "resolvers",
+    "temporary",
 ]

@@ -24,6 +24,7 @@ type Extra = (
 class AssetKind(enum.StrEnum):
     INPUT = enum.auto()
     OUTPUT = enum.auto()
+    TEMPORARY = enum.auto()
 
 
 @attrs.define
@@ -70,6 +71,10 @@ def get_outputs(cfg: pydantic.BaseModel) -> Generator[Path]:
     yield from get_assets(cfg, AssetKind.OUTPUT)
 
 
+def get_temporaries(cfg: pydantic.BaseModel) -> Generator[Path]:
+    yield from get_assets(cfg, AssetKind.TEMPORARY)
+
+
 def input(path: PathLike, extra: Extra = None, **kwargs) -> Path:  # noqa: A001
     return asset(path, extra=extra, kind=AssetKind.INPUT, **kwargs)
 
@@ -96,3 +101,7 @@ def model_dump_without_assets(
 
 def output(path: PathLike, extra: Extra = None, **kwargs) -> Path:
     return asset(path, extra=extra, kind=AssetKind.OUTPUT, **kwargs)
+
+
+def temporary(path: PathLike, extra: Extra = None, **kwargs) -> Path:
+    return asset(path, extra=extra, kind=AssetKind.TEMPORARY, **kwargs)

@@ -1,7 +1,7 @@
 from . import config, core, meta, path_utils, plugins
 from ._entrypoint import end, run, start
 from ._version import __version__, __version_tuple__, version, version_tuple
-from .config import BaseConfig, input, output  # noqa: A004
+from .config import BaseConfig, input, output, temporary  # noqa: A004
 from .core import (
     Plugin,
     Run,
@@ -65,6 +65,7 @@ __all__ = [
     "run",
     "src",
     "start",
+    "temporary",
     "version",
     "version_tuple",
 ]

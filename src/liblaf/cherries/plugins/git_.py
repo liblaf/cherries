@@ -19,6 +19,7 @@ class Git(core.Run):
     inputs: list[Path] = attrs.field(factory=list)
     outputs: list[Path] = attrs.field(factory=list)
     repo: git.Repo = attrs.field(default=None)
+    temporaries: list[Path] = attrs.field(factory=list)
     verify: bool = False
 
     @override
@@ -53,6 +54,14 @@ class Git(core.Run):
 
     @override
     @core.impl
+    def log_temporary(
+        self, path: PathLike, name: PathLike | None = None, **kwargs
+    ) -> None:
+        path: Path = Path(path)
+        self.temporaries.append(path.relative_to(self.project_dir))
+
+    @override
+    @core.impl
     def start(self, *args, **kwargs) -> None:
         self.repo = git.Repo(search_parent_directories=True)
 
@@ -71,5 +80,7 @@ class Git(core.Run):
             meta["inputs"] = inputs
         if outputs := self.outputs:
             meta["outputs"] = outputs
+        if temporaries := self.temporaries:
+            meta["temporaries"] = temporaries
         message += grapes.yaml.encode(meta).decode()
         return message
