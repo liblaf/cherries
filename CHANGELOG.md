@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/liblaf/cherries/compare/v0.6.0...v0.6.1) (2025-10-21)
+
+
+### 🐛 Bug Fixes
+
+* **core, plugins:** improve local experiment data management and environment loading ([67299fe](https://github.com/liblaf/cherries/commit/67299fe95da113064d13dd503f97385c5e5c1834))
+
 ## [0.6.0](https://github.com/liblaf/cherries/compare/v0.5.5..v0.6.0) - 2025-10-20
 
 ### 💥 BREAKING CHANGES
