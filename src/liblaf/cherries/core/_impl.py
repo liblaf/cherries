@@ -53,6 +53,7 @@ def impl[**P, T](
         args: tuple[Any, ...],
         kwargs: dict[str, Any],
     ) -> T:
+        __tracebackhide__ = True
         return wrapped(*args, **kwargs)
 
     func = wrapper(func)

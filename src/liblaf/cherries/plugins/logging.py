@@ -31,6 +31,7 @@ class Logging(core.Run):
         epoch: int | None = None,
         **kwargs,
     ) -> None:
+        __tracebackhide__ = True
         if step is None:
             logger.info("{name}: {value}", name=name, value=value)
         else:
@@ -49,6 +50,7 @@ class Logging(core.Run):
         epoch: int | None = None,
         **kwargs,
     ) -> None:
+        __tracebackhide__ = True
         if step is None:
             logger.info("{dic}", dic=dic)
         else:

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import attrs
+from environs import env
 
 from liblaf.cherries import path_utils
 from liblaf.cherries.typing import PathLike
@@ -148,8 +149,10 @@ class Run(Plugin):
         **kwargs,
     ) -> None: ...
 
-    @spec
-    def start(self, *args, **kwargs) -> None: ...
+    @spec(delegate=False)
+    def start(self, *args, **kwargs) -> None:
+        env.read_env(self.entrypoint.parent / ".env")
+        return self.delegate("start", args, kwargs)
 
 
 active_run: Run = Run()

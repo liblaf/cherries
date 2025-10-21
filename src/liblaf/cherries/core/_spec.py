@@ -55,6 +55,7 @@ def spec[**P, T](
         args: tuple[Any, ...],
         kwargs: dict[str, Any],
     ) -> T:
+        __tracebackhide__ = True
         if info.delegate:
             return instance.delegate(
                 wrapped.__name__, args, kwargs, first_result=info.first_result

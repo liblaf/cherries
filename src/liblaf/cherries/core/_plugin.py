@@ -39,6 +39,7 @@ class Plugin:
         *,
         first_result: bool = False,
     ) -> Any:
+        __tracebackhide__ = True
         plugins: Sequence[Plugin] = self._plugins_sort(method)
         if not plugins:
             if first_result:

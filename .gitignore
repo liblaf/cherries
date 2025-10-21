@@ -37,5 +37,3 @@ junit.xml
 
 # [hatch-vcs](https://github.com/ofek/hatch-vcs)
 _version.py
-
-.cherries/

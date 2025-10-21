@@ -59,9 +59,11 @@ class Local(core.Run):
     @override
     @core.impl
     def start(self, *args, **kwargs) -> None:
+        cherries_dir: Path = self.exp_dir / ".cherries"
+        cherries_dir.mkdir(parents=True, exist_ok=True)
+        (cherries_dir / ".gitignore").write_text("*\n")
         self.folder = (
-            self.exp_dir
-            / ".cherries"
+            cherries_dir
             / self.entrypoint.stem
             / self.start_time.strftime("%Y-%m-%dT%H%M%S")
         )
