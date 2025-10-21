@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/liblaf/cherries/compare/v0.6.1...v0.6.2) (2025-10-21)
+
+
+### ✨ Features
+
+* **asset:** introduce temporary asset tracking ([ea2a383](https://github.com/liblaf/cherries/commit/ea2a383c8e7359e530b6aacb09e1dc35bf351474))
+
 ## [0.6.1](https://github.com/liblaf/cherries/compare/v0.6.0..v0.6.1) - 2025-10-21
 
 ### 🐛 Bug Fixes
