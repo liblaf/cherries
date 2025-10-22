@@ -1,14 +1,20 @@
 # Changelog
 
+## [0.6.2](https://github.com/liblaf/cherries/compare/v0.6.1..v0.6.2) - 2025-10-21
+
+### ✨ Features
+
+- **asset:** introduce temporary asset tracking - ([ea2a383](https://github.com/liblaf/cherries/commit/ea2a383c8e7359e530b6aacb09e1dc35bf351474))
+
+### ❤️ New Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+
 ## [0.6.1](https://github.com/liblaf/cherries/compare/v0.6.0..v0.6.1) - 2025-10-21
 
 ### 🐛 Bug Fixes
 
 - **core, plugins:** improve local experiment data management and environment loading - ([67299fe](https://github.com/liblaf/cherries/commit/67299fe95da113064d13dd503f97385c5e5c1834))
-
-### ❤️ New Contributors
-
-- [@liblaf](https://github.com/liblaf) made their first contribution
 
 ## [0.6.0](https://github.com/liblaf/cherries/compare/v0.5.5..v0.6.0) - 2025-10-20
 
@@ -321,7 +327,7 @@
 
 ### ❤️ New Contributors
 
-- [@liblaf-bot[bot]](https://github.com/apps/liblaf-bot) made their first contribution
+- [@liblaf[bot]](https://github.com/apps/liblaf) made their first contribution
 
 ## [0.0.0] - 2025-01-16
 
