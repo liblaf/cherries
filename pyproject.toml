@@ -62,7 +62,7 @@ dynamic = ["version"]
 build = ["check-wheel-contents>=0.6,<0.7", "hatch>=1,<2", "twine>=6,<7"]
 dev = ["icecream>=2,<3"]
 docs = ["liblaf-mkdocs-preset>=0.2,<0.3", "mkdocs>=1,<2"]
-test = ["liblaf-pytest-preset>=0.1,<0.2", "pytest>=8,<9"]
+test = ["liblaf-pytest-preset>=0.1,<0.2", "pytest>=9,<10"]
 
 [build-system]
 requires = ["hatch-vcs", "hatchling"]
