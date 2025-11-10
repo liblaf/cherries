@@ -12,7 +12,7 @@ import git
 from loguru import logger
 
 from liblaf import grapes
-from liblaf.cherries import core, path_utils
+from liblaf.cherries import core, meta, path_utils
 from liblaf.cherries.typing import PathLike
 
 
@@ -199,7 +199,7 @@ class Comet(core.Run):
         if len(self._assets_git) == 0:
             return
         repo = git.Repo(search_parent_directories=True)
-        info: grapes.git.GitInfo = grapes.git.info()
+        info: meta.GitInfo = meta.git_info()
         for asset in self._assets_git:
             uri: str
             match str(info.platform):

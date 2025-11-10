@@ -1,9 +1,27 @@
 import subprocess as sp
+from typing import Protocol
 
 import git
+import giturlparse
 
-from liblaf import grapes
 from liblaf.cherries import path_utils
+
+
+class GitInfo(Protocol):
+    """.
+
+    References:
+        1. <https://github.com/nephila/giturlparse/blob/master/README.rst>
+    """
+
+    @property
+    def host(self) -> str: ...
+    @property
+    def platform(self) -> str: ...
+    @property
+    def owner(self) -> str: ...
+    @property
+    def repo(self) -> str: ...
 
 
 def git_auto_commit(
@@ -32,16 +50,15 @@ def git_commit_sha() -> str:
 def git_commit_url(sha: str | None = None) -> str:
     if sha is None:
         sha = git_commit_sha()
-    info: grapes.git.GitInfo = git_info()
+    info: GitInfo = git_info()
     if info.platform == "github":
         return f"https://github.com/{info.owner}/{info.repo}/commit/{sha}"
     raise NotImplementedError
 
 
-def git_info() -> grapes.git.GitInfo:
-    info: grapes.git.GitInfo = grapes.git.info(
-        path_utils.exp_dir(absolute=True), search_parent_directories=True
-    )
+def git_info() -> GitInfo:
+    repo: git.Repo = _repo()
+    info: GitInfo = giturlparse.parse(repo.remote().url)  # pyright: ignore[reportAssignmentType]
     return info
 
 

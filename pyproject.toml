@@ -22,6 +22,7 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Software Development",
   "Topic :: Software Development :: Bug Tracking",
   "Topic :: Software Development :: Debuggers",
@@ -39,8 +40,9 @@ dependencies = [
   "dvc[ssh]>=3,<4",
   "environs>=14,<15",
   "gitpython>=3,<4",
+  "giturlparse>=0.14,<0.15",
   "lazy-loader>=0.4,<0.5",
-  "liblaf-grapes>=6,<7",
+  "liblaf-grapes>=8,<9",
   "loguru>=0.7,<0.8",
   "networkx>=3,<4",
   "pydantic>=2,<3",
@@ -59,10 +61,10 @@ dynamic = ["version"]
 "Source Code" = "https://github.com/liblaf/cherries"
 
 [dependency-groups]
-build = ["check-wheel-contents>=0.6,<0.7", "hatch>=1,<2", "twine>=6,<7"]
 dev = ["icecream>=2,<3"]
+build = ["check-wheel-contents>=0.6,<0.7", "hatch>=1,<2", "twine>=6,<7"]
 docs = ["liblaf-mkdocs-preset>=0.2,<0.3", "mkdocs>=1,<2"]
-test = ["liblaf-pytest-preset>=0.1,<0.2", "pytest>=8,<9"]
+test = ["liblaf-pytest-preset>=0.1,<0.2", "pytest>=9,<10"]
 
 [build-system]
 requires = ["hatch-vcs", "hatchling"]
@@ -90,7 +92,7 @@ source = "vcs"
 [tool.pyright]
 extends = ".config/linters/pyrightconfig.json"
 
-[tool.pytest.ini_options]
+[tool.pytest]
 addopts = [
   "--doctest-modules",
   "--hypothesis-show-statistics",
@@ -99,6 +101,7 @@ addopts = [
   "--strict-config",
   "--strict-markers"
 ]
+strict = true
 testpaths = ["benches", "src", "tests"]
 
 [tool.ruff]

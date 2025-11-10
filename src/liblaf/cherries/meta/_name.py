@@ -2,15 +2,14 @@ from pathlib import Path
 
 import git.exc
 
-from liblaf import grapes
 from liblaf.cherries import path_utils
 
-from ._git import git_info
+from ._git import GitInfo, git_info
 
 
 def project_name() -> str | None:
     try:
-        info: grapes.git.GitInfo = git_info()
+        info: GitInfo = git_info()
     except git.exc.InvalidGitRepositoryError:
         return None
     else:

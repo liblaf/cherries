@@ -18,7 +18,7 @@ class Logging(core.Run):
     @override
     @core.impl
     def start(self, *args, **kwargs) -> None:
-        grapes.logging.init(enable_link=False, file=self.log_file)
+        grapes.logging.init(link=False, file=self.log_file)
 
     @override
     @core.impl
