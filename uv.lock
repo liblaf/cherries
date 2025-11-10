@@ -1884,7 +1884,7 @@ requires-dist = [
     { name = "dvc", extras = ["ssh"], specifier = ">=3,<4" },
     { name = "environs", specifier = ">=14,<15" },
     { name = "gitpython", specifier = ">=3,<4" },
-    { name = "giturlparse", specifier = ">=0.14.0,<0.15.0" },
+    { name = "giturlparse", specifier = ">=0.14,<0.15" },
     { name = "lazy-loader", specifier = ">=0.4,<0.5" },
     { name = "liblaf-grapes", specifier = ">=8,<9" },
     { name = "loguru", specifier = ">=0.7,<0.8" },
