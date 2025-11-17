@@ -1,12 +1,16 @@
 import logging
 from pathlib import Path
 
+import pytest
+
 from liblaf import cherries
 
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-def test_main(tmp_path: Path) -> None:
+def test_main(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr("sys.argv", [__file__])
+
     class Config(cherries.BaseConfig):
         name: str = "world"
         output: Path = cherries.output(tmp_path / "hello.txt")
