@@ -7,7 +7,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.3](https://github.com/liblaf/cherries/releases/tag/v0.6.3) - 2025-11-10
+## [0.7.0](https://github.com/liblaf/cherries/releases/tag/v0.7.0) - 2025-11-17
+
+### 💥 BREAKING CHANGES
+
+- - The main entrypoint `cherries.run()` has been renamed to `cherries.main()`.
+
+* The global `core.active_run` instance has been replaced by `core.run`.
+* Plugin methods `log_parameter`, `log_parameters`, and `log_temporary` have been renamed to `log_param`, `log_params`, and `log_temp` respectively.
+* The `Git` plugin's `commit` default is now `False` in the `ProfileDefault`. - [7c8a9fa](https://github.com/liblaf/cherries/commit/7c8a9fa2b86b431af9952ab05c384d6d0c4d1591) by [@liblaf](https://github.com/liblaf)
+
+### ✨ Features
+
+- **bundle:** Add `BundleLandmarks` and `BundleSeries` to default registry - [0e38826](https://github.com/liblaf/cherries/commit/0e3882689ef32f7b7befe74c85018556316c1fe4) by [@liblaf](https://github.com/liblaf)
+- **core:** Add `mkdir` option to path helpers - [962a275](https://github.com/liblaf/cherries/commit/962a275e32d1cacaa393f542ce6752ef0b7e646b) by [@liblaf](https://github.com/liblaf)
+
+### 🐛 Bug Fixes
+
+- **core:** Handle Python -c execution for entrypoint detection - [349a6e7](https://github.com/liblaf/cherries/commit/349a6e79010d7a9077b4ec061545e3eb3120b774) by [@liblaf](https://github.com/liblaf)
+
+### ♻ Code Refactoring
+
+- **core, main, api:** restructure experiment lifecycle and asset management - [5236ba8](https://github.com/liblaf/cherries/commit/5236ba817735eedfdabece65139bedb5c8575cfc) by [@liblaf](https://github.com/liblaf)
+- overhaul core plugin architecture and introduce asset bundling - [7c8a9fa](https://github.com/liblaf/cherries/commit/7c8a9fa2b86b431af9952ab05c384d6d0c4d1591) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@copier-update[bot]](https://github.com/apps/copier-update) made their first contribution in [#72](https://github.com/liblaf/cherries/pull/72)
+
+## [0.6.3](https://github.com/liblaf/cherries/releases/tag/v0.6.3) - 2025-11-11
 
 ### ♻ Code Refactoring
 
@@ -15,9 +44,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
-- [@liblaf](https://github.com/liblaf) made their first contribution
-- [@renovate[bot]](https://github.com/apps/renovate) made their first contribution in [#71](https://github.com/liblaf/cherries/pull/71)
-- [@liblaf[bot]](https://github.com/apps/liblaf) made their first contribution
+- [@liblaf[bot]](https://github.com/apps/liblaf)
+- [@liblaf](https://github.com/liblaf)
+- [@renovate[bot]](https://github.com/apps/renovate)
 
 ## [0.6.2](https://github.com/liblaf/cherries/releases/tag/v0.6.2) - 2025-10-22
 
