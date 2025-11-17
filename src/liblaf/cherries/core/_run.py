@@ -37,6 +37,8 @@ class Run(PluginManager):
 
     @functools.cached_property
     def entrypoint(self) -> Path:
+        if sys.argv[0] == "-c":
+            return Path(os.devnull)
         return Path(sys.argv[0]).resolve()
 
     @functools.cached_property
