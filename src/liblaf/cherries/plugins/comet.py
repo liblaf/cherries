@@ -136,10 +136,6 @@ class Comet(core.PluginSchema):
     @override
     @core.impl(after=("Logging",))
     def start(self, *args, **kwargs) -> None:
-        logger: logging.Logger = logging.getLogger("comet_ml")
-        logger.handlers.clear()
-        logger.propagate = True
-
         try:
             comet_ml.start(
                 project_name=self.run.project_name,

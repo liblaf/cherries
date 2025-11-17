@@ -4,9 +4,7 @@ from pathlib import Path
 from typing import override
 
 import attrs
-from liblaf.grapes.logging.filters import as_filter
-from liblaf.grapes.rich import get_console
-from liblaf.grapes.rich.logging import RichHandler
+from liblaf.grapes.logging import RichFileHandler, as_filter, depth_logger
 
 from liblaf.cherries import core
 
@@ -24,24 +22,28 @@ class Local(core.PluginSchema):
     @override
     @core.impl
     def log_asset(self, path: Path, name: Path, **kwargs) -> None:
+        __tracebackhide__ = True
         target: Path = self.folder / name
         self._copy(path, target)
 
     @override
     @core.impl
     def log_input(self, path: Path, name: Path, **kwargs) -> None:
+        __tracebackhide__ = True
         target: Path = self.folder / "inputs" / name
         self._copy(path, target)
 
     @override
     @core.impl
     def log_output(self, path: Path, name: Path, **kwargs) -> None:
+        __tracebackhide__ = True
         target: Path = self.folder / "outputs" / name
         self._copy(path, target)
 
     @override
     @core.impl
     def log_temp(self, path: Path, name: Path, **kwargs) -> None:
+        __tracebackhide__ = True
         target: Path = self.folder / "temp" / name
         self._copy(path, target)
 
@@ -62,17 +64,16 @@ class Local(core.PluginSchema):
 
     def _config_logging(self) -> None:
         logger: logging.Logger = logging.getLogger()
-        self.log_file.parent.mkdir(parents=True, exist_ok=True)
-        console = get_console(file=self.log_file.open("w"))
-        handler = RichHandler(console=console)
+        handler = RichFileHandler(self.log_file)
         handler.addFilter(as_filter())
         logger.addHandler(handler)
 
     def _copy(self, source: Path, target: Path) -> None:
+        __tracebackhide__ = True
         if target.exists():
             if target.samefile(self.log_file):
                 return
-            logger.warning("Overwriting existing file: %s", target)
+            depth_logger.warning("Overwriting existing file: %s", target)
         target.parent.mkdir(parents=True, exist_ok=True)
         if source.is_dir():
             shutil.copytree(source, target, dirs_exist_ok=True)

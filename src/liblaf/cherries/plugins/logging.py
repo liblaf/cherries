@@ -45,5 +45,4 @@ class Logging(core.PluginSchema):
     @override
     @core.impl
     def start(self, *args, **kwargs) -> None:
-        self.log_file.parent.mkdir(parents=True, exist_ok=True)
         grapes.logging.init(file=self.log_file, force=True)
