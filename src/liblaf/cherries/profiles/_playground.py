@@ -8,7 +8,7 @@ from ._abc import Profile
 class ProfilePlayground(Profile):
     @override  # impl Profile
     def init(self) -> core.Run:
-        run: core.Run = core.active_run
+        run: core.Run = core.run
         run.register(plugins.Comet(disabled=True))
         run.register(plugins.Git(commit=False))
         run.register(plugins.Local())

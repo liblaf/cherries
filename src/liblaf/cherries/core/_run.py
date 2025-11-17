@@ -1,179 +1,161 @@
-import datetime
+import functools
+import logging
+import os
+import sys
 from collections.abc import Mapping
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import attrs
-from environs import env
+import git
+import git.exc
+from liblaf.grapes.logging import depth_logger
 
-from liblaf.cherries import path_utils
-from liblaf.cherries.typing import PathLike
+from liblaf.cherries.bundle import bundles
+from liblaf.cherries.core._typing import MethodName
 
-from ._plugin import Plugin
-from ._spec import spec
-from ._utils import plugin_cached_property, plugin_property
+from ._plugin_manager import PluginManager, delegate
+
+type PathLike = str | os.PathLike[str]
+
+logger: logging.Logger = logging.getLogger(__name__)
+
+_PATH_SKIP_NAMES: set[str] = {"exp", "src"}
 
 
 @attrs.define
-class Run(Plugin):
-    """.
-
-    References:
-        1. [Experiment - Comet Docs](https://www.comet.com/docs/v2/api-and-sdk/python-sdk/reference/Experiment/)
-        2. [Logger | ClearML](https://clear.ml/docs/latest/docs/references/sdk/logger)
-        3. [MLflow Tracking APIs | MLflow](https://www.mlflow.org/docs/latest/ml/tracking/tracking-api/)
-    """
-
-    @plugin_cached_property
+class Run(PluginManager):
+    @functools.cached_property
     def data_dir(self) -> Path:
-        return path_utils.data()
+        return self.exp_dir / "data"
 
-    @plugin_cached_property
+    @functools.cached_property
     def entrypoint(self) -> Path:
-        return path_utils.entrypoint()
+        return Path(sys.argv[0]).resolve()
 
-    @plugin_cached_property
+    @functools.cached_property
     def exp_dir(self) -> Path:
-        return path_utils.exp_dir()
+        parent: Path = self.entrypoint.parent
+        while parent.name in _PATH_SKIP_NAMES:
+            parent = parent.parent
+        return parent
 
-    @plugin_cached_property
+    @functools.cached_property
     def exp_name(self) -> str:
-        return (
-            self.entrypoint.relative_to(self.project_dir)
-            .as_posix()
-            .removeprefix("exp/")
-        )
+        name: str = self.entrypoint.relative_to(self.project_dir).as_posix()
+        while True:
+            original: str = name
+            for folder in _PATH_SKIP_NAMES:
+                name = name.removeprefix(f"{folder}/")
+            if name == original:
+                break
+        return name
 
-    @plugin_property
-    def params(self) -> Mapping[str, Any]:
-        return self.plugin_root.get_params()
+    @functools.cached_property
+    def fig_dir(self) -> Path:
+        return self.exp_dir / "fig"
 
-    @plugin_cached_property
-    def project_name(self) -> str | None:
+    @functools.cached_property
+    def logs_dir(self) -> Path:
+        return self.exp_dir / "logs"
+
+    @functools.cached_property
+    def project_dir(self) -> Path:
+        try:
+            repo: git.Repo = git.Repo(search_parent_directories=True)
+        except git.exc.InvalidGitRepositoryError as err:
+            logger.warning("%s", err)
+            return Path.cwd().resolve()
+        else:
+            return Path(repo.working_dir).resolve()
+
+    @functools.cached_property
+    def project_name(self) -> str:
         return self.project_dir.name
 
-    @plugin_cached_property
-    def project_dir(self) -> Path:
-        return path_utils.project_dir()
+    @functools.cached_property
+    def start_time(self) -> datetime:
+        return datetime.now().astimezone()
 
-    @plugin_cached_property
-    def start_time(self) -> datetime.datetime:
-        return datetime.datetime.now().astimezone()
+    @functools.cached_property
+    def temp_dir(self) -> Path:
+        return self.exp_dir / "temp"
 
-    @plugin_property
+    @property
     def url(self) -> str:
-        return self.plugin_root.get_url()
+        return self.get_url()
 
-    @spec
+    @delegate
     def end(self, *args, **kwargs) -> None: ...
 
-    @spec(first_result=True)
+    @delegate(first_result=True)
+    def get_other(self, name: str) -> Any: ...
+
+    @delegate(first_result=True)
     def get_others(self) -> Mapping[str, Any]: ...
 
-    @spec(first_result=True)
+    @delegate(first_result=True)
+    def get_param(self, name: str) -> Any: ...
+
+    @delegate(first_result=True)
     def get_params(self) -> Mapping[str, Any]: ...
 
-    @spec(first_result=True)
+    @delegate(first_result=True)
     def get_url(self) -> str: ...
 
-    @spec
-    def log_asset(
-        self,
-        path: PathLike,
-        name: PathLike | None = None,
-        *,
-        metadata: Mapping[str, Any] | None = None,
-        **kwargs,
-    ) -> None: ...
+    def log_asset(self, path: PathLike, **kwargs) -> None:
+        __tracebackhide__ = True
+        self._log_asset(path, "log_asset", self.exp_dir, **kwargs)
 
-    @spec
-    def log_input(
-        self,
-        path: PathLike,
-        name: PathLike | None = None,
-        *,
-        metadata: Mapping[str, Any] | None = None,
-        **kwargs,
-    ) -> None: ...
+    def log_input(self, path: PathLike, **kwargs) -> None:
+        __tracebackhide__ = True
+        self._log_asset(path, "log_input", self.data_dir, **kwargs)
 
-    @spec
+    @delegate
     def log_metric(
-        self,
-        name: str,
-        value: Any,
-        /,
-        step: int | None = None,
-        epoch: int | None = None,
-        **kwargs,
+        self, name: str, value: Any, step: int | None = None, **kwargs
     ) -> None: ...
 
-    @spec
+    @delegate
     def log_metrics(
-        self,
-        dic: Mapping[str, Any],
-        /,
-        prefix: str | None = None,
-        step: int | None = None,
-        epoch: int | None = None,
-        **kwargs,
+        self, metrics: Mapping[str, Any], step: int | None = None, **kwargs
     ) -> None: ...
 
-    @spec
-    def log_other(self, key: Any, value: Any, /, **kwargs) -> None: ...
+    @delegate
+    def log_other(self, name: str, value: Any) -> None: ...
 
-    @spec
-    def log_others(self, dictionary: Mapping[Any, Any], /, **kwargs) -> None: ...
+    @delegate
+    def log_others(self, others: Mapping[str, Any]) -> None: ...
 
-    @spec
-    def log_output(
-        self,
-        path: PathLike,
-        name: PathLike | None = None,
-        *,
-        metadata: Mapping[str, Any] | None = None,
-        **kwargs,
-    ) -> None: ...
+    def log_output(self, path: PathLike, **kwargs) -> None:
+        __tracebackhide__ = True
+        self._log_asset(path, "log_output", self.data_dir, **kwargs)
 
-    @spec
-    def log_parameter(
-        self, name: Any, value: Any, /, step: int | None = None, **kwargs
-    ) -> None: ...
+    @delegate
+    def log_param(self, name: str, value: Any) -> None: ...
 
-    @spec
-    def log_parameters(
-        self,
-        parameters: Mapping[Any, Any],
-        /,
-        prefix: str | None = None,
-        step: int | None = None,
-        **kwargs,
-    ) -> None: ...
+    @delegate
+    def log_params(self, params: Mapping[str, Any]) -> None: ...
 
-    @spec
-    def log_temporary(
-        self,
-        path: PathLike,
-        name: PathLike | None = None,
-        *,
-        metadata: Mapping[str, Any] | None = None,
-        **kwargs,
-    ) -> None: ...
+    def log_temp(self, path: PathLike, **kwargs) -> None:
+        __tracebackhide__ = True
+        self._log_asset(path, "log_temp", self.temp_dir, **kwargs)
 
-    @spec(delegate=False)
-    def start(self, *args, **kwargs) -> None:
-        env.read_env(self.entrypoint.parent / ".env")
-        return self.delegate("start", args, kwargs)
+    @delegate
+    def set_step(self, step: int | None = None) -> None: ...
 
+    @delegate
+    def start(self, *args, **kwargs) -> None: ...
 
-active_run: Run = Run()
-end = active_run.end
-log_asset = active_run.log_asset
-log_input = active_run.log_input
-log_metric = active_run.log_metric
-log_metrics = active_run.log_metrics
-log_other = active_run.log_other
-log_others = active_run.log_others
-log_output = active_run.log_output
-log_parameter = active_run.log_parameter
-log_parameters = active_run.log_parameters
-start = active_run.start
+    def _log_asset(
+        self, path: PathLike, method_name: MethodName, prefix: PathLike, **kwargs
+    ) -> None:
+        __tracebackhide__ = True
+        for p, relative, required in bundles.ls_files(path, prefix):
+            p = Path(p)  # noqa: PLW2901
+            relative = Path(relative)  # noqa: PLW2901
+            if required and not p.exists():
+                depth_logger.warning("No such file or directory: %s", p)
+                continue
+            self.delegate(method_name, args=(p, relative), kwargs=kwargs)

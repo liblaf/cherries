@@ -1,3 +1,4 @@
+import logging
 import unittest.mock
 from collections.abc import Mapping
 from pathlib import Path
@@ -9,25 +10,24 @@ import cytoolz as toolz
 import dvc.api
 import dvc.exceptions
 import git
-from loguru import logger
 
 from liblaf import grapes
 from liblaf.cherries import core, meta, path_utils
-from liblaf.cherries.typing import PathLike
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @attrs.frozen
 class Asset:
-    path: PathLike
-    name: PathLike | None
+    path: Path
+    name: Path
     metadata: Mapping[str, Any] | None = None
     kwargs: Mapping[str, Any] = attrs.field(factory=dict)
 
 
 @attrs.define
-class Comet(core.Run):
+class Comet(core.PluginSchema):
     disabled: bool = attrs.field(default=False)
-    enable_dvc: bool = False
     _assets_git: list[Asset] = attrs.field(factory=list)
 
     @override
@@ -35,14 +35,24 @@ class Comet(core.Run):
     def end(self, *args, **kwargs) -> None:
         try:
             self._log_asset_git_end()
-        except git.GitError as err:
-            logger.exception(err)
+        except git.GitError:
+            logger.exception("")
         self.experiment.end()
+
+    @override
+    @core.impl
+    def get_other(self, name: str) -> Any:
+        return self.experiment.get_other(name)
 
     @override
     @core.impl
     def get_others(self) -> Mapping[str, Any]:
         return self.experiment.others
+
+    @override
+    @core.impl
+    def get_param(self, name: str) -> Any:
+        return self.experiment.get_parameter(name)
 
     @override
     @core.impl
@@ -55,96 +65,86 @@ class Comet(core.Run):
         return self.experiment.url  # pyright: ignore[reportReturnType]
 
     @override
-    @core.impl(after=("Dvc",))
-    def log_asset(
-        self,
-        path: PathLike,
-        name: PathLike | None = None,
-        **kwargs,
-    ) -> None:
+    @core.impl
+    def log_asset(self, path: Path, name: Path, **kwargs) -> None:
         if self._log_asset_git(path, name, **kwargs):
             return
-        if self.enable_dvc and self._log_asset_dvc(path, name, **kwargs):
-            return
-        name = path_utils.as_posix(name)
-        self.experiment.log_asset(path, name, **kwargs)
+        self.experiment.log_asset(path, name.as_posix(), **kwargs)
 
     @override
-    @core.impl(after=("Dvc",))
+    @core.impl
     def log_input(
         self,
-        path: PathLike,
-        name: PathLike | None = None,
+        path: Path,
+        name: Path,
         *,
         metadata: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
-        if name is None:
-            path = Path(path)
-            name = f"inputs/{path.name}"
+        name = "inputs" / name
         metadata = toolz.assoc(metadata or {}, "type", "input")
         self.log_asset(path, name, metadata=metadata, **kwargs)
 
     @override
     @core.impl
-    def log_metric(self, *args, **kwargs) -> None:
-        return self.experiment.log_metric(*args, **kwargs)
+    def log_metric(
+        self, name: str, value: Any, step: int | None = None, **kwargs
+    ) -> None:
+        return self.experiment.log_metric(name, value, step=step, **kwargs)
 
     @override
     @core.impl
-    def log_metrics(self, *args, **kwargs) -> None:
-        return self.experiment.log_metrics(*args, **kwargs)
+    def log_metrics(
+        self, metrics: Mapping[str, Any], step: int | None = None, **kwargs
+    ) -> None:
+        return self.experiment.log_metrics(dict(metrics), step=step, **kwargs)
 
     @override
     @core.impl
-    def log_other(self, *args, **kwargs) -> None:
-        return self.experiment.log_other(*args, **kwargs)
+    def log_other(self, name: str, value: Any) -> None:
+        return self.experiment.log_other(name, value)
 
     @override
     @core.impl
-    def log_others(self, *args, **kwargs) -> None:
-        return self.experiment.log_others(*args, **kwargs)
+    def log_others(self, others: Mapping[str, Any]) -> None:
+        return self.experiment.log_others(dict(others))
 
     @override
-    @core.impl(after=("Dvc",))
+    @core.impl
     def log_output(
         self,
-        path: PathLike,
-        name: PathLike | None = None,
+        path: Path,
+        name: Path,
         *,
         metadata: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
-        if name is None:
-            path = Path(path)
-            name = f"outputs/{path.name}"
+        name = "outputs" / name
         metadata = toolz.assoc(metadata or {}, "type", "output")
         self.log_asset(path, name, metadata=metadata, **kwargs)
 
     @override
     @core.impl
-    def log_parameter(self, *args, **kwargs) -> None:
-        return self.experiment.log_parameter(*args, **kwargs)
+    def log_param(self, name: str, value: Any) -> None:
+        return self.experiment.log_parameter(name, value)
 
     @override
     @core.impl
-    def log_parameters(self, *args, **kwargs) -> None:
-        return self.experiment.log_parameters(*args, **kwargs)
+    def log_params(self, params: Mapping[str, Any]) -> None:
+        return self.experiment.log_parameters(dict(params))
 
     @override
     @core.impl(after=("Logging",))
     def start(self, *args, **kwargs) -> None:
-        logger.disable("comet_ml")
         try:
             comet_ml.start(
-                project_name=self.project_name,
+                project_name=self.run.project_name,
                 experiment_config=comet_ml.ExperimentConfig(
-                    disabled=self.disabled, name=self.exp_name
+                    disabled=self.disabled, name=self.run.exp_name
                 ),
             )
-        except ValueError as err:
-            logger.warning(err)
-        logger.enable("comet_ml")
+        except ValueError:
+            logger.exception("")
 
     @property
     def experiment(self) -> comet_ml.CometExperiment:
@@ -152,14 +152,12 @@ class Comet(core.Run):
 
     def _log_asset_dvc(
         self,
-        path: PathLike,
-        name: PathLike | None = None,
+        path: Path,
+        name: Path,
         *,
         metadata: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> bool:
-        path = Path(path)
-        name = path_utils.as_posix(name)
         try:
             # ? I don't know why, but `dvc.api.get_url` only works with this. Maybe a DVC bug?
             dvc_path: Path = path.absolute().relative_to(Path.cwd())
@@ -169,13 +167,15 @@ class Comet(core.Run):
         dvc_file: Path = path.with_name(path.name + ".dvc")
         dvc_meta: Mapping[str, Any] = grapes.yaml.load(dvc_file)
         metadata: dict[str, Mapping] = toolz.merge(metadata or {}, dvc_meta["outs"][0])
-        self.experiment.log_remote_asset(uri, name, metadata=metadata, **kwargs)
+        self.experiment.log_remote_asset(
+            uri, name.as_posix(), metadata=metadata, **kwargs
+        )
         return True
 
     def _log_asset_git(
         self,
-        path: PathLike,
-        name: PathLike | None = None,
+        path: Path,
+        name: Path,
         *,
         metadata: Mapping[str, Any] | None = None,
         **kwargs,
@@ -204,10 +204,11 @@ class Comet(core.Run):
             uri: str
             match str(info.platform):
                 case "github":
+                    assert repo.working_tree_dir is not None
                     path: Path = Path(asset.path).absolute()
-                    path_rel: str = path.relative_to(repo.working_tree_dir).as_posix()  # pyright: ignore[reportArgumentType]
+                    relative: str = path.relative_to(repo.working_tree_dir).as_posix()
                     sha: str = repo.head.commit.hexsha
-                    uri = f"https://{info.host}/{info.owner}/{info.repo}/raw/{sha}/{path_rel}"
+                    uri = f"https://{info.host}/{info.owner}/{info.repo}/raw/{sha}/{relative}"
                 case _:
                     uri = path_utils.as_posix(asset.path)
             self.experiment.log_remote_asset(
@@ -216,8 +217,3 @@ class Comet(core.Run):
                 metadata=dict(asset.metadata) if asset.metadata is not None else None,
                 **asset.kwargs,
             )
-
-
-def _get_api_key() -> str | None:
-    config: comet_ml.config.Config = comet_ml.get_config()
-    return comet_ml.get_api_key(None, config)

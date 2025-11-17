@@ -11,11 +11,13 @@ from liblaf.cherries import core, profiles
 
 
 def end(*args, **kwargs) -> None:
-    core.active_run.log_other("cherries.end_time", datetime.datetime.now().astimezone())
-    core.active_run.end(*args, **kwargs)
+    core.run.log_other("cherries.end_time", datetime.datetime.now().astimezone())
+    core.run.end(*args, **kwargs)
 
 
-def run[T](main: Callable[..., T], *, profile: profiles.ProfileLike | None = None) -> T:
+def main[T](
+    main: Callable[..., T], *, profile: profiles.ProfileLike | None = None
+) -> T:
     run: core.Run = start(profile=profile)
     args: Sequence[Any]
     kwargs: Mapping[str, Any]
@@ -26,7 +28,7 @@ def run[T](main: Callable[..., T], *, profile: profiles.ProfileLike | None = Non
         if isinstance(arg, pydantic.BaseModel)
     ]
     for config in configs:
-        run.log_parameters(_config.model_dump_without_assets(config, mode="json"))
+        run.log_params(_config.model_dump_without_assets(config, mode="json"))
         for path in _config.get_inputs(config):
             run.log_input(path)
     try:
@@ -36,7 +38,7 @@ def run[T](main: Callable[..., T], *, profile: profiles.ProfileLike | None = Non
             for path in _config.get_outputs(config):
                 run.log_output(path)
             for path in _config.get_temporaries(config):
-                run.log_temporary(path)
+                run.log_temp(path)
         run.end()
 
 

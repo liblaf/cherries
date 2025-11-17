@@ -8,43 +8,28 @@ import wrapt
 
 from liblaf import grapes
 
-from .typing import MethodName, PluginId
+from ._typing import MethodName, PluginId
 
 
 @attrs.define
 class ImplInfo:
-    after: Iterable[PluginId] = attrs.field(default=())
-    before: Iterable[PluginId] = attrs.field(default=())
-    priority: int = 0
+    after: Iterable[PluginId] = ()
+    before: Iterable[PluginId] = ()
 
 
 @overload
 def impl[C: Callable](
-    func: C,
-    /,
-    *,
-    priority: int = 0,
-    after: Iterable[PluginId] = (),
-    before: Iterable[PluginId] = (),
+    func: C, /, *, after: Iterable[PluginId] = (), before: Iterable[PluginId] = ()
 ) -> C: ...
 @overload
 def impl[C: Callable](
-    *,
-    priority: int = 0,
-    after: Iterable[PluginId] = (),
-    before: Iterable[PluginId] = (),
+    *, after: Iterable[PluginId] = (), before: Iterable[PluginId] = ()
 ) -> Callable[[C], C]: ...
-def impl[**P, T](
-    func: Callable[P, T] | None = None,
-    /,
-    priority: int = 0,
-    after: Iterable[PluginId] = (),
-    before: Iterable[PluginId] = (),
-) -> Any:
+def impl[**P, T](func: Callable[P, T] | None = None, /, **kwargs) -> Any:
     if func is None:
-        return functools.partial(impl, priority=priority, after=after, before=before)
+        return functools.partial(impl, **kwargs)
 
-    info = ImplInfo(after=after, before=before, priority=priority)
+    info = ImplInfo(**kwargs)
 
     @wrapt.decorator
     def wrapper(
@@ -62,14 +47,14 @@ def impl[**P, T](
 
 
 def collect_impls(cls: Any) -> dict[MethodName, ImplInfo]:
-    if isinstance(cls, type):
+    if not isinstance(cls, type):
         cls = type(cls)
-    return {
-        name: grapes.wrapt_getattr(method, "impl")
-        for name, method in inspect.getmembers(
-            cls, lambda m: grapes.wrapt_getattr(m, "impl", None) is not None
-        )
-    }
+    impls: dict[MethodName, ImplInfo] = {}
+    for name, method in inspect.getmembers(cls):
+        info: ImplInfo | None = get_impl_info(method)
+        if info is not None:
+            impls[name] = info
+    return impls
 
 
 def get_impl_info(func: Callable | None) -> ImplInfo | None:

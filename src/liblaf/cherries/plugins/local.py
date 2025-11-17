@@ -5,89 +5,54 @@ from typing import override
 import attrs
 
 from liblaf.cherries import core
-from liblaf.cherries.typing import PathLike
 
 
 @attrs.define
-class Local(core.Run):
+class Local(core.PluginSchema):
     folder: Path = attrs.field(default=None)
 
     @override
     @core.impl
-    def log_asset(
-        self,
-        path: PathLike,
-        name: PathLike | None = None,
-        **kwargs,
-    ) -> None:
-        path = Path(path)
-        if name is None:
-            path_absolute: Path = path.resolve()
-            if path_absolute.is_relative_to(self.exp_dir):
-                name = path_absolute.relative_to(self.exp_dir)
-            else:
-                name = path
+    def log_asset(self, path: Path, name: Path, **kwargs) -> None:
         target: Path = self.folder / name
-        self._copy(path, target)
+        _copy(path, target)
 
     @override
     @core.impl
-    def log_input(
-        self,
-        path: PathLike,
-        name: PathLike | None = None,
-        **kwargs,
-    ) -> None:
-        if name is None:
-            name = Path(path).name
-        name = f"inputs/{name}"
-        self.log_asset(path, name, **kwargs)
+    def log_input(self, path: Path, name: Path, **kwargs) -> None:
+        target: Path = self.folder / "inputs" / name
+        _copy(path, target)
 
     @override
     @core.impl
-    def log_output(
-        self,
-        path: PathLike,
-        name: PathLike | None = None,
-        **kwargs,
-    ) -> None:
-        if name is None:
-            name = Path(path).name
-        name = f"outputs/{name}"
-        self.log_asset(path, name, **kwargs)
+    def log_output(self, path: Path, name: Path, **kwargs) -> None:
+        target: Path = self.folder / "outputs" / name
+        _copy(path, target)
 
     @override
     @core.impl
-    def log_temporary(
-        self,
-        path: PathLike,
-        name: PathLike | None = None,
-        **kwargs,
-    ) -> None:
-        if name is None:
-            name = Path(path).name
-        name = f"temp/{name}"
-        self.log_asset(path, name, **kwargs)
+    def log_temp(self, path: Path, name: Path, **kwargs) -> None:
+        target: Path = self.folder / "temp" / name
+        _copy(path, target)
 
     @override
     @core.impl
     def start(self, *args, **kwargs) -> None:
-        cherries_dir: Path = self.exp_dir / ".cherries"
-        cherries_dir.mkdir(parents=True, exist_ok=True)
-        (cherries_dir / ".gitignore").write_text("*\n")
+        local_dir: Path = self.run.exp_dir / ".cherries"
+        local_dir.mkdir(parents=True, exist_ok=True)
+        (local_dir / ".gitignore").write_text("*\n")
+        entrypoint: Path = self.run.entrypoint
         self.folder = (
-            cherries_dir
-            / self.entrypoint.stem
-            / self.start_time.strftime("%Y-%m-%dT%H%M%S")
+            local_dir
+            / entrypoint.stem
+            / self.run.start_time.strftime("%Y-%m-%dT%H%M%S")
         )
-        entrypoint: Path = self.entrypoint
-        self.log_asset(entrypoint, f"src/{entrypoint.name}")
+        _copy(entrypoint, self.folder / "src" / entrypoint.name)
 
-    def _copy(self, source: PathLike, target: PathLike) -> None:
-        source = Path(source)
-        target = Path(target)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if source.is_dir():
-            shutil.copytree(source, target)
-        else:
-            shutil.copy2(source, target)
+
+def _copy(source: Path, target: Path) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if source.is_dir():
+        shutil.copytree(source, target, dirs_exist_ok=True)
+    else:
+        shutil.copy2(source, target)

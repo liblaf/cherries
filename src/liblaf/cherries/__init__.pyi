@@ -1,5 +1,5 @@
 from . import config, core, meta, path_utils, plugins
-from ._entrypoint import end, run, start
+from ._entrypoint import end, main, start
 from ._version import __version__, __version_tuple__, version, version_tuple
 from .config import BaseConfig, input, output, temporary  # noqa: A004
 from .core import (
@@ -55,6 +55,7 @@ __all__ = [
     "log_output",
     "log_parameter",
     "log_parameters",
+    "main",
     "meta",
     "output",
     "params",
@@ -62,7 +63,6 @@ __all__ = [
     "path_utils",
     "plugins",
     "project_dir",
-    "run",
     "src",
     "start",
     "temporary",
