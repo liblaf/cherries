@@ -1,11 +1,13 @@
 from ._impl import ImplInfo, collect_impls, get_impl_info, impl
 from ._methods import (
+    asset,
     end,
     get_other,
     get_others,
     get_param,
     get_params,
     get_url,
+    input,  # noqa: A004
     log_asset,
     log_input,
     log_metric,
@@ -16,9 +18,11 @@ from ._methods import (
     log_param,
     log_params,
     log_temp,
+    output,
     run,
     set_step,
     start,
+    temp,
 )
 from ._plugin import Plugin
 from ._plugin_manager import PluginManager
@@ -34,6 +38,7 @@ __all__ = [
     "PluginManager",
     "PluginSchema",
     "Run",
+    "asset",
     "collect_impls",
     "end",
     "get_impl_info",
@@ -43,6 +48,7 @@ __all__ = [
     "get_params",
     "get_url",
     "impl",
+    "input",
     "log_asset",
     "log_input",
     "log_metric",
@@ -53,7 +59,9 @@ __all__ = [
     "log_param",
     "log_params",
     "log_temp",
+    "output",
     "run",
     "set_step",
     "start",
+    "temp",
 ]

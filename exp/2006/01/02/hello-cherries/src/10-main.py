@@ -5,7 +5,7 @@ from pathlib import Path
 import liblaf.cherries as cherries  # noqa: PLR0402
 from liblaf import grapes
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class Config(cherries.BaseConfig):

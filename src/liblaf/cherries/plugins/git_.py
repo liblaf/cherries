@@ -24,7 +24,7 @@ class Git(core.PluginSchema):
     verify: bool = False
 
     @override
-    @core.impl(after=("Logging",), before=("Comet",))
+    @core.impl(before=("Comet",))
     def end(self, *args, **kwargs) -> None:
         if self.commit and self.repo.is_dirty(untracked_files=True):
             try:

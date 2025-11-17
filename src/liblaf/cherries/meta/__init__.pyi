@@ -1,20 +1,3 @@
-from ._git import (
-    GitInfo,
-    git_auto_commit,
-    git_branch,
-    git_commit_sha,
-    git_commit_url,
-    git_info,
-)
-from ._name import exp_name, project_name
+from ._git import GitUrlParsed, giturlparse
 
-__all__ = [
-    "GitInfo",
-    "exp_name",
-    "git_auto_commit",
-    "git_branch",
-    "git_commit_sha",
-    "git_commit_url",
-    "git_info",
-    "project_name",
-]
+__all__ = ["GitUrlParsed", "giturlparse"]

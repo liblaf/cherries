@@ -26,6 +26,11 @@ _PATH_SKIP_NAMES: set[str] = {"exp", "src"}
 
 @attrs.define
 class Run(PluginManager):
+    _assets_queue: list[Path] = attrs.field(init=False, factory=list)
+    _inputs_queue: list[Path] = attrs.field(init=False, factory=list)
+    _outputs_queue: list[Path] = attrs.field(init=False, factory=list)
+    _temps_queue: list[Path] = attrs.field(init=False, factory=list)
+
     @functools.cached_property
     def data_dir(self) -> Path:
         return self.exp_dir / "data"
@@ -86,8 +91,38 @@ class Run(PluginManager):
     def url(self) -> str:
         return self.get_url()
 
-    @delegate
-    def end(self, *args, **kwargs) -> None: ...
+    def asset(self, path: PathLike) -> Path:
+        absolute: Path = self.exp_dir / path
+        self._assets_queue.append(absolute)
+        return absolute
+
+    def input(self, path: PathLike) -> Path:
+        absolute: Path = self.data_dir / path
+        self._inputs_queue.append(absolute)
+        return absolute
+
+    def output(self, path: PathLike) -> Path:
+        absolute: Path = self.data_dir / path
+        self._outputs_queue.append(absolute)
+        return absolute
+
+    def temp(self, path: PathLike) -> Path:
+        absolute: Path = self.temp_dir / path
+        self._temps_queue.append(absolute)
+        return absolute
+
+    def end(self, *args, **kwargs) -> None:
+        __tracebackhide__ = True
+        self.log_other("cherries.end_time", datetime.now().astimezone())
+        for path in self._assets_queue:
+            self.log_asset(path)
+        for path in self._inputs_queue:
+            self.log_input(path)
+        for path in self._outputs_queue:
+            self.log_output(path)
+        for path in self._temps_queue:
+            self.log_temp(path)
+        self.delegate("end", args, kwargs)
 
     @delegate(first_result=True)
     def get_other(self, name: str) -> Any: ...
@@ -112,6 +147,14 @@ class Run(PluginManager):
         __tracebackhide__ = True
         self._log_asset(path, "log_input", self.data_dir, **kwargs)
 
+    def log_output(self, path: PathLike, **kwargs) -> None:
+        __tracebackhide__ = True
+        self._log_asset(path, "log_output", self.data_dir, **kwargs)
+
+    def log_temp(self, path: PathLike, **kwargs) -> None:
+        __tracebackhide__ = True
+        self._log_asset(path, "log_temp", self.temp_dir, **kwargs)
+
     @delegate
     def log_metric(
         self, name: str, value: Any, step: int | None = None, **kwargs
@@ -128,34 +171,42 @@ class Run(PluginManager):
     @delegate
     def log_others(self, others: Mapping[str, Any]) -> None: ...
 
-    def log_output(self, path: PathLike, **kwargs) -> None:
-        __tracebackhide__ = True
-        self._log_asset(path, "log_output", self.data_dir, **kwargs)
-
     @delegate
     def log_param(self, name: str, value: Any) -> None: ...
 
     @delegate
     def log_params(self, params: Mapping[str, Any]) -> None: ...
 
-    def log_temp(self, path: PathLike, **kwargs) -> None:
-        __tracebackhide__ = True
-        self._log_asset(path, "log_temp", self.temp_dir, **kwargs)
-
     @delegate
     def set_step(self, step: int | None = None) -> None: ...
 
-    @delegate
-    def start(self, *args, **kwargs) -> None: ...
+    def start(self, *args, **kwargs) -> None:
+        __tracebackhide__ = True
+        self.delegate("start", args, kwargs)
+        self.log_other(
+            "cherries.entrypoint",
+            _relative_or_absolute(self.entrypoint, self.project_dir),
+        )
+        self.log_other(
+            "cherries.exp_dir", _relative_or_absolute(self.exp_dir, self.project_dir)
+        )
+        self.log_other("cherries.start_time", self.start_time)
 
     def _log_asset(
         self, path: PathLike, method_name: MethodName, prefix: PathLike, **kwargs
     ) -> None:
         __tracebackhide__ = True
-        for p, relative, required in bundles.ls_files(path, prefix):
-            p = Path(p)  # noqa: PLW2901
+        for absolute, relative, required in bundles.ls_files(path, prefix):
+            absolute = Path(absolute)  # noqa: PLW2901
             relative = Path(relative)  # noqa: PLW2901
-            if required and not p.exists():
-                depth_logger.warning("No such file or directory: %s", p)
+            if required and not absolute.exists():
+                depth_logger.warning("No such file or directory: %s", absolute)
                 continue
-            self.delegate(method_name, args=(p, relative), kwargs=kwargs)
+            self.delegate(method_name, args=(absolute, relative), kwargs=kwargs)
+
+
+def _relative_or_absolute(path: Path, prefix: Path) -> Path:
+    try:
+        return path.relative_to(prefix)
+    except ValueError:
+        return path

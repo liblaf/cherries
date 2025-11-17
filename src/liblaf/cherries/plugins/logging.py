@@ -16,7 +16,7 @@ class Logging(core.PluginSchema):
         return self.run.logs_dir / self.run.entrypoint.with_suffix(".log").name
 
     @override
-    @core.impl(before=("Comet", "Git"))
+    @core.impl(before=("Comet",))
     def end(self, *args, **kwargs) -> None:
         self.run.log_asset(self.log_file)
 
@@ -45,4 +45,5 @@ class Logging(core.PluginSchema):
     @override
     @core.impl
     def start(self, *args, **kwargs) -> None:
+        self.log_file.parent.mkdir(parents=True, exist_ok=True)
         grapes.logging.init(file=self.log_file, force=True)

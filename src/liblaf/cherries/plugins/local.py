@@ -1,42 +1,52 @@
+import logging
 import shutil
 from pathlib import Path
 from typing import override
 
 import attrs
+from liblaf.grapes.logging.filters import as_filter
+from liblaf.grapes.rich import get_console
+from liblaf.grapes.rich.logging import RichHandler
 
 from liblaf.cherries import core
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @attrs.define
 class Local(core.PluginSchema):
     folder: Path = attrs.field(default=None)
 
+    @property
+    def log_file(self) -> Path:
+        return self.folder / "logs" / self.run.entrypoint.with_suffix(".log").name
+
     @override
     @core.impl
     def log_asset(self, path: Path, name: Path, **kwargs) -> None:
         target: Path = self.folder / name
-        _copy(path, target)
+        self._copy(path, target)
 
     @override
     @core.impl
     def log_input(self, path: Path, name: Path, **kwargs) -> None:
         target: Path = self.folder / "inputs" / name
-        _copy(path, target)
+        self._copy(path, target)
 
     @override
     @core.impl
     def log_output(self, path: Path, name: Path, **kwargs) -> None:
         target: Path = self.folder / "outputs" / name
-        _copy(path, target)
+        self._copy(path, target)
 
     @override
     @core.impl
     def log_temp(self, path: Path, name: Path, **kwargs) -> None:
         target: Path = self.folder / "temp" / name
-        _copy(path, target)
+        self._copy(path, target)
 
     @override
-    @core.impl
+    @core.impl(after=("Logging",))
     def start(self, *args, **kwargs) -> None:
         local_dir: Path = self.run.exp_dir / ".cherries"
         local_dir.mkdir(parents=True, exist_ok=True)
@@ -47,12 +57,24 @@ class Local(core.PluginSchema):
             / entrypoint.stem
             / self.run.start_time.strftime("%Y-%m-%dT%H%M%S")
         )
-        _copy(entrypoint, self.folder / "src" / entrypoint.name)
+        self._copy(entrypoint, self.folder / "src" / entrypoint.name)
+        self._config_logging()
 
+    def _config_logging(self) -> None:
+        logger: logging.Logger = logging.getLogger()
+        self.log_file.parent.mkdir(parents=True, exist_ok=True)
+        console = get_console(file=self.log_file.open("w"))
+        handler = RichHandler(console=console)
+        handler.addFilter(as_filter())
+        logger.addHandler(handler)
 
-def _copy(source: Path, target: Path) -> None:
-    target.parent.mkdir(parents=True, exist_ok=True)
-    if source.is_dir():
-        shutil.copytree(source, target, dirs_exist_ok=True)
-    else:
-        shutil.copy2(source, target)
+    def _copy(self, source: Path, target: Path) -> None:
+        if target.exists():
+            if target.samefile(self.log_file):
+                return
+            logger.warning("Overwriting existing file: %s", target)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if source.is_dir():
+            shutil.copytree(source, target, dirs_exist_ok=True)
+        else:
+            shutil.copy2(source, target)

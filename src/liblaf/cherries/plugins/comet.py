@@ -12,7 +12,7 @@ import dvc.exceptions
 import git
 
 from liblaf import grapes
-from liblaf.cherries import core, meta, path_utils
+from liblaf.cherries import core, meta
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -136,6 +136,10 @@ class Comet(core.PluginSchema):
     @override
     @core.impl(after=("Logging",))
     def start(self, *args, **kwargs) -> None:
+        logger: logging.Logger = logging.getLogger("comet_ml")
+        logger.handlers.clear()
+        logger.propagate = True
+
         try:
             comet_ml.start(
                 project_name=self.run.project_name,
@@ -199,21 +203,23 @@ class Comet(core.PluginSchema):
         if len(self._assets_git) == 0:
             return
         repo = git.Repo(search_parent_directories=True)
-        info: meta.GitInfo = meta.git_info()
+        info: meta.GitUrlParsed = meta.giturlparse(repo.remote().url)
         for asset in self._assets_git:
             uri: str
             match str(info.platform):
                 case "github":
                     assert repo.working_tree_dir is not None
-                    path: Path = Path(asset.path).absolute()
-                    relative: str = path.relative_to(repo.working_tree_dir).as_posix()
+                    absolute: Path = Path(asset.path).absolute()
+                    relative: str = absolute.relative_to(
+                        repo.working_tree_dir
+                    ).as_posix()
                     sha: str = repo.head.commit.hexsha
                     uri = f"https://{info.host}/{info.owner}/{info.repo}/raw/{sha}/{relative}"
                 case _:
-                    uri = path_utils.as_posix(asset.path)
+                    uri = asset.path.as_posix()
             self.experiment.log_remote_asset(
                 uri,
-                path_utils.as_posix(asset.name),
+                asset.name.as_posix(),
                 metadata=dict(asset.metadata) if asset.metadata is not None else None,
                 **asset.kwargs,
             )
