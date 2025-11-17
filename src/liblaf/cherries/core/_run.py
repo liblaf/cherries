@@ -93,23 +93,31 @@ class Run(PluginManager):
     def url(self) -> str:
         return self.get_url()
 
-    def asset(self, path: PathLike) -> Path:
+    def asset(self, path: PathLike, *, mkdir: bool = False) -> Path:
         absolute: Path = self.exp_dir / path
+        if mkdir:
+            absolute.parent.mkdir(parents=True, exist_ok=True)
         self._assets_queue.append(absolute)
         return absolute
 
-    def input(self, path: PathLike) -> Path:
+    def input(self, path: PathLike, *, mkdir: bool = False) -> Path:
         absolute: Path = self.data_dir / path
+        if mkdir:
+            absolute.parent.mkdir(parents=True, exist_ok=True)
         self._inputs_queue.append(absolute)
         return absolute
 
-    def output(self, path: PathLike) -> Path:
+    def output(self, path: PathLike, *, mkdir: bool = False) -> Path:
         absolute: Path = self.data_dir / path
+        if mkdir:
+            absolute.parent.mkdir(parents=True, exist_ok=True)
         self._outputs_queue.append(absolute)
         return absolute
 
-    def temp(self, path: PathLike) -> Path:
+    def temp(self, path: PathLike, *, mkdir: bool = False) -> Path:
         absolute: Path = self.temp_dir / path
+        if mkdir:
+            absolute.parent.mkdir(parents=True, exist_ok=True)
         self._temps_queue.append(absolute)
         return absolute
 
