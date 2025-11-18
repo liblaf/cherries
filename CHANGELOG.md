@@ -7,6 +7,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1](https://github.com/liblaf/cherries/releases/tag/v0.7.1) - 2025-11-18
+
+### 🐛 Bug Fixes
+
+- **core:** Skip logging for non-existent assets - [3f97dd2](https://github.com/liblaf/cherries/commit/3f97dd2f412a16f9c4f71c5d7b12e36ac27f94b0) by [@liblaf](https://github.com/liblaf)
+- **plugins/logging:** Standardize logging setup and file handling - [3176289](https://github.com/liblaf/cherries/commit/3176289fcf293b278fb1fcf26d49152aadc4e88f) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+
 ## [0.7.0](https://github.com/liblaf/cherries/releases/tag/v0.7.0) - 2025-11-17
 
 ### 💥 BREAKING CHANGES
@@ -33,7 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
-- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@liblaf[bot]](https://github.com/apps/liblaf)
+- [@liblaf](https://github.com/liblaf)
 - [@copier-update[bot]](https://github.com/apps/copier-update) made their first contribution in [#72](https://github.com/liblaf/cherries/pull/72)
 
 ## [0.6.3](https://github.com/liblaf/cherries/releases/tag/v0.6.3) - 2025-11-11
