@@ -209,8 +209,9 @@ class Run(PluginManager):
         for absolute, relative, required in bundles.ls_files(path, prefix):
             absolute = Path(absolute)  # noqa: PLW2901
             relative = Path(relative)  # noqa: PLW2901
-            if required and not absolute.exists():
-                depth_logger.warning("No such file or directory: %s", absolute)
+            if not absolute.exists():
+                if required:
+                    depth_logger.warning("No such file or directory: %s", absolute)
                 continue
             self.delegate(method_name, args=(absolute, relative), kwargs=kwargs)
 
