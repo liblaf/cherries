@@ -1,5 +1,6 @@
 import inspect
 import itertools
+import typing
 from collections.abc import Callable, Mapping, Sequence
 from inspect import Parameter
 from typing import Any
@@ -32,23 +33,28 @@ def main[T](
 
 
 def _make_args(func: Callable) -> tuple[Sequence[Any], Mapping[str, Any]]:
+    hints: dict[str, Any] = typing.get_type_hints(func)
     signature: inspect.Signature = inspect.signature(func)
     args: list[Any] = []
     kwargs: dict[str, Any] = {}
     for name, param in signature.parameters.items():
+        annotation: Any = hints.get(name)
         match param.kind:
             case Parameter.POSITIONAL_ONLY:
-                args.append(_make_arg(param))
+                args.append(_make_arg(param, annotation))
             case Parameter.POSITIONAL_OR_KEYWORD | Parameter.KEYWORD_ONLY:
-                kwargs[name] = _make_arg(param)
+                kwargs[name] = _make_arg(param, annotation)
             case _:
                 pass
     return args, kwargs
 
 
-def _make_arg(param: Parameter) -> Any:
+def _make_arg(param: Parameter, annotation: Any) -> Any:
     if param.default is not Parameter.empty:
         return param.default
     if param.annotation is not Parameter.empty:
-        return param.annotation()
+        if not isinstance(param.annotation, str):
+            return param.annotation()
+        if annotation is not None:
+            return annotation()
     return None
