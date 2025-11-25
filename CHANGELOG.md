@@ -7,6 +7,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3](https://github.com/liblaf/cherries/releases/tag/v0.7.3) - 2025-11-25
+
+### 🐛 Bug Fixes
+
+- **logging:** Replace `depth_logger` with `autolog` - [30e966f](https://github.com/liblaf/cherries/commit/30e966f0421c06fbe77caea2fca15911bdf2c13e) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+
 ## [0.7.2](https://github.com/liblaf/cherries/releases/tag/v0.7.2) - 2025-11-24
 
 ### 🐛 Bug Fixes
@@ -19,9 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
-- [@liblaf](https://github.com/liblaf) made their first contribution
-- [@liblaf[bot]](https://github.com/apps/liblaf) made their first contribution in [#79](https://github.com/liblaf/cherries/pull/79)
-- [@renovate[bot]](https://github.com/apps/renovate) made their first contribution in [#78](https://github.com/liblaf/cherries/pull/78)
+- [@liblaf[bot]](https://github.com/apps/liblaf)
+- [@liblaf](https://github.com/liblaf)
+- [@renovate[bot]](https://github.com/apps/renovate)
 
 ## [0.7.1](https://github.com/liblaf/cherries/releases/tag/v0.7.1) - 2025-11-18
 
