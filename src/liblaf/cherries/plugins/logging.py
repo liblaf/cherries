@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, override
 
 import attrs
-from liblaf.grapes.logging import depth_logger
+from liblaf.grapes.logging import autolog
 
 from liblaf import grapes
 from liblaf.cherries import core
@@ -27,9 +27,9 @@ class Logging(core.PluginSchema):
     ) -> None:
         __tracebackhide__ = True
         if step is None:
-            depth_logger.info("%s: %s", name, value)
+            autolog.info("%s: %s", name, value)
         else:
-            depth_logger.info("step: %s, %s: %s", step, name, value)
+            autolog.info("step: %s, %s: %s", step, name, value)
 
     @override
     @core.impl
@@ -38,9 +38,9 @@ class Logging(core.PluginSchema):
     ) -> None:
         __tracebackhide__ = True
         if step is None:
-            depth_logger.info("%s", metrics)
+            autolog.info("%s", metrics)
         else:
-            depth_logger.info("step: %s, %s", step, metrics)
+            autolog.info("step: %s, %s", step, metrics)
 
     @override
     @core.impl

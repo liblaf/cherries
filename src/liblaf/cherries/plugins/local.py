@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import override
 
 import attrs
-from liblaf.grapes.logging import RichFileHandler, as_filter, depth_logger
+from liblaf.grapes.logging import RichFileHandler, as_filter, autolog
 
 from liblaf.cherries import core
 
@@ -73,7 +73,7 @@ class Local(core.PluginSchema):
         if target.exists():
             if target.samefile(self.log_file):
                 return
-            depth_logger.warning("Overwriting existing file: %s", target)
+            autolog.warning("Overwriting existing file: %s", target)
         target.parent.mkdir(parents=True, exist_ok=True)
         if source.is_dir():
             shutil.copytree(source, target, dirs_exist_ok=True)

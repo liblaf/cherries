@@ -600,7 +600,7 @@ wheels = [
 
 [[package]]
 name = "comet-ml"
-version = "3.54.1"
+version = "3.54.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dulwich" },
@@ -619,9 +619,9 @@ dependencies = [
     { name = "wrapt" },
     { name = "wurlitzer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f1/85/f79737e2bf73fddfc24ef485498915b554161e4503dfa6d303871c32d83b/comet_ml-3.54.1.tar.gz", hash = "sha256:f052fbd98128fceaf337a9de86edc5c383fb52241624b1c60947f57d1bf54da2", size = 575069, upload-time = "2025-11-14T12:23:49.794Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/92/cf/f78001bb125b6aa3c4414c0a2de4fe7f9dc65dc2d7db98fb859474d83148/comet_ml-3.54.2.tar.gz", hash = "sha256:9687bb633fc8d61bf1665be310feb5d2474782f195018cf1f74471870a29a101", size = 579830, upload-time = "2025-11-24T15:10:20.946Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/75/b50604694c10a7f339b4a51f233e71d9d8ed4895240940023f709b595d92/comet_ml-3.54.1-py3-none-any.whl", hash = "sha256:addb752c9797735b8cbbb57a8efc99357b97e3f8816d85857bd1e9ae3e5ff924", size = 775096, upload-time = "2025-11-14T12:23:48.119Z" },
+    { url = "https://files.pythonhosted.org/packages/57/dc/e0c794957b62724941f53f2f5c7ebf7377a44a6d593d78aeb6646e763d43/comet_ml-3.54.2-py3-none-any.whl", hash = "sha256:85df8d585a266b06324adc48022e3cbf41a1f91f9a3845dcf2078783572876fe", size = 779975, upload-time = "2025-11-24T15:10:19.304Z" },
 ]
 
 [[package]]

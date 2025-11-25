@@ -10,7 +10,7 @@ from typing import Any
 import attrs
 import git
 import git.exc
-from liblaf.grapes.logging import depth_logger
+from liblaf.grapes.logging import autolog
 
 from liblaf.cherries.bundle import bundles
 from liblaf.cherries.core._typing import MethodName
@@ -211,7 +211,7 @@ class Run(PluginManager):
             relative = Path(relative)  # noqa: PLW2901
             if not absolute.exists():
                 if required:
-                    depth_logger.warning("No such file or directory: %s", absolute)
+                    autolog.warning("No such file or directory: %s", absolute)
                 continue
             self.delegate(method_name, args=(absolute, relative), kwargs=kwargs)
 
