@@ -1,12 +1,16 @@
-import os
+from __future__ import annotations
+
 from collections.abc import Generator
 from pathlib import Path
-from typing import Literal, override
+from typing import TYPE_CHECKING, Literal, override
 
 import attrs
 import pydantic
 
 from ._abc import Bundle, BundleItem
+
+if TYPE_CHECKING:
+    from _typeshed import StrPath
 
 
 def snake_to_kebab(snake: str) -> str:
@@ -35,7 +39,7 @@ class BundleSeries(Bundle):
         series: Series = Series.model_validate_json(path.read_bytes())
         for meta in series.files:
             absolute: Path = path.parent / meta.name
-            relative: str | os.PathLike[str]
+            relative: StrPath
             try:
                 relative = absolute.relative_to(prefix)
             except ValueError:

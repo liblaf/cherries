@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -11,9 +10,6 @@ from ._plugin import Plugin
 
 if TYPE_CHECKING:
     from ._run import Run
-
-
-type PathLike = str | os.PathLike[str]
 
 
 @attrs.define

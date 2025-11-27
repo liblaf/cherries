@@ -1,10 +1,13 @@
-import os
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-type PathLike = str | os.PathLike[str]
+if TYPE_CHECKING:
+    from _typeshed import StrPath
 
 
-def relative_to_or_name(path: Path, prefix: Path) -> PathLike:
+def relative_to_or_name(path: Path, prefix: Path) -> StrPath:
     try:
         return path.relative_to(prefix)
     except ValueError:

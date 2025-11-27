@@ -1,15 +1,17 @@
+from __future__ import annotations
+
 import abc
-import os
 from collections.abc import Iterable
 from pathlib import Path
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
-type PathLike = str | os.PathLike[str]
+if TYPE_CHECKING:
+    from _typeshed import StrPath
 
 
 class BundleItem(NamedTuple):
-    path: PathLike
-    relative: PathLike
+    path: StrPath
+    relative: StrPath
     required: bool
 
 

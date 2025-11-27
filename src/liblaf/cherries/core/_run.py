@@ -1,23 +1,25 @@
+from __future__ import annotations
+
 import functools
 import logging
-import os
 import sys
 from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import attrs
 import git
 import git.exc
 from liblaf.grapes.logging import autolog
 
-from liblaf.cherries.bundle import bundles
+from liblaf.cherries.bundle import bundles, relative_to_or_name
 from liblaf.cherries.core._typing import MethodName
 
 from ._plugin_manager import PluginManager, delegate
 
-type PathLike = str | os.PathLike[str]
+if TYPE_CHECKING:
+    from _typeshed import StrPath
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -93,28 +95,28 @@ class Run(PluginManager):
     def url(self) -> str:
         return self.get_url()
 
-    def asset(self, path: PathLike, *, mkdir: bool = False) -> Path:
+    def asset(self, path: StrPath, *, mkdir: bool = False) -> Path:
         absolute: Path = self.exp_dir / path
         if mkdir:
             absolute.parent.mkdir(parents=True, exist_ok=True)
         self._assets_queue.append(absolute)
         return absolute
 
-    def input(self, path: PathLike, *, mkdir: bool = False) -> Path:
+    def input(self, path: StrPath, *, mkdir: bool = False) -> Path:
         absolute: Path = self.data_dir / path
         if mkdir:
             absolute.parent.mkdir(parents=True, exist_ok=True)
         self._inputs_queue.append(absolute)
         return absolute
 
-    def output(self, path: PathLike, *, mkdir: bool = False) -> Path:
+    def output(self, path: StrPath, *, mkdir: bool = False) -> Path:
         absolute: Path = self.data_dir / path
         if mkdir:
             absolute.parent.mkdir(parents=True, exist_ok=True)
         self._outputs_queue.append(absolute)
         return absolute
 
-    def temp(self, path: PathLike, *, mkdir: bool = False) -> Path:
+    def temp(self, path: StrPath, *, mkdir: bool = False) -> Path:
         absolute: Path = self.temp_dir / path
         if mkdir:
             absolute.parent.mkdir(parents=True, exist_ok=True)
@@ -149,19 +151,19 @@ class Run(PluginManager):
     @delegate(first_result=True)
     def get_url(self) -> str: ...
 
-    def log_asset(self, path: PathLike, **kwargs) -> None:
+    def log_asset(self, path: StrPath, **kwargs) -> None:
         __tracebackhide__ = True
         self._log_asset(path, "log_asset", self.exp_dir, **kwargs)
 
-    def log_input(self, path: PathLike, **kwargs) -> None:
+    def log_input(self, path: StrPath, **kwargs) -> None:
         __tracebackhide__ = True
         self._log_asset(path, "log_input", self.data_dir, **kwargs)
 
-    def log_output(self, path: PathLike, **kwargs) -> None:
+    def log_output(self, path: StrPath, **kwargs) -> None:
         __tracebackhide__ = True
         self._log_asset(path, "log_output", self.data_dir, **kwargs)
 
-    def log_temp(self, path: PathLike, **kwargs) -> None:
+    def log_temp(self, path: StrPath, **kwargs) -> None:
         __tracebackhide__ = True
         self._log_asset(path, "log_temp", self.temp_dir, **kwargs)
 
@@ -203,9 +205,16 @@ class Run(PluginManager):
         self.log_other("cherries.start_time", self.start_time)
 
     def _log_asset(
-        self, path: PathLike, method_name: MethodName, prefix: PathLike, **kwargs
+        self, path: StrPath, method_name: MethodName, prefix: StrPath, **kwargs
     ) -> None:
         __tracebackhide__ = True
+        path: Path = Path(path).resolve()
+        if not path.exists():
+            autolog.warning("No such file or directory: %s", path)
+            return
+        prefix: Path = Path(prefix).resolve()
+        name: StrPath = relative_to_or_name(path, prefix)
+        self.delegate(method_name, args=(path, name), kwargs=kwargs)
         for absolute, relative, required in bundles.ls_files(path, prefix):
             absolute = Path(absolute)  # noqa: PLW2901
             relative = Path(relative)  # noqa: PLW2901
