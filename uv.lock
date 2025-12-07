@@ -637,9 +637,9 @@ dependencies = [
     { name = "click" },
     { name = "prompt-toolkit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cb/a2/57f4ac79838cfae6912f997b4d1a64a858fb0c86d7fcaae6f7b58d267fca/click-repl-0.3.0.tar.gz", hash = "sha256:17849c23dba3d667247dc4defe1757fff98694e90fe37474f3feebb69ced26a9" }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/a2/57f4ac79838cfae6912f997b4d1a64a858fb0c86d7fcaae6f7b58d267fca/click-repl-0.3.0.tar.gz", hash = "sha256:17849c23dba3d667247dc4defe1757fff98694e90fe37474f3feebb69ced26a9", size = 10449, upload-time = "2023-06-15T12:43:51.141Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/52/40/9d857001228658f0d59e97ebd4c346fe73e138c6de1bce61dc568a57c7f8/click_repl-0.3.0-py3-none-any.whl", hash = "sha256:fb7e06deb8da8de86180a33a9da97ac316751c094c6899382da7feeeeb51b812" },
+    { url = "https://files.pythonhosted.org/packages/52/40/9d857001228658f0d59e97ebd4c346fe73e138c6de1bce61dc568a57c7f8/click_repl-0.3.0-py3-none-any.whl", hash = "sha256:fb7e06deb8da8de86180a33a9da97ac316751c094c6899382da7feeeeb51b812", size = 10289, upload-time = "2023-06-15T12:43:48.626Z" },
 ]
 
 [[package]]
@@ -950,9 +950,9 @@ wheels = [
 name = "defusedxml"
 version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0f/d5/c66da9b79e5bdb124974bfe172b4daf3c984ebd9c2a06e2b8a4dc7331c72/defusedxml-0.7.1.tar.gz", hash = "sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69" }
+sdist = { url = "https://files.pythonhosted.org/packages/0f/d5/c66da9b79e5bdb124974bfe172b4daf3c984ebd9c2a06e2b8a4dc7331c72/defusedxml-0.7.1.tar.gz", hash = "sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69", size = 75520, upload-time = "2021-03-08T10:59:26.269Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/6c/aa3f2f849e01cb6a001cd8554a88d4c77c5c1a31c95bdf1cf9301e6d9ef4/defusedxml-0.7.1-py2.py3-none-any.whl", hash = "sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61" },
+    { url = "https://files.pythonhosted.org/packages/07/6c/aa3f2f849e01cb6a001cd8554a88d4c77c5c1a31c95bdf1cf9301e6d9ef4/defusedxml-0.7.1-py2.py3-none-any.whl", hash = "sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61", size = 25604, upload-time = "2021-03-08T10:59:24.45Z" },
 ]
 
 [[package]]
@@ -980,9 +980,9 @@ wheels = [
 name = "diskcache"
 version = "5.6.3"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3f/21/1c1ffc1a039ddcc459db43cc108658f32c57d271d7289a2794e401d0fdb6/diskcache-5.6.3.tar.gz", hash = "sha256:2c3a3fa2743d8535d832ec61c2054a1641f41775aa7c556758a109941e33e4fc" }
+sdist = { url = "https://files.pythonhosted.org/packages/3f/21/1c1ffc1a039ddcc459db43cc108658f32c57d271d7289a2794e401d0fdb6/diskcache-5.6.3.tar.gz", hash = "sha256:2c3a3fa2743d8535d832ec61c2054a1641f41775aa7c556758a109941e33e4fc", size = 67916, upload-time = "2023-08-31T06:12:00.316Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3f/27/4570e78fc0bf5ea0ca45eb1de3818a23787af9b390c0b0a0033a1b8236f9/diskcache-5.6.3-py3-none-any.whl", hash = "sha256:5e31b2d5fbad117cc363ebaf6b689474db18a1f6438bc82358b024abd4c2ca19" },
+    { url = "https://files.pythonhosted.org/packages/3f/27/4570e78fc0bf5ea0ca45eb1de3818a23787af9b390c0b0a0033a1b8236f9/diskcache-5.6.3-py3-none-any.whl", hash = "sha256:5e31b2d5fbad117cc363ebaf6b689474db18a1f6438bc82358b024abd4c2ca19", size = 45550, upload-time = "2023-08-31T06:11:58.822Z" },
 ]
 
 [[package]]
@@ -1001,15 +1001,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/fc/f8/98eea607f65de6527f8a2e8885fc8015d3e6f5775df186e443e0964a11c3/distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed", size = 60722, upload-time = "2023-12-24T09:54:32.31Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2", size = 20277, upload-time = "2023-12-24T09:54:30.421Z" },
-]
-
-[[package]]
-name = "docstring-inheritance"
-version = "2.2.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/16/f4/988a96d45e7db09e1c43dbb8ab0ef0e093e82869fb38e30d41647571a024/docstring_inheritance-2.2.2.tar.gz", hash = "sha256:224eeaee1aeea6503341f9d39eea075d50760f9f2ad9c73dbe8ae61af785d3c0", size = 28341, upload-time = "2025-06-19T08:34:23.571Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/c4/a098fe2006371014eddf84244751352c6160c2dc7d2d033aee732f4b2065/docstring_inheritance-2.2.2-py3-none-any.whl", hash = "sha256:090d7a6e098bbea8914839391d56cc38e32d37d471d99a3397ef9d94fa84b5e9", size = 24201, upload-time = "2024-11-30T19:55:33.477Z" },
 ]
 
 [[package]]
@@ -1509,19 +1500,6 @@ wheels = [
 ]
 
 [[package]]
-name = "griffe-generics"
-version = "1.0.13"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "griffe" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d7/87/56a51c97f6a88b2dd4199a12c3a96c12627a24fa9994270d79047c79ecca/griffe_generics-1.0.13.tar.gz", hash = "sha256:00cfd1f1a940fb1566b382a24dbb40b288a694d313e41363cfc3e30093c358b3", size = 8064, upload-time = "2025-01-18T07:44:05.332Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d5/59/96c5bfdc24f5942690ac6161d425d4cc181d4c4624eb3f54b5d244672908/griffe_generics-1.0.13-py3-none-any.whl", hash = "sha256:e8139e485d256d0eba97ab310368c8800048918f0d5c7257817d769bba76ac94", size = 10557, upload-time = "2025-01-18T07:44:03.507Z" },
-]
-
-[[package]]
 name = "griffe-inherited-docstrings"
 version = "1.1.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1531,19 +1509,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/28/02/36d9929bb8ad929941b27117aba4d850b8a9f2c12f982e2b59ab4bc4d80b/griffe_inherited_docstrings-1.1.2.tar.gz", hash = "sha256:0a489ac4bb6093a7789d014b23083b4cbb1ab139f0b8dd878c8f3a4f8e892624", size = 27541, upload-time = "2025-09-05T15:17:13.081Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ad/12/4c67b644dc5965000874908dfa89d05ba878d5ca22a9b4ebfbfadc41467b/griffe_inherited_docstrings-1.1.2-py3-none-any.whl", hash = "sha256:b1cf61fff6e12a769db75de5718ddbbb5361b2cc4155af1f1ad86c13f56c197b", size = 6709, upload-time = "2025-09-05T15:17:11.853Z" },
-]
-
-[[package]]
-name = "griffe-modernized-annotations"
-version = "1.0.8"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "griffe" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/34/89/70efdbdbf5ca13cf6919368b542de78b8d0f5cca77f04f533d9f89cd9639/griffe_modernized_annotations-1.0.8.tar.gz", hash = "sha256:f4cd757260d2ebdb96d361c8ab882015955225bc3edc4713073b5a81ddad75b0", size = 8409, upload-time = "2024-08-16T10:02:48.106Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/54/f2defd39a3e258abda26e6c0ec0611611c5757e97d73defd64a4e917f5e9/griffe_modernized_annotations-1.0.8-py3-none-any.whl", hash = "sha256:d84b2d03d9c3127c2548f1eaa04dc3eba6cde34c0a2c4ae64f627908984e973d", size = 12158, upload-time = "2024-08-16T10:02:46.917Z" },
 ]
 
 [[package]]
@@ -1947,7 +1912,7 @@ build = [
 ]
 dev = []
 docs = [
-    { name = "liblaf-mkdocs-preset", specifier = ">=0.2,<0.3" },
+    { name = "liblaf-mkdocs-preset", specifier = ">=0.3,<0.4" },
     { name = "mkdocs", specifier = ">=1,<2" },
 ]
 test = [
@@ -1989,14 +1954,11 @@ wheels = [
 
 [[package]]
 name = "liblaf-mkdocs-preset"
-version = "0.2.2"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "docstring-inheritance" },
     { name = "griffe-fieldz" },
-    { name = "griffe-generics" },
     { name = "griffe-inherited-docstrings" },
-    { name = "griffe-modernized-annotations" },
     { name = "griffe-pydantic" },
     { name = "griffe-warnings-deprecated" },
     { name = "mdx-truly-sane-lists" },
@@ -2012,9 +1974,9 @@ dependencies = [
     { name = "pymdown-extensions" },
     { name = "ruff" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b6/62/6a0b33cc7fedb1fd2163a1c70e40d45a39cf7618ba753431d3df6ef1c70c/liblaf_mkdocs_preset-0.2.2.tar.gz", hash = "sha256:ae6450329594ad167dfebaebd9d35e28610d7748c7c130ee6c4120a8e9b0bd99", size = 4541, upload-time = "2025-10-12T01:22:07.455Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/01/68/2e3314fde82f7462af410ea57437912b84af61a79edd2ed46aa8ea1773a5/liblaf_mkdocs_preset-0.3.0.tar.gz", hash = "sha256:4038a70e1dd321e59f7de01e665a07839e91db262ef4233a39283e5431ea10a9", size = 4483, upload-time = "2025-12-05T11:23:54.699Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/75/ede35005d36356816ca2ebf70a91954cc70c85a6fc5e2c8b665289de5628/liblaf_mkdocs_preset-0.2.2-py3-none-any.whl", hash = "sha256:26090eff15e729a072fe8700e327f933b9853c8ee601378a890d832f9df5892d", size = 3897, upload-time = "2025-10-12T01:22:05.766Z" },
+    { url = "https://files.pythonhosted.org/packages/40/ed/da84b65460914e9f6c2d5f5ee790fcbbd17d2c36ff47e63f891cac177628/liblaf_mkdocs_preset-0.3.0-py3-none-any.whl", hash = "sha256:18ff0bef3cbdd0454bf3de64a9bbef64bed8a4b08427f560d7c88f8733d17c5d", size = 3855, upload-time = "2025-12-05T11:23:53.308Z" },
 ]
 
 [[package]]
@@ -2331,14 +2293,14 @@ imaging = [
 name = "mkdocs-material-extensions"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/79/9b/9b4c96d6593b2a541e1cb8b34899a6d021d208bb357042823d4d2cabdbe7/mkdocs_material_extensions-1.3.1.tar.gz", hash = "sha256:10c9511cea88f568257f960358a467d12b970e1f7b2c0e5fb2bb48cab1928443" }
+sdist = { url = "https://files.pythonhosted.org/packages/79/9b/9b4c96d6593b2a541e1cb8b34899a6d021d208bb357042823d4d2cabdbe7/mkdocs_material_extensions-1.3.1.tar.gz", hash = "sha256:10c9511cea88f568257f960358a467d12b970e1f7b2c0e5fb2bb48cab1928443", size = 11847, upload-time = "2023-11-22T19:09:45.208Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5b/54/662a4743aa81d9582ee9339d4ffa3c8fd40a4965e033d77b9da9774d3960/mkdocs_material_extensions-1.3.1-py3-none-any.whl", hash = "sha256:adff8b62700b25cb77b53358dad940f3ef973dd6db797907c49e3c2ef3ab4e31" },
+    { url = "https://files.pythonhosted.org/packages/5b/54/662a4743aa81d9582ee9339d4ffa3c8fd40a4965e033d77b9da9774d3960/mkdocs_material_extensions-1.3.1-py3-none-any.whl", hash = "sha256:adff8b62700b25cb77b53358dad940f3ef973dd6db797907c49e3c2ef3ab4e31", size = 8728, upload-time = "2023-11-22T19:09:43.465Z" },
 ]
 
 [[package]]
 name = "mkdocstrings"
-version = "0.30.1"
+version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jinja2" },
@@ -2348,9 +2310,9 @@ dependencies = [
     { name = "mkdocs-autorefs" },
     { name = "pymdown-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c5/33/2fa3243439f794e685d3e694590d28469a9b8ea733af4b48c250a3ffc9a0/mkdocstrings-0.30.1.tar.gz", hash = "sha256:84a007aae9b707fb0aebfc9da23db4b26fc9ab562eb56e335e9ec480cb19744f", size = 106350, upload-time = "2025-09-19T10:49:26.446Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e5/13/10bbf9d56565fd91b91e6f5a8cd9b9d8a2b101c4e8ad6eeafa35a706301d/mkdocstrings-1.0.0.tar.gz", hash = "sha256:351a006dbb27aefce241ade110d3cd040c1145b7a3eb5fd5ac23f03ed67f401a", size = 101086, upload-time = "2025-11-27T15:39:40.534Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7b/2c/f0dc4e1ee7f618f5bff7e05898d20bf8b6e7fa612038f768bfa295f136a4/mkdocstrings-0.30.1-py3-none-any.whl", hash = "sha256:41bd71f284ca4d44a668816193e4025c950b002252081e387433656ae9a70a82", size = 36704, upload-time = "2025-09-19T10:49:24.805Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/fc/80aa31b79133634721cf7855d37b76ea49773599214896f2ff10be03de2a/mkdocstrings-1.0.0-py3-none-any.whl", hash = "sha256:4c50eb960bff6e05dfc631f6bc00dfabffbcb29c5ff25f676d64daae05ed82fa", size = 35135, upload-time = "2025-11-27T15:39:39.301Z" },
 ]
 
 [package.optional-dependencies]
@@ -2532,9 +2494,9 @@ wheels = [
 name = "natsort"
 version = "8.4.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e2/a9/a0c57aee75f77794adaf35322f8b6404cbd0f89ad45c87197a937764b7d0/natsort-8.4.0.tar.gz", hash = "sha256:45312c4a0e5507593da193dedd04abb1469253b601ecaf63445ad80f0a1ea581" }
+sdist = { url = "https://files.pythonhosted.org/packages/e2/a9/a0c57aee75f77794adaf35322f8b6404cbd0f89ad45c87197a937764b7d0/natsort-8.4.0.tar.gz", hash = "sha256:45312c4a0e5507593da193dedd04abb1469253b601ecaf63445ad80f0a1ea581", size = 76575, upload-time = "2023-06-20T04:17:19.925Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/82/7a9d0550484a62c6da82858ee9419f3dd1ccc9aa1c26a1e43da3ecd20b0d/natsort-8.4.0-py3-none-any.whl", hash = "sha256:4732914fb471f56b5cce04d7bae6f164a592c7712e1c85f9ef585e197299521c" },
+    { url = "https://files.pythonhosted.org/packages/ef/82/7a9d0550484a62c6da82858ee9419f3dd1ccc9aa1c26a1e43da3ecd20b0d/natsort-8.4.0-py3-none-any.whl", hash = "sha256:4732914fb471f56b5cce04d7bae6f164a592c7712e1c85f9ef585e197299521c", size = 38268, upload-time = "2023-06-20T04:17:17.522Z" },
 ]
 
 [[package]]
@@ -2712,9 +2674,9 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ptyprocess" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f" }
+sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/c3/059298687310d527a58bb01f3b1965787ee3b40dce76752eda8b44e9a2c5/pexpect-4.9.0-py2.py3-none-any.whl", hash = "sha256:7236d1e080e4936be2dc3e326cec0af72acf9212a7e1d060210e70a47e253523" },
+    { url = "https://files.pythonhosted.org/packages/9e/c3/059298687310d527a58bb01f3b1965787ee3b40dce76752eda8b44e9a2c5/pexpect-4.9.0-py2.py3-none-any.whl", hash = "sha256:7236d1e080e4936be2dc3e326cec0af72acf9212a7e1d060210e70a47e253523", size = 63772, upload-time = "2023-11-25T06:56:14.81Z" },
 ]
 
 [[package]]
