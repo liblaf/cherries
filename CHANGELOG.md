@@ -7,7 +7,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.4](https://github.com/liblaf/cherries/releases/tag/v0.7.4) - 2025-11-27
+## [0.7.5](https://github.com/liblaf/cherries/releases/tag/v0.7.5) - 2025-12-15
+
+### 🐛 Bug Fixes
+
+- **logging:** Suppress verbose urllib3 connection pool logs - [cdfeb6c](https://github.com/liblaf/cherries/commit/cdfeb6c09a3584d02608aaa61d1f59c302ba83db) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@renovate[bot]](https://github.com/apps/renovate) made their first contribution in [#90](https://github.com/liblaf/cherries/pull/90)
+- [@liblaf[bot]](https://github.com/apps/liblaf) made their first contribution in [#89](https://github.com/liblaf/cherries/pull/89)
+
+## [0.7.4](https://github.com/liblaf/cherries/releases/tag/v0.7.4) - 2025-11-30
 
 ### 🐛 Bug Fixes
 
@@ -15,7 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
-- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@liblaf[bot]](https://github.com/apps/liblaf)
+- [@liblaf](https://github.com/liblaf)
 
 ## [0.7.3](https://github.com/liblaf/cherries/releases/tag/v0.7.3) - 2025-11-25
 
