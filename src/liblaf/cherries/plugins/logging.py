@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, override
@@ -46,3 +47,4 @@ class Logging(core.PluginSchema):
     @core.impl
     def start(self, *args, **kwargs) -> None:
         grapes.logging.init(file=self.log_file, force=True)
+        logging.getLogger("urllib3.connectionpool").setLevel(logging.CRITICAL)
