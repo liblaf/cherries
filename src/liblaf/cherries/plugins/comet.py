@@ -146,6 +146,11 @@ class Comet(core.PluginSchema):
         except ValueError:
             logger.exception("")
 
+    @override
+    @core.impl
+    def set_step(self, step: int | None = None) -> None:
+        return self.experiment.set_step(step)
+
     @property
     def experiment(self) -> comet_ml.CometExperiment:
         return comet_ml.get_running_experiment() or unittest.mock.MagicMock()
