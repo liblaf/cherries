@@ -7,6 +7,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7](https://github.com/liblaf/cherries/releases/tag/v0.7.7) - 2025-12-30
+
+### 🐛 Bug Fixes
+
+- **main:** Correctly flatten kwargs for pydantic config collection - [aced74b](https://github.com/liblaf/cherries/commit/aced74bbf2876f9f432fd30dda9fb5cc00368b4d) by [@liblaf](https://github.com/liblaf)
+
+### 📝 Documentation
+
+- **mkdocs:** Configure mkdocstrings to preload environs module - [2bc089e](https://github.com/liblaf/cherries/commit/2bc089e34efc7ec37c8009280be6104f96667abc) by [@liblaf](https://github.com/liblaf)
+
+### ♻ Code Refactoring
+
+- **profiles:** rename playground profile to debug - [dbacb68](https://github.com/liblaf/cherries/commit/dbacb68e62b1fb2ac65a4a71fd281ffede72ac4f) by [@liblaf](https://github.com/liblaf)
+
+### ✅ Tests
+
+- **main:** Correct test profile for main function - [f2049c3](https://github.com/liblaf/cherries/commit/f2049c3b95ed978e8e5e6ef1c13f2d35eedd1c23) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@renovate[bot]](https://github.com/apps/renovate) made their first contribution in [#97](https://github.com/liblaf/cherries/pull/97)
+- [@liblaf[bot]](https://github.com/apps/liblaf) made their first contribution in [#96](https://github.com/liblaf/cherries/pull/96)
+
 ## [0.7.6](https://github.com/liblaf/cherries/releases/tag/v0.7.6) - 2025-12-16
 
 ### 🐛 Bug Fixes
@@ -15,7 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
-- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@liblaf[bot]](https://github.com/apps/liblaf)
+- [@liblaf](https://github.com/liblaf)
 
 ## [0.7.5](https://github.com/liblaf/cherries/releases/tag/v0.7.5) - 2025-12-16
 
