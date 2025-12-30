@@ -5,7 +5,7 @@ from liblaf.cherries import core, plugins
 from ._abc import Profile
 
 
-class ProfilePlayground(Profile):
+class ProfileDebug(Profile):
     @override  # impl Profile
     def init(self) -> core.Run:
         run: core.Run = core.run
