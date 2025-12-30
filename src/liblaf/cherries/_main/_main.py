@@ -1,5 +1,4 @@
 import inspect
-import itertools
 import typing
 from collections.abc import Callable, Mapping, Sequence
 from inspect import Parameter
@@ -20,9 +19,7 @@ def main[T](
     kwargs: Mapping[str, Any]
     args, kwargs = _make_args(main)
     configs: list[pydantic.BaseModel] = [
-        arg
-        for arg in itertools.chain(args, *kwargs.values())
-        if isinstance(arg, pydantic.BaseModel)
+        arg for arg in (*args, *kwargs.values()) if isinstance(arg, pydantic.BaseModel)
     ]
     for config in configs:
         run.log_params(config.model_dump(mode="json"))
