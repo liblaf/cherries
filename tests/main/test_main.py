@@ -27,4 +27,4 @@ def test_main(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         cfg.temp.write_text("Temporary file.\n")
         logger.info("Hello, %s!", cfg.name)
 
-    cherries.main(main, profile="playground")
+    cherries.main(main, profile="debug")
