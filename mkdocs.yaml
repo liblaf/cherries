@@ -1,3 +1,11 @@
 INHERIT: .config/copier/mkdocs.yaml
 site_name: Cherries
 site_description: 🍒 Sweet experiment tracking with Comet, DVC, and Git integration.
+
+plugins:
+  mkdocstrings:
+    handlers:
+      python:
+        options:
+          preload_modules:
+            - environs # I don't know why, but this makes mkdocstrings work
