@@ -7,6 +7,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0](https://github.com/liblaf/cherries/releases/tag/v1.0.0) - 2026-01-04
+
+### 💥 BREAKING CHANGES
+
+- release 1.0.0 - [829b2d6](https://github.com/liblaf/cherries/commit/829b2d69b02ac28af65f530139250f661bf8e0b2) by [@liblaf](https://github.com/liblaf)
+
+### ✨ Features
+
+- release 1.0.0 - [829b2d6](https://github.com/liblaf/cherries/commit/829b2d69b02ac28af65f530139250f661bf8e0b2) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+
 ## [0.7.8](https://github.com/liblaf/cherries/releases/tag/v0.7.8) - 2026-01-04
 
 ### 🐛 Bug Fixes
@@ -15,9 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
-- [@liblaf](https://github.com/liblaf) made their first contribution
-- [@renovate[bot]](https://github.com/apps/renovate) made their first contribution in [#100](https://github.com/liblaf/cherries/pull/100)
-- [@liblaf[bot]](https://github.com/apps/liblaf) made their first contribution in [#99](https://github.com/liblaf/cherries/pull/99)
+- [@liblaf[bot]](https://github.com/apps/liblaf)
+- [@liblaf](https://github.com/liblaf)
+- [@renovate[bot]](https://github.com/apps/renovate)
 
 ## [0.7.7](https://github.com/liblaf/cherries/releases/tag/v0.7.7) - 2025-12-30
 
