@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import override
 
 import attrs
-from liblaf.grapes.logging import RichFileHandler, as_filter, autolog
+from liblaf.grapes.logging import LimitsFilter, RichFileHandler, autolog
 
 from liblaf.cherries import core
 
@@ -65,7 +65,7 @@ class Local(core.PluginSchema):
     def _config_logging(self) -> None:
         logger: logging.Logger = logging.getLogger()
         handler = RichFileHandler(self.log_file)
-        handler.addFilter(as_filter())
+        handler.addFilter(LimitsFilter())
         logger.addHandler(handler)
 
     def _copy(self, source: Path, target: Path) -> None:

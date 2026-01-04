@@ -11,12 +11,13 @@ from typing import TYPE_CHECKING, Any
 import attrs
 import git
 import git.exc
+import tlz
 from liblaf.grapes.logging import autolog
 
 from liblaf.cherries.bundle import bundles, relative_to_or_name
-from liblaf.cherries.core._typing import MethodName
 
 from ._plugin_manager import PluginManager, delegate
+from ._typing import MethodName
 
 if TYPE_CHECKING:
     from _typeshed import StrPath
@@ -87,6 +88,14 @@ class Run(PluginManager):
     def start_time(self) -> datetime:
         return datetime.now().astimezone()
 
+    @property
+    def step(self) -> int | None:
+        return self.get_step()
+
+    @step.setter
+    def step(self, value: int | None) -> None:
+        self.set_step(value)
+
     @functools.cached_property
     def temp_dir(self) -> Path:
         return self.exp_dir / "temp"
@@ -147,6 +156,9 @@ class Run(PluginManager):
 
     @delegate(first_result=True)
     def get_params(self) -> Mapping[str, Any]: ...
+
+    @delegate(first_result=True)
+    def get_step(self) -> int | None: ...
 
     @delegate(first_result=True)
     def get_url(self) -> str: ...
@@ -215,6 +227,7 @@ class Run(PluginManager):
         prefix: Path = Path(prefix).resolve()
         name: StrPath = relative_to_or_name(path, prefix)
         self.delegate(method_name, args=(path, name), kwargs=kwargs)
+        kwargs: dict[str, Any] = tlz.assoc(kwargs, "bundle", True)  # noqa: FBT003
         for absolute, relative, required in bundles.ls_files(path, prefix):
             absolute = Path(absolute)  # noqa: PLW2901
             relative = Path(relative)  # noqa: PLW2901

@@ -38,17 +38,29 @@ class Git(core.PluginSchema):
 
     @override
     @core.impl
-    def log_input(self, path: Path, name: Path, **kwargs) -> None:
+    def log_input(
+        self, path: Path, name: Path, *, bundle: bool = False, **kwargs
+    ) -> None:
+        if bundle:
+            return
         self.inputs.append(self._relative_to_repo(path))
 
     @override
     @core.impl
-    def log_output(self, path: Path, name: Path, **kwargs) -> None:
+    def log_output(
+        self, path: Path, name: Path, *, bundle: bool = False, **kwargs
+    ) -> None:
+        if bundle:
+            return
         self.outputs.append(self._relative_to_repo(path))
 
     @override
     @core.impl
-    def log_temp(self, path: Path, name: Path, **kwargs) -> None:
+    def log_temp(
+        self, path: Path, name: Path, *, bundle: bool = False, **kwargs
+    ) -> None:
+        if bundle:
+            return
         self.temps.append(self._relative_to_repo(path))
 
     @override

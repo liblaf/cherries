@@ -33,13 +33,20 @@ class PluginSchema(Plugin):
     def get_params(self) -> Mapping[str, Any]:
         raise NotImplementedError
 
+    def get_step(self) -> int | None:
+        raise NotImplementedError
+
     def get_url(self) -> str:
         raise NotImplementedError
 
-    def log_asset(self, path: Path, name: Path, **kwargs) -> None:
+    def log_asset(
+        self, path: Path, name: Path, *, bundle: bool = False, **kwargs
+    ) -> None:
         raise NotImplementedError
 
-    def log_input(self, path: Path, name: Path, **kwargs) -> None:
+    def log_input(
+        self, path: Path, name: Path, *, bundle: bool = False, **kwargs
+    ) -> None:
         raise NotImplementedError
 
     def log_metric(
@@ -58,7 +65,9 @@ class PluginSchema(Plugin):
     def log_others(self, others: Mapping[str, Any]) -> None:
         raise NotImplementedError
 
-    def log_output(self, path: Path, name: Path, **kwargs) -> None:
+    def log_output(
+        self, path: Path, name: Path, *, bundle: bool = False, **kwargs
+    ) -> None:
         raise NotImplementedError
 
     def log_param(self, name: str, value: Any) -> None:
@@ -67,7 +76,9 @@ class PluginSchema(Plugin):
     def log_params(self, params: Mapping[str, Any]) -> None:
         raise NotImplementedError
 
-    def log_temp(self, path: Path, name: Path, **kwargs) -> None:
+    def log_temp(
+        self, path: Path, name: Path, *, bundle: bool = False, **kwargs
+    ) -> None:
         raise NotImplementedError
 
     def set_step(self, step: int | None = None) -> None:

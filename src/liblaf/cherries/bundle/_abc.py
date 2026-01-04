@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 class BundleItem(NamedTuple):
     path: StrPath
-    relative: StrPath
+    name: StrPath
     required: bool
 
 

@@ -6,10 +6,10 @@ from typing import Any, override
 
 import attrs
 import comet_ml
-import cytoolz as toolz
 import dvc.api
 import dvc.exceptions
 import git
+import tlz
 
 from liblaf import grapes
 from liblaf.cherries import core, meta
@@ -51,6 +51,11 @@ class Comet(core.PluginSchema):
 
     @override
     @core.impl
+    def get_step(self) -> int | None:
+        return self.experiment.curr_step
+
+    @override
+    @core.impl
     def get_param(self, name: str) -> Any:
         return self.experiment.get_parameter(name)
 
@@ -66,7 +71,9 @@ class Comet(core.PluginSchema):
 
     @override
     @core.impl
-    def log_asset(self, path: Path, name: Path, **kwargs) -> None:
+    def log_asset(
+        self, path: Path, name: Path, *, bundle: bool = False, **kwargs
+    ) -> None:
         if self._log_asset_git(path, name, **kwargs):
             return
         self.experiment.log_asset(path, name.as_posix(), **kwargs)
@@ -82,7 +89,7 @@ class Comet(core.PluginSchema):
         **kwargs,
     ) -> None:
         name = "inputs" / name
-        metadata = toolz.assoc(metadata or {}, "type", "input")
+        metadata = tlz.assoc(metadata or {}, "type", "input")
         self.log_asset(path, name, metadata=metadata, **kwargs)
 
     @override
@@ -120,7 +127,7 @@ class Comet(core.PluginSchema):
         **kwargs,
     ) -> None:
         name = "outputs" / name
-        metadata = toolz.assoc(metadata or {}, "type", "output")
+        metadata = tlz.assoc(metadata or {}, "type", "output")
         self.log_asset(path, name, metadata=metadata, **kwargs)
 
     @override
@@ -171,7 +178,7 @@ class Comet(core.PluginSchema):
             return False
         dvc_file: Path = path.with_name(path.name + ".dvc")
         dvc_meta: Mapping[str, Any] = grapes.yaml.load(dvc_file)
-        metadata: dict[str, Mapping] = toolz.merge(metadata or {}, dvc_meta["outs"][0])
+        metadata: dict[str, Mapping] = tlz.merge(metadata or {}, dvc_meta["outs"][0])
         self.experiment.log_remote_asset(
             uri, name.as_posix(), metadata=metadata, **kwargs
         )
