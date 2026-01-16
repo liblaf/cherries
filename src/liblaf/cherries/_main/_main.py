@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import typing
 from collections.abc import Callable, Mapping, Sequence
@@ -24,6 +25,8 @@ def main[T](
     for config in configs:
         run.log_params(config.model_dump(mode="json"))
     try:
+        if inspect.iscoroutinefunction(main):
+            return asyncio.run(main(*args, **kwargs))
         return main(*args, **kwargs)
     finally:
         run.end()
