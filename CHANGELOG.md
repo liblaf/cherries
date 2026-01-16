@@ -7,6 +7,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/liblaf/cherries/releases/tag/v1.1.0) - 2026-01-16
+
+### ✨ Features
+
+- **main:** add support for asynchronous main functions - [d6b817a](https://github.com/liblaf/cherries/commit/d6b817a3b0d02523b0e8282d27f2cf1b78aff3dc) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@liblaf[bot]](https://github.com/apps/liblaf) made their first contribution in [#104](https://github.com/liblaf/cherries/pull/104)
+- [@renovate[bot]](https://github.com/apps/renovate) made their first contribution in [#103](https://github.com/liblaf/cherries/pull/103)
+
 ## [1.0.0](https://github.com/liblaf/cherries/releases/tag/v1.0.0) - 2026-01-04
 
 ### 💥 BREAKING CHANGES
@@ -19,7 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
-- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@liblaf[bot]](https://github.com/apps/liblaf)
+- [@liblaf](https://github.com/liblaf)
 
 ## [0.7.8](https://github.com/liblaf/cherries/releases/tag/v0.7.8) - 2026-01-04
 
