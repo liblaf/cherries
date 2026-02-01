@@ -35,7 +35,7 @@ classifiers = [
 ]
 dependencies = [
   "attrs>=25,<26",
-  "cachetools>=6,<7",
+  "cachetools>=7,<8",
   "comet-ml>=3,<4",
   "dvc[ssh]>=3,<4",
   "environs>=14,<15",
