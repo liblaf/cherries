@@ -3,12 +3,11 @@ from __future__ import annotations
 import functools
 import graphlib
 import logging
-import math
 from collections.abc import Callable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, overload
 
 import attrs
-import cachetools
+import cachebox
 import wrapt
 
 from ._impl import ImplInfo, collect_impls, get_impl_info
@@ -42,6 +41,14 @@ def delegate(func: Callable | None = None, *, first_result: bool = False) -> Any
         )
 
     return wrapper(func)
+
+
+def _sort_plugins_key_inner(method_name: MethodName) -> MethodName:
+    return method_name
+
+
+def _sort_plugins_key(args: tuple[Any, ...], kwargs: dict[str, Any]) -> MethodName:
+    return _sort_plugins_key_inner(*args, **kwargs)
 
 
 @attrs.define
@@ -79,16 +86,13 @@ class PluginManager:
             return None
         return results
 
-    _sort_plugins_cache: cachetools.Cache[MethodName, Sequence[Plugin]] = attrs.field(
-        repr=False, init=False, factory=lambda: cachetools.Cache(math.inf)
+    _sort_plugins_cache: cachebox.Cache[MethodName, Sequence[Plugin]] = attrs.field(
+        repr=False,
+        init=False,
+        factory=lambda: cachebox.Cache(0),  # zero means unlimited
     )
 
-    def _sort_plugins_key(self, method_name: MethodName) -> MethodName:
-        return method_name
-
-    @cachetools.cachedmethod(
-        lambda self: self._sort_plugins_cache, key=_sort_plugins_key
-    )
+    @cachebox.cached(lambda self: self._sort_plugins_cache, key_maker=_sort_plugins_key)  # pyright: ignore[reportArgumentType]
     def _sort_plugins(self, method_name: MethodName) -> Sequence[Plugin]:
         plugins: dict[PluginId, Plugin] = {}
         sorter: graphlib.TopologicalSorter[PluginId] = graphlib.TopologicalSorter()

@@ -6,12 +6,9 @@ from typing import Any, override
 
 import attrs
 import comet_ml
-import dvc.api
-import dvc.exceptions
 import git
 import tlz
 
-from liblaf import grapes
 from liblaf.cherries import core, meta
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -161,28 +158,6 @@ class Comet(core.PluginSchema):
     @property
     def experiment(self) -> comet_ml.CometExperiment:
         return comet_ml.get_running_experiment() or unittest.mock.MagicMock()
-
-    def _log_asset_dvc(
-        self,
-        path: Path,
-        name: Path,
-        *,
-        metadata: Mapping[str, Any] | None = None,
-        **kwargs,
-    ) -> bool:
-        try:
-            # ? I don't know why, but `dvc.api.get_url` only works with this. Maybe a DVC bug?
-            dvc_path: Path = path.absolute().relative_to(Path.cwd())
-            uri: str = dvc.api.get_url(str(dvc_path))
-        except dvc.exceptions.OutputNotFoundError:
-            return False
-        dvc_file: Path = path.with_name(path.name + ".dvc")
-        dvc_meta: Mapping[str, Any] = grapes.yaml.load(dvc_file)
-        metadata: dict[str, Mapping] = tlz.merge(metadata or {}, dvc_meta["outs"][0])
-        self.experiment.log_remote_asset(
-            uri, name.as_posix(), metadata=metadata, **kwargs
-        )
-        return True
 
     def _log_asset_git(
         self,
