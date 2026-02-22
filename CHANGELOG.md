@@ -7,6 +7,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1](https://github.com/liblaf/cherries/releases/tag/v1.1.1) - 2026-02-20
+
+### ♻ Code Refactoring
+
+- migrate to cachebox and remove dvc integration - [cbd0720](https://github.com/liblaf/cherries/commit/cbd07206213147e2349f20834d828295cfd61bfa) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf) made their first contribution
+- [@liblaf[bot]](https://github.com/apps/liblaf) made their first contribution in [#107](https://github.com/liblaf/cherries/pull/107)
+
 ## [1.1.0](https://github.com/liblaf/cherries/releases/tag/v1.1.0) - 2026-01-16
 
 ### ✨ Features
@@ -15,9 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
-- [@liblaf](https://github.com/liblaf) made their first contribution
-- [@liblaf[bot]](https://github.com/apps/liblaf) made their first contribution in [#104](https://github.com/liblaf/cherries/pull/104)
-- [@renovate[bot]](https://github.com/apps/renovate) made their first contribution in [#103](https://github.com/liblaf/cherries/pull/103)
+- [@liblaf[bot]](https://github.com/apps/liblaf)
+- [@liblaf](https://github.com/liblaf)
+- [@renovate[bot]](https://github.com/apps/renovate)
 
 ## [1.0.0](https://github.com/liblaf/cherries/releases/tag/v1.0.0) - 2026-01-04
 
