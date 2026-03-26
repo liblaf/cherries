@@ -48,11 +48,11 @@ wheels = [
 
 [[package]]
 name = "attrs"
-version = "25.4.0"
+version = "26.1.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6b/5c/685e6633917e101e5dcb62b9dd76946cbb57c26e133bae9e0cd36033c0a9/attrs-25.4.0.tar.gz", hash = "sha256:16d5969b87f0859ef33a48b35d55ac1be6e42ae49d5e853b597db70c35c57e11", size = 934251, upload-time = "2025-10-06T13:54:44.725Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9a/8e/82a0fe20a541c03148528be8cac2408564a6c9a0cc7e9171802bc1d26985/attrs-26.1.0.tar.gz", hash = "sha256:d03ceb89cb322a8fd706d4fb91940737b6642aa36998fe130a9bc96c985eff32", size = 952055, upload-time = "2026-03-19T14:22:25.026Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3a/2a/7cc015f5b9f5db42b7d48157e23356022889fc354a2813c15934b7cb5c0e/attrs-25.4.0-py3-none-any.whl", hash = "sha256:adcf7e2a1fb3b36ac48d97835bb6d8ade15b8dcce26aba8bf1d14847b57a3373", size = 67615, upload-time = "2025-10-06T13:54:43.17Z" },
+    { url = "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl", hash = "sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309", size = 67548, upload-time = "2026-03-19T14:22:23.645Z" },
 ]
 
 [[package]]
@@ -1265,7 +1265,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "attrs", specifier = ">=25,<26" },
+    { name = "attrs", specifier = ">=26,<27" },
     { name = "cachebox", specifier = ">=5,<6" },
     { name = "comet-ml", specifier = ">=3,<4" },
     { name = "environs", specifier = ">=14,<15" },
@@ -1297,7 +1297,7 @@ test = [
 
 [[package]]
 name = "liblaf-grapes"
-version = "9.3.3"
+version = "9.3.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "about-time" },
@@ -1323,9 +1323,9 @@ dependencies = [
     { name = "wadler-lindig" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e4/da/cc4ca0e4fe04132feb9b21344d5141c4c4c778ea2871e30b7d80e504d096/liblaf_grapes-9.3.3.tar.gz", hash = "sha256:397a1e5c6b0a7f1211ba1d1f3a5f4bfe05bbd227e3f8c48efb61214a927111d0", size = 45091, upload-time = "2026-03-08T01:16:27.728Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/63/d5/db8d6de96b176cf17e99f2d9199d4ca3d9d265fde5fbab1bf61906fec6f9/liblaf_grapes-9.3.4.tar.gz", hash = "sha256:cd12269ee1b17877460166d4bd31a50dea83d0b24dc87523de1ddb00b5cb2982", size = 45087, upload-time = "2026-03-22T01:20:01.771Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cf/19/6416e090ded33dd34c8120ff8410362ecd18f03981b44ab4ed9119d96679/liblaf_grapes-9.3.3-py3-none-any.whl", hash = "sha256:47aabb8cd3153c55a238d082e7b98b87e6c35111bb28eed803b7a14d56a59b8a", size = 95618, upload-time = "2026-03-08T01:16:25.702Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/68/e3bdefd0c57b74dd274e3dfab6c5d50bbf48465603fe02ff5c95eb3fcb81/liblaf_grapes-9.3.4-py3-none-any.whl", hash = "sha256:85cb189b0077da0e4d60f68e905028d73567099e1562ced3f84adf2406ff0462", size = 95615, upload-time = "2026-03-22T01:19:59.854Z" },
 ]
 
 [[package]]
