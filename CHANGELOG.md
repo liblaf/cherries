@@ -7,7 +7,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.1](https://github.com/liblaf/cherries/releases/tag/v1.1.1) - 2026-02-20
+## [1.1.2](https://github.com/liblaf/cherries/releases/tag/v1.1.2) - 2026-03-27
+
+### 🐛 Bug Fixes
+
+- **deps:** update dependency lazy-loader to >=0.5,<0.6 (#115) - [e1c0bac](https://github.com/liblaf/cherries/commit/e1c0bac47f459ac849364d949179bd66ee6f4783) by [@renovate[bot]](https://github.com/apps/renovate) in [#115](https://github.com/liblaf/cherries/pull/115)
+- **deps:** update dependency attrs to v26 (#119) - [5d218ff](https://github.com/liblaf/cherries/commit/5d218ffaac9eb82177df05506700d3d2d047d5bf) by [@renovate[bot]](https://github.com/apps/renovate) in [#119](https://github.com/liblaf/cherries/pull/119)
+
+### ❤️ Contributors
+
+- [@renovate[bot]](https://github.com/apps/renovate)
+- [@liblaf[bot]](https://github.com/apps/liblaf)
+
+## [1.1.1](https://github.com/liblaf/cherries/releases/tag/v1.1.1) - 2026-02-22
 
 ### ♻ Code Refactoring
 
@@ -15,8 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
-- [@liblaf](https://github.com/liblaf) made their first contribution
-- [@liblaf[bot]](https://github.com/apps/liblaf) made their first contribution in [#107](https://github.com/liblaf/cherries/pull/107)
+- [@liblaf[bot]](https://github.com/apps/liblaf)
+- [@liblaf](https://github.com/liblaf)
 
 ## [1.1.0](https://github.com/liblaf/cherries/releases/tag/v1.1.0) - 2026-01-16
 
