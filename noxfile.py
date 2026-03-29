@@ -2,8 +2,9 @@ from typing import Any
 
 import nox
 import nox_uv
-from liblaf import nox_recipes as recipes
 from liblaf.nox_recipes import Resolution
+
+from liblaf import nox_recipes as recipes
 
 nox.options.default_venv_backend = "uv"
 nox.options.reuse_existing_virtualenvs = True
