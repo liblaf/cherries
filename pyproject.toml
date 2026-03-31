@@ -34,18 +34,18 @@ classifiers = [
   "Typing :: Typed"
 ]
 dependencies = [
-  "attrs>=26,<27",
-  "cachebox>=5,<6",
-  "comet-ml>=3,<4",
-  "environs>=14,<15",
-  "gitpython>=3,<4",
-  "giturlparse>=0.14,<0.15",
-  "lazy-loader>=0.5,<0.6",
-  "liblaf-grapes>=9,<10",
-  "pydantic>=2,<3",
-  "pydantic-settings>=2,<3",
-  "rich>=14,<15",
-  "wrapt>=2,<3"
+  "attrs>=26",
+  "cachebox>=5",
+  "comet-ml>=3",
+  "environs>=14",
+  "gitpython>=3",
+  "giturlparse>=0.14",
+  "lazy-loader>=0.4",
+  "liblaf-grapes>=9",
+  "pydantic>=2",
+  "pydantic-settings>=2",
+  "rich>=14",
+  "wrapt>=2"
 ]
 dynamic = ["version"]
 
@@ -58,10 +58,10 @@ dynamic = ["version"]
 "Source Code" = "https://github.com/liblaf/cherries"
 
 [dependency-groups]
-dev = ["toolz-stubs>=0.4,<0.5"]
-build = ["check-wheel-contents>=0.6,<0.7", "hatch>=1,<2", "twine>=6,<7"]
-docs = ["liblaf-mkdocs-preset>=0.3,<0.4", "mkdocs>=1,<2"]
-test = ["liblaf-pytest-preset>=0.1,<0.2", "pytest>=9,<10"]
+dev = ["toolz-stubs>=0.4"]
+build = ["check-wheel-contents>=0.6", "hatch>=1", "twine>=6"]
+docs = ["liblaf-mkdocs-preset>=0.3", "mkdocs>=1"]
+test = ["liblaf-pytest-preset>=0.1", "pytest>=9"]
 
 [build-system]
 requires = ["hatch-vcs", "hatchling"]
