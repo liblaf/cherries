@@ -7,7 +7,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.2](https://github.com/liblaf/cherries/releases/tag/v1.1.2) - 2026-03-27
+## [1.1.3](https://github.com/liblaf/cherries/releases/tag/v1.1.3) - 2026-03-31
+
+### 🛠 Builds
+
+- relax dependency version constraints - [73b67aa](https://github.com/liblaf/cherries/commit/73b67aa15f7200e9b22b893350279831305ec02c) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf)
+- [@renovate[bot]](https://github.com/apps/renovate)
+
+## [1.1.2](https://github.com/liblaf/cherries/releases/tag/v1.1.2) - 2026-03-29
 
 ### 🐛 Bug Fixes
 
@@ -16,8 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
-- [@renovate[bot]](https://github.com/apps/renovate)
 - [@liblaf[bot]](https://github.com/apps/liblaf)
+- [@renovate[bot]](https://github.com/apps/renovate)
 
 ## [1.1.1](https://github.com/liblaf/cherries/releases/tag/v1.1.1) - 2026-02-22
 
