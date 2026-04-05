@@ -8,45 +8,44 @@ caseSensitive: false
 enableGlobDot: true
 ignorePaths:
   - .git/
-  - "*.lock"
   - cspell.*
+  - "*.lock"
 ignoreRandomStrings: true
 maxFileSize: 500KB
 useGitignore: true
 words:
   - arithmatex
-  - direnv
-  - dvcignore
   - fieldz
-  - getattr
+  - grimp
   - hynek
   - impls
   - inlinehilite
   - kwargs
   - liblaf
+  - linenums
+  - lucide
   - mkdocs
   - mkdocstrings
   - mlflow
-  - numprocesses
   - numpy
+  - pipx
   - pycache
   - pydantic
   - pydocstyle
+  - pygments
   - pylint
   - pymdownx
   - pypa
   - pypi
   - pyplot
-  - pyproject
-  - pyrightconfig
   - pytest
   - pyvista
-  - rclone
+  - rumdl
   - sdist
-  - tombi
+  - taiki
   - toolz
   - trimesh
-  - uuidgen
+  - twemoji
   - venv
   - virtualenv
-  - webdav
+  - zensical

@@ -4,14 +4,15 @@
 # ref: <https://github.com/oxsecurity/megalinter/blob/main/mega-linter-runner/generators/mega-linter/templates/mega-linter.yml>
 # ref: <https://megalinter.io>
 
-name: MegaLinter
+name: Shared / MegaLinter
 
 on:
   push:
     branches:
       - main
   pull_request:
-  workflow_dispatch:
+    branches:
+      - main
 
 env:
   FORCE_COLOR: 1
@@ -21,10 +22,14 @@ jobs:
     name: MegaLinter
     permissions:
       contents: write
+      issues: write
       pull-requests: write
     runs-on: ubuntu-latest
     environment:
-      name: MegaLinter
+      name: mega-linter
+      deployment: false
+    outputs:
+      pull-request-url: ${{ steps.pr.outputs.pull-request-url }}
     steps:
       - id: auth
         name: Auth
@@ -34,15 +39,14 @@ jobs:
           private-key: ${{ secrets.PRIVATE_KEY }}
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ github.head_ref || github.ref }}
       - id: lint
         name: MegaLinter
-        uses: liblaf/actions/mega-linter@1f83732587ff97f1babbe9218fdc5436dda1a16f # v1
-        with:
-          token: ${{ steps.auth.outputs.token }}
+        uses: liblaf/megalinter-custom-flavor-all@4c245a0bdb312d24c66108433d4d701fb0875746 # main
+        env:
+          GITHUB_TOKEN: ${{ steps.auth.outputs.token }}
+          MEGALINTER_CONFIG: https://raw.githubusercontent.com/liblaf/megalinter-custom-flavor-all/refs/heads/main/.mega-linter.yml
       - if: success() || failure()
-        name: Upload Reports
+        name: Upload reports
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: mega-linter-reports
@@ -51,25 +55,47 @@ jobs:
             megalinter-reports
           include-hidden-files: true
       - if: success() || failure()
-        name: Remove MegaLinter Reports
+        name: Remove MegaLinter reports
         run: |-
           cp --target-directory='${{ runner.temp }}' --verbose 'megalinter-reports/megalinter-report.md'
           sudo rm --force --recursive 'mega-linter.log' 'megalinter-reports'
-      - if: steps.lint.outputs.has-updated-sources > 0 && github.ref == 'refs/heads/main'
-        name: Create PR with Applied Fixes
+      - id: pr
+        if: steps.lint.outputs.has-updated-sources == 1 && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        name: Create PR
         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8
         with:
+          token: ${{ steps.auth.outputs.token }}
           commit-message: "chore(mega-linter): apply linters automatic fixes"
-          branch: mega-linter-fix/${{ github.ref_name }}
+          branch: mega-linter/${{ github.head_ref || github.ref_name }}
+          delete-branch: true
           sign-commits: true
           title: "chore(mega-linter): apply linters automatic fixes"
           body-path: ${{ runner.temp }}/megalinter-report.md
-          labels: automerge,bot
+          labels: |-
+            automerge
+            mega-linter
           assignees: ${{ github.repository_owner }}
-          reviewers: ${{ github.repository_owner }}
-      - if: steps.lint.outputs.has-updated-sources > 0 && github.ref != 'refs/heads/main'
-        name: Commit and Push Applied Linter Fixes
-        uses: liblaf/actions/commit@1f83732587ff97f1babbe9218fdc5436dda1a16f # v1
+
+  approve:
+    name: Approve
+    permissions:
+      pull-requests: write
+    needs:
+      - mega-linter
+    if: needs.mega-linter.outputs.pull-request-url
+    runs-on: ubuntu-latest
+    environment:
+      name: approve
+      deployment: false
+    steps:
+      - id: auth
+        name: Auth
+        uses: liblaf/actions/auth@12ffbdf8f37ab1ff07565b44b643fd8433621cd7 # v1
         with:
-          add-options: --verbose --update
-          message: "chore(mega-linter): apply linters automatic fixes"
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+      - name: Approve
+        uses: liblaf/actions/approve@12ffbdf8f37ab1ff07565b44b643fd8433621cd7 # v1
+        with:
+          approve-token: ${{ steps.auth.outputs.token }}
+          pull: ${{ needs.mega-linter.outputs.pull-request-url }}

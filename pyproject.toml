@@ -51,17 +51,26 @@ dynamic = ["version"]
 
 [project.urls]
 "Changelog" = "https://github.com/liblaf/cherries/blob/main/CHANGELOG.md"
-"Documentation" = "https://cherries.readthedocs.io/"
+"Documentation" = "https://liblaf.github.io/cherries/"
 "Homepage" = "https://github.com/liblaf/cherries"
 "Issue Tracker" = "https://github.com/liblaf/cherries/issues"
 "Release Notes" = "https://github.com/liblaf/cherries/releases"
 "Source Code" = "https://github.com/liblaf/cherries"
 
 [dependency-groups]
-dev = ["toolz-stubs>=0.4"]
 build = ["check-wheel-contents>=0.6", "hatch>=1", "twine>=6"]
-docs = ["liblaf-mkdocs-preset>=0.3", "mkdocs>=1"]
-test = ["liblaf-pytest-preset>=0.1", "pytest>=9"]
+docs = [
+  "griffe-fieldz>=0.5",
+  "griffe-inherited-docstrings>=1",
+  "griffe-pydantic>=1",
+  "griffe-warnings-deprecated>=1",
+  "mkdocstrings[python]>=1",
+  "zensical>=0.0.30"
+]
+lint = ["import-linter[ui]>=2", "ruff>=0.15"]
+nox = ["liblaf-nox-recipes>=0.1", "nox>=2026", "nox-uv>=0.7"]
+test = ["pytest>=9", "pytest-cov>=7", "pytest-randomly>=4"]
+typing = ["toolz-stubs>=0.4"]
 
 [build-system]
 requires = ["hatch-vcs", "hatchling"]
@@ -86,17 +95,23 @@ packages = ["src/liblaf"]
 [tool.hatch.version]
 source = "vcs"
 
-[tool.pyright]
-extends = ".config/linters/pyrightconfig.json"
+[tool.importlinter]
+root_package = "liblaf.cherries"
+
+[[tool.importlinter.contracts]]
+ancestors = ["liblaf.cherries"]
+name = "Acyclic siblings"
+type = "acyclic_siblings"
 
 [tool.pytest]
 addopts = [
   "--doctest-modules",
-  "--hypothesis-show-statistics",
   "--import-mode=importlib",
+  "--junitxml=junit.xml",
   "--showlocals"
 ]
 consider_namespace_packages = true
+junit_family = "legacy"
 strict = true
 testpaths = ["benches", "src", "tests"]
 

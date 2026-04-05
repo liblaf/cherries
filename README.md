@@ -3,7 +3,7 @@
 
 ![cherries](https://socialify.git.ci/liblaf/cherries/image?description=1&forks=1&issues=1&language=1&logo=https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Ffluentui-emoji%2Frefs%2Fheads%2Fmain%2Fassets%2FCherries%2F3D%2Fcherries_3d.png&name=1&owner=1&pattern=Transparent&pulls=1&stargazers=1&theme=Auto)
 
-**[Explore the docs »](https://liblaf.github.io/cherries/)**
+**[Explore the docs »](https://cherries.readthedocs.io/)**
 
 <!-- tangerine-start: badges/python.md -->
 
