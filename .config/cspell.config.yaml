@@ -16,7 +16,6 @@ maxFileSize: 32KB
 useGitignore: true
 words:
   - arithmatex
-  - cytoolz
   - delenv
   - fieldz
   - fspath
@@ -30,6 +29,7 @@ words:
   - mkdocs
   - mkdocstrings
   - numpy
+  - orhun
   - oxfmt
   - oxlint
   - pipx
