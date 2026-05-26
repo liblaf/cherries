@@ -1,7 +1,6 @@
 from typing import Any
 
 import nox
-import nox_uv
 from liblaf.nox_recipes import Resolution
 
 from liblaf import nox_recipes as recipes
@@ -11,11 +10,6 @@ nox.options.reuse_existing_virtualenvs = True
 nox.options.tags = ["test"]
 PYPROJECT: dict[str, Any] = nox.project.load_toml("pyproject.toml")
 PYTHON_VERSIONS: list[str] = nox.project.python_versions(PYPROJECT)
-
-
-@nox_uv.session(reuse_venv=True, tags=["bench"], uv_groups=["test"], uv_quiet=True)
-def bench(s: nox.Session) -> None:
-    recipes.pytest_bench(s, suppress_no_test_exit_code=True)
 
 
 @nox.session(python=PYTHON_VERSIONS, reuse_venv=True, tags=["test"])
