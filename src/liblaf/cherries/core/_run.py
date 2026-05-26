@@ -144,7 +144,7 @@ class Run(PluginManager):
     @functools.cached_property
     def temp_dir(self) -> Path:
         """Directory used by [`temp`][liblaf.cherries.core.Run.temp] paths."""
-        return self.exp_dir / "temp"
+        return self.exp_dir / "tmp"
 
     @property
     def url(self) -> str:

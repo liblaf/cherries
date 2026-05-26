@@ -87,7 +87,13 @@ class Git(core.Plugin, core.PluginProtocol):
 
     def _log_summary(self, summary: dict[str, Any]) -> None:
         """Log a YAML experiment summary."""
-        logger.info("Cherries Experiment Summary:\n%s", _pretty_yaml(summary))
+        logger.info(
+            """Cherries Experiment Summary:
+---
+%s
+---""",
+            _pretty_yaml(summary),
+        )
 
     def _make_commit_message(self, summary: dict[str, Any]) -> str:
         """Build the commit message used for automatic experiment commits."""
