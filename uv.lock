@@ -1124,7 +1124,7 @@ wheels = [
 
 [[package]]
 name = "liblaf-logging"
-version = "0.1.1"
+version = "0.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
@@ -1133,9 +1133,9 @@ dependencies = [
     { name = "packaging" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e6/70/aadf6226733e73f9d35ef711b5687599f1a9b10abc0b260be8dbe5bfde51/liblaf_logging-0.1.1.tar.gz", hash = "sha256:58f46bed71de135bb2893cf8e5c0e66b98058387f61a756e5d385c57911b259b", size = 16529, upload-time = "2026-05-26T09:59:19.73Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0a/03/45fad6b08cb70e14f4f672a73740dd61442452595aac5c5d31c9c5570ef9/liblaf_logging-0.1.2.tar.gz", hash = "sha256:7c6ec09a15be6fe4b7b3f9453cbdcc460a320b51f14a498a451af5c9313bf55d", size = 16644, upload-time = "2026-05-26T13:11:37.653Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/47/2037a9af21f26fcdf576f2d846a0dd17f81b9c4ab456eac55bf45a094db7/liblaf_logging-0.1.1-py3-none-any.whl", hash = "sha256:b066c9b876a1c059f60ec85eb6b3c850ae1b7ab2e470962e215c5ede5dca14f0", size = 24914, upload-time = "2026-05-26T09:59:17.977Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/27/0a3632fd22362264a250aeaac884c501354f415743b02060802c426361e6/liblaf_logging-0.1.2-py3-none-any.whl", hash = "sha256:62886ddd85af289961c492f5b21238e34dddfc1512d5b5862acbc2a0cfd25f98", size = 25119, upload-time = "2026-05-26T13:11:36.38Z" },
 ]
 
 [[package]]
@@ -1560,9 +1560,9 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ptyprocess" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f" }
+sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/c3/059298687310d527a58bb01f3b1965787ee3b40dce76752eda8b44e9a2c5/pexpect-4.9.0-py2.py3-none-any.whl", hash = "sha256:7236d1e080e4936be2dc3e326cec0af72acf9212a7e1d060210e70a47e253523" },
+    { url = "https://files.pythonhosted.org/packages/9e/c3/059298687310d527a58bb01f3b1965787ee3b40dce76752eda8b44e9a2c5/pexpect-4.9.0-py2.py3-none-any.whl", hash = "sha256:7236d1e080e4936be2dc3e326cec0af72acf9212a7e1d060210e70a47e253523", size = 63772, upload-time = "2023-11-25T06:56:14.81Z" },
 ]
 
 [[package]]
