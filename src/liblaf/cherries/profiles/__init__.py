@@ -1,5 +1,13 @@
-from lazy_loader import attach_stub
+from ._abc import Profile
+from ._debug import ProfileDebug
+from ._default import ProfileDefault
+from ._factory import ProfileLike, ProfileName, factory
 
-__getattr__, __dir__, __all__ = attach_stub(__name__, __file__)
-
-del attach_stub
+__all__ = [
+    "Profile",
+    "ProfileDebug",
+    "ProfileDefault",
+    "ProfileLike",
+    "ProfileName",
+    "factory",
+]

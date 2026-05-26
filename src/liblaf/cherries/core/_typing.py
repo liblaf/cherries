@@ -1,2 +1,2 @@
 type MethodName = str
-type PluginId = str
+type PluginName = str

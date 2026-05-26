@@ -3,6 +3,7 @@ from liblaf.cherries.profiles import ProfileLike
 
 
 def start(profile: ProfileLike | None = None) -> core.Run:
+    """Create and start a run from `profile`."""
     profile = profiles.factory(profile)
     run: core.Run = profile.init()
     run.start()

@@ -4,49 +4,61 @@ from collections.abc import Callable, Iterable
 from typing import Any, overload
 
 import attrs
-import wrapt
 
-from liblaf import grapes
-
-from ._typing import MethodName, PluginId
+from ._typing import MethodName, PluginName
 
 
 @attrs.define
 class ImplInfo:
-    after: Iterable[PluginId] = ()
-    before: Iterable[PluginId] = ()
+    """Ordering metadata attached to a plugin hook implementation."""
+
+    after: Iterable[PluginName] = ()
+    """Plugin names that should run before this implementation."""
+
+    before: Iterable[PluginName] = ()
+    """Plugin names that should run after this implementation."""
 
 
 @overload
-def impl[C: Callable](
-    func: C, /, *, after: Iterable[PluginId] = (), before: Iterable[PluginId] = ()
-) -> C: ...
+def impl[F: Callable[..., Any]](
+    func: F, /, *, after: Iterable[PluginName] = (), before: Iterable[PluginName] = ()
+) -> F: ...
 @overload
-def impl[C: Callable](
-    *, after: Iterable[PluginId] = (), before: Iterable[PluginId] = ()
-) -> Callable[[C], C]: ...
-def impl[**P, T](func: Callable[P, T] | None = None, /, **kwargs) -> Any:
+def impl[F: Callable[..., Any]](
+    *, after: Iterable[PluginName] = (), before: Iterable[PluginName] = ()
+) -> Callable[[F], F]: ...
+def impl(func: Callable[..., Any] | None = None, /, **kwargs: Any) -> Any:
+    """Mark a method as a plugin hook implementation.
+
+    Args:
+        func: Method being decorated.
+        **kwargs: Ordering metadata accepted by [`ImplInfo`][liblaf.cherries.core.ImplInfo].
+
+    Examples:
+        >>> @impl(before=("Comet",))
+        ... def log_metric():
+        ...     return None
+        >>> get_impl_info(log_metric).before
+        ('Comet',)
+    """
     if func is None:
         return functools.partial(impl, **kwargs)
-
     info = ImplInfo(**kwargs)
-
-    @wrapt.decorator
-    def wrapper(
-        wrapped: Callable[P, T],
-        _instance: Any,
-        args: tuple[Any, ...],
-        kwargs: dict[str, Any],
-    ) -> T:
-        __tracebackhide__ = True
-        return wrapped(*args, **kwargs)
-
-    func = wrapper(func)
-    grapes.wrapt_setattr(func, "impl", info)
+    func.__cherries_impl__ = info  # ty:ignore[unresolved-attribute]
     return func
 
 
 def collect_impls(cls: Any) -> dict[MethodName, ImplInfo]:
+    """Collect hook implementations declared on a plugin class or instance.
+
+    Examples:
+        >>> class Example:
+        ...     @impl
+        ...     def start(self):
+        ...         return None
+        >>> sorted(collect_impls(Example))
+        ['start']
+    """
     if not isinstance(cls, type):
         cls = type(cls)
     impls: dict[MethodName, ImplInfo] = {}
@@ -58,6 +70,7 @@ def collect_impls(cls: Any) -> dict[MethodName, ImplInfo]:
 
 
 def get_impl_info(func: Callable | None) -> ImplInfo | None:
+    """Return hook metadata previously attached with [`impl`][liblaf.cherries.core.impl]."""
     if func is None:
         return None
-    return grapes.wrapt_getattr(func, "impl", None)
+    return getattr(func, "__cherries_impl__", None)

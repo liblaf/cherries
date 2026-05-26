@@ -27,8 +27,8 @@ def test_bundle_series(tmp_path: Path, *, frames: int) -> None:
     bundle = BundleSeries()
     assert bundle.match(series_file)
     n_files: int = 0
-    for absolute, relative, required in bundle.ls_files(series_file, tmp_path):
+    for absolute, relative, optional in bundle.ls_files(series_file, tmp_path):
         assert absolute == tmp_path / relative
-        assert required
+        assert not optional
         n_files += 1
     assert n_files == frames

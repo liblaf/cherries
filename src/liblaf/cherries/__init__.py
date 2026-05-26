@@ -1,5 +1,73 @@
-from lazy_loader import attach_stub
+"""Run Python experiments with typed config, path helpers, and plugins.
 
-__getattr__, __dir__, __all__ = attach_stub(__name__, __file__)
+Cherries exposes a compact facade around a process-global
+[`Run`][liblaf.cherries.core.Run]. Use [`main`][liblaf.cherries.main] to run an
+experiment function inside a profile, [`BaseConfig`][liblaf.cherries.BaseConfig]
+for typed settings, and helpers such as [`output`][liblaf.cherries.output] to
+queue artifacts for logging at shutdown.
+"""
 
-del attach_stub
+from . import bundle, config, core, plugins, utils
+from ._main import end, main, start
+from ._version import __version__, __version_tuple__
+from .config import BaseConfig
+from .core import (
+    Run,
+    asset,
+    get_other,
+    get_others,
+    get_param,
+    get_params,
+    get_step,
+    input,  # noqa: A004
+    log_asset,
+    log_input,
+    log_metric,
+    log_metrics,
+    log_other,
+    log_others,
+    log_output,
+    log_param,
+    log_params,
+    log_temp,
+    output,
+    run,
+    set_step,
+    temp,
+)
+
+__all__ = [
+    "BaseConfig",
+    "Run",
+    "__version__",
+    "__version_tuple__",
+    "asset",
+    "bundle",
+    "config",
+    "core",
+    "end",
+    "get_other",
+    "get_others",
+    "get_param",
+    "get_params",
+    "get_step",
+    "input",
+    "log_asset",
+    "log_input",
+    "log_metric",
+    "log_metrics",
+    "log_other",
+    "log_others",
+    "log_output",
+    "log_param",
+    "log_params",
+    "log_temp",
+    "main",
+    "output",
+    "plugins",
+    "run",
+    "set_step",
+    "start",
+    "temp",
+    "utils",
+]

@@ -3,14 +3,20 @@
 
 [project]
 name = "liblaf-cherries"
-description = "🍒 Sweet experiment tracking with Comet, DVC, and Git integration."
+description = "A small Python experiment runner with typed settings, artifact path helpers, plugin hooks, and Comet/Git/local logging."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 authors = [
   { name = "liblaf", email = "30631553+liblaf@users.noreply.github.com" }
 ]
-keywords = []
+keywords = [
+  "comet-ml",
+  "experiment-tracking",
+  "git",
+  "pydantic",
+  "reproducibility"
+]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
@@ -35,17 +41,14 @@ classifiers = [
 ]
 dependencies = [
   "attrs>=26",
-  "cachebox>=5",
-  "comet-ml>=3",
+  "comet-ml>=3.40",
   "environs>=14",
-  "gitpython>=3",
+  "gitpython>=3.1",
   "giturlparse>=0.14",
-  "lazy-loader>=0.4",
   "liblaf-grapes>=9",
+  "msgspec[yaml]>=0.21.1",
   "pydantic>=2",
-  "pydantic-settings>=2",
-  "rich>=14",
-  "wrapt>=2"
+  "pydantic-settings>=2"
 ]
 dynamic = ["version"]
 

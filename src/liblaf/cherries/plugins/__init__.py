@@ -1,5 +1,6 @@
-from lazy_loader import attach_stub
+from .comet import Comet
+from .git_ import Git
+from .local import Local
+from .logging import Logging
 
-__getattr__, __dir__, __all__ = attach_stub(__name__, __file__)
-
-del attach_stub
+__all__ = ["Comet", "Git", "Local", "Logging"]

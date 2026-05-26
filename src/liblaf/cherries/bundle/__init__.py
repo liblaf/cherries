@@ -1,5 +1,16 @@
-from lazy_loader import attach_stub
+from ._abc import Bundle, BundleItem
+from ._landmarks import BundleLandmarks
+from ._registry import BundleRegistry, bundles
+from ._series import BundleSeries
+from ._utils import relative_or_absolute, relative_or_name
 
-__getattr__, __dir__, __all__ = attach_stub(__name__, __file__)
-
-del attach_stub
+__all__ = [
+    "Bundle",
+    "BundleItem",
+    "BundleLandmarks",
+    "BundleRegistry",
+    "BundleSeries",
+    "bundles",
+    "relative_or_absolute",
+    "relative_or_name",
+]

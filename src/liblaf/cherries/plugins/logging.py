@@ -1,4 +1,4 @@
-import logging
+import functools
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, override
@@ -11,21 +11,31 @@ from liblaf.cherries import core
 
 
 @attrs.define
-class Logging(core.PluginSchema):
-    @property
+class Logging(core.Plugin, core.PluginProtocol):
+    """Initialize Python logging and mirror metrics to the logger.
+
+    The plugin creates a log file beside the experiment and mirrors metric
+    calls through `liblaf.grapes.logging.autolog`, making local runs readable
+    even when no remote tracker is enabled.
+    """
+
+    @functools.cached_property
     def log_file(self) -> Path:
-        return self.run.logs_dir / self.run.entrypoint.with_suffix(".log").name
+        """Default log file path for the current run."""
+        return self.manager.logs_dir / self.manager.entrypoint.with_suffix(".log").name
 
     @override
-    @core.impl(before=("Comet",))
-    def end(self, *args, **kwargs) -> None:
-        self.run.log_asset(self.log_file)
+    @core.impl
+    def start(self, *args, **kwargs) -> None:
+        """Initialize logging with the run log file."""
+        grapes.logging.init(file=self.log_file, force=True)
 
     @override
     @core.impl
     def log_metric(
         self, name: str, value: Any, step: int | None = None, **kwargs
     ) -> None:
+        """Log one metric at the optional step."""
         __tracebackhide__ = True
         if step is None:
             autolog.info("%s: %s", name, value)
@@ -37,14 +47,9 @@ class Logging(core.PluginSchema):
     def log_metrics(
         self, metrics: Mapping[str, Any], step: int | None = None, **kwargs
     ) -> None:
+        """Log a mapping of metrics at the optional step."""
         __tracebackhide__ = True
         if step is None:
             autolog.info("%s", metrics)
         else:
             autolog.info("step: %s, %s", step, metrics)
-
-    @override
-    @core.impl
-    def start(self, *args, **kwargs) -> None:
-        grapes.logging.init(file=self.log_file, force=True)
-        logging.getLogger("urllib3.connectionpool").setLevel(logging.CRITICAL)
