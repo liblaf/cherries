@@ -7,6 +7,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.0.1](https://github.com/liblaf/cherries/releases/tag/v2.0.1) - 2026-05-26
+
+### 🛠 Builds
+
+- update liblaf-logging lockfile - [73b16d2](https://github.com/liblaf/cherries/commit/73b16d28f030b686a454cd2f81a479604b7143b4) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf)
+- [@renovate[bot]](https://github.com/apps/renovate)
+
 ## [v2.0.0](https://github.com/liblaf/cherries/releases/tag/v2.0.0) - 2026-05-26
 
 ### 💥 BREAKING CHANGES
@@ -30,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
+- [@liblaf-release-please[bot]](https://github.com/apps/liblaf-release-please) made their first contribution in [#131](https://github.com/liblaf/cherries/pull/131)
 - [@liblaf](https://github.com/liblaf)
 - [@renovate[bot]](https://github.com/apps/renovate)
 
@@ -482,9 +494,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 💥 BREAKING CHANGES
 
 - **(core)** Existing plugin implementations
-  must migrate to new architecture. Path utilities
-  have been consolidated under `paths` module.
-  Integration modules (comet, dvc, git) removed. - [b437d45](https://github.com/liblaf/cherries/commit/b437d4526207008e73b9f3cb564635d5a008c6d9) by [@liblaf](https://github.com/liblaf)
+must migrate to new architecture. Path utilities
+have been consolidated under `paths` module.
+Integration modules (comet, dvc, git) removed. - [b437d45](https://github.com/liblaf/cherries/commit/b437d4526207008e73b9f3cb564635d5a008c6d9) by [@liblaf](https://github.com/liblaf)
 
 ### ♻️ Code Refactoring
 
