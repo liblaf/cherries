@@ -80,7 +80,7 @@ running.
 Built-in plugins:
 
 - `Logging`: initializes a run log file and mirrors metrics through
-  `liblaf.grapes.logging.autolog`.
+  `liblaf.logging`.
 - `Local`: copies the entrypoint, logs, and artifacts into a timestamped
   `.cherries/` snapshot.
 - `Git`: writes an experiment summary, optionally commits dirty changes, and

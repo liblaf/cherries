@@ -41,14 +41,16 @@ classifiers = [
 ]
 dependencies = [
   "attrs>=26",
+  "autoregistry>=1.2.1",
   "comet-ml>=3.40",
   "environs>=14",
   "gitpython>=3.1",
   "giturlparse>=0.14",
-  "liblaf-grapes>=9",
+  "liblaf-logging>=0.1.0",
   "msgspec[yaml]>=0.21.1",
   "pydantic>=2",
-  "pydantic-settings>=2"
+  "pydantic-settings>=2",
+  "toolz>=1.1"
 ]
 dynamic = ["version"]
 

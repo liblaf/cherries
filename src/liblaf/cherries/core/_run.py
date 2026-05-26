@@ -12,9 +12,9 @@ from typing import TYPE_CHECKING, Any
 import attrs
 import git
 import git.exc
+import liblaf.logging as _log
 import tlz
 from environs import env
-from liblaf.grapes.logging import autolog
 
 from liblaf.cherries import utils
 from liblaf.cherries.bundle import bundles, relative_or_absolute, relative_or_name
@@ -326,7 +326,7 @@ class Run(PluginManager):
         __tracebackhide__ = True
         path: Path = Path(path).resolve()
         if not path.exists():
-            autolog.warning("No such file or directory: %s", path)
+            _log.warning("No such file or directory: %s", path)
             return
         prefix: Path = Path(prefix).resolve()
         name: Path = relative_or_name(path, prefix)
@@ -337,6 +337,6 @@ class Run(PluginManager):
             relative: Path = Path(relative_)
             if not absolute.exists():
                 if not optional:
-                    autolog.warning("No such file or directory: %s", absolute)
+                    _log.warning("No such file or directory: %s", absolute)
                 continue
             self.delegate(method_name, args=(absolute, relative), kwargs=kwargs)

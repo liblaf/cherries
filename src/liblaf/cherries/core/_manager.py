@@ -71,7 +71,7 @@ class PluginManager:
         """Register `plugin` and invalidate cached orders for its hooks."""
         for method_name in collect_impls(plugin):
             self._sort_plugins_cache.pop(method_name, None)
-        plugin.manager = self  # ty:ignore[invalid-assignment]
+        plugin.manager = self
         self.plugins[plugin.name] = plugin
 
     def delegate(

@@ -5,6 +5,7 @@
 [hooks.enter]
 task = "install"
 
+#
 [tasks."docs:build"]
 description = "Build the documentation site"
 run = [
@@ -17,14 +18,19 @@ run = [
 [tasks."docs:serve"]
 description = "Serve the documentation site locally"
 run = ["rm --force --recursive '{{ config_root }}/.cache'", "zensical serve"]
+#
 
 [tasks."gen:init"]
-description = "Generate __init__.py files from __init__.pyi stubs"
-file = "https://raw.githubusercontent.com/liblaf/copier-python/refs/heads/main/mise-tasks/gen/init.py"
+description = "Generate lazy-loading __init__.py files from __init__.pyi stubs"
+file = "https://raw.githubusercontent.com/liblaf/copier-python/fef2c14776c3b03b5505b96e2eb36e1f0401a439/mise-tasks/gen/init.py"
+
+[tasks."gen:ref-pages"]
+description = "Generate API reference pages from public Python modules"
+file = "https://raw.githubusercontent.com/liblaf/copier-python/fef2c14776c3b03b5505b96e2eb36e1f0401a439/mise-tasks/gen/ref-pages.py"
 
 [tasks.install]
-description = "Install project dependencies from lockfiles"
-file = "https://raw.githubusercontent.com/liblaf/copier-python/refs/heads/main/mise-tasks/install.sh"
+description = "Install project dependencies from pixi.lock or uv.lock"
+file = "https://raw.githubusercontent.com/liblaf/copier-python/fef2c14776c3b03b5505b96e2eb36e1f0401a439/mise-tasks/install.sh"
 
 [tasks.lint]
 description = "Run all linters"
@@ -32,12 +38,12 @@ depends = ["lint:python", "lint:toml"]
 
 [tasks."lint:python"]
 description = "Lint and format Python files"
-run = ["lint-imports", "ruff check --fix", "ruff format"]
+run = ["lint-imports", "ruff check --fix", "ruff format", "ty check --fix"]
 
 [tasks."lint:toml"]
-description = "Sort, format, and lint TOML files"
-file = "https://raw.githubusercontent.com/liblaf/copier-python/refs/heads/main/mise-tasks/lint/toml.sh"
+description = "Sort, format, and lint TOML files with toml-sort and tombi"
+file = "https://raw.githubusercontent.com/liblaf/copier-python/fef2c14776c3b03b5505b96e2eb36e1f0401a439/mise-tasks/lint/toml.sh"
 
 [tasks.upgrade]
-description = "Upgrade project dependencies from lockfiles"
-file = "https://raw.githubusercontent.com/liblaf/copier-python/refs/heads/main/mise-tasks/upgrade.sh"
+description = "Upgrade project dependencies from pixi.lock or uv.lock"
+file = "https://raw.githubusercontent.com/liblaf/copier-python/fef2c14776c3b03b5505b96e2eb36e1f0401a439/mise-tasks/upgrade.sh"

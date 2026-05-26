@@ -18,7 +18,7 @@ nav = [
       { "<code class=\"doc-symbol doc-symbol-toc doc-symbol-module\"></code> plugins" = [
         "reference/liblaf/cherries/plugins/README.md",
         "reference/liblaf/cherries/plugins/comet.md",
-        "reference/liblaf/cherries/plugins/git_.md",
+        "reference/liblaf/cherries/plugins/git.md",
         "reference/liblaf/cherries/plugins/local.md",
         "reference/liblaf/cherries/plugins/logging.md"
       ] },

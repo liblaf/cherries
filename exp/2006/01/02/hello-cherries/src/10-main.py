@@ -2,8 +2,9 @@ import logging
 import time
 from pathlib import Path
 
-import liblaf.cherries as cherries  # noqa: PLR0402
-from liblaf import grapes
+import rich.progress
+
+from liblaf import cherries
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ class Config(cherries.BaseConfig):
 
 
 def main(cfg: Config) -> None:
-    for x in grapes.track(range(10), description="Progress"):
+    for x in rich.progress.track(range(10), description="Progress"):
         y: float = x**2
         cherries.log_metrics({"x": x, "y": y})
         time.sleep(1)

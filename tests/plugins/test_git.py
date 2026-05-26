@@ -5,9 +5,9 @@ from typing import Any
 import git
 import pytest
 
-from liblaf.cherries.plugins.git_ import Git
+from liblaf.cherries.plugins.git import Git
 
-logger: logging.Logger = logging.getLogger("liblaf.cherries.plugins.git_")
+logger: logging.Logger = logging.getLogger("liblaf.cherries.plugins.git")
 
 
 class GitManager:

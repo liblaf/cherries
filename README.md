@@ -5,7 +5,7 @@
 
 **[Explore the docs »](https://liblaf.github.io/cherries/)**
 
-[![Test](https://github.com/liblaf/cherries/actions/workflows/test.yaml/badge.svg)](https://github.com/liblaf/cherries/actions/workflows/test.yaml)
+[![Test](https://github.com/liblaf/cherries/actions/workflows/python-test.yaml/badge.svg)](https://github.com/liblaf/cherries/actions/workflows/python-test.yaml)
 [![codecov](https://codecov.io/gh/liblaf/cherries/graph/badge.svg)](https://codecov.io/gh/liblaf/cherries)
 [![PyPI - Version](https://img.shields.io/pypi/v/liblaf-cherries?logo=PyPI&label=PyPI)](https://pypi.org/project/liblaf-cherries)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/liblaf-cherries?logo=Python&label=Python)](https://pypi.org/project/liblaf-cherries)

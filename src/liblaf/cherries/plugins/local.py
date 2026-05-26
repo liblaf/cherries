@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import override
 
 import attrs
-from liblaf.grapes.logging import LimitsFilter, RichFileHandler, autolog
+import liblaf.logging as _log
+from liblaf.logging import FileHandler, LimitsFilter
 
 from liblaf.cherries import core
 
@@ -82,7 +83,7 @@ class Local(core.Plugin, core.PluginProtocol):
 
     def _config_logging(self) -> None:
         logger: logging.Logger = logging.getLogger()
-        handler = RichFileHandler(self.log_file)
+        handler: logging.Handler = FileHandler(self.log_file)
         handler.addFilter(LimitsFilter())
         logger.addHandler(handler)
 
@@ -91,7 +92,7 @@ class Local(core.Plugin, core.PluginProtocol):
         if target.exists():
             if target.samefile(self.log_file):
                 return
-            autolog.warning("Overwriting existing file: %s", target)
+            _log.warning("Overwriting existing file: %s", target)
         target.parent.mkdir(parents=True, exist_ok=True)
         if source.is_dir():
             shutil.copytree(source, target, dirs_exist_ok=True)

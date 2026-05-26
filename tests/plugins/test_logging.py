@@ -2,17 +2,17 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, call
 
+import liblaf.logging
 import pytest
 
-import liblaf.cherries.plugins.logging as logging_module
 from liblaf.cherries.plugins.logging import Logging
 
 
-def test_logging_start_initializes_grapes_logging(
+def test_logging_start_initializes_liblaf_logging(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     init = Mock()
-    monkeypatch.setattr(logging_module.grapes.logging, "init", init)
+    monkeypatch.setattr(liblaf.logging, "init", init)
     entrypoint = tmp_path / "experiment.py"
     plugin = Logging()
     plugin.manager = SimpleNamespace(logs_dir=tmp_path / "logs", entrypoint=entrypoint)
@@ -25,9 +25,11 @@ def test_logging_start_initializes_grapes_logging(
     )
 
 
-def test_logging_mirrors_metrics_to_autolog(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_logging_mirrors_metrics_to_liblaf_logging(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     info = Mock()
-    monkeypatch.setattr(logging_module.autolog, "info", info)
+    monkeypatch.setattr(liblaf.logging, "info", info)
     plugin = Logging()
 
     plugin.log_metric("loss", 0.5)
