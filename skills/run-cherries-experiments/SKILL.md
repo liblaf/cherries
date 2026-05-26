@@ -40,7 +40,7 @@ class Config(cherries.BaseConfig):
 def main(cfg: Config) -> None:
     for step in range(10):
         cherries.set_step(step)
-        cherries.log_metrics({"loss": 1 / (step + 1)})
+        cherries.log_metrics({"train/loss": 1 / (step + 1)})
     cfg.output.write_text("done\n")
     logger.info("Wrote %s", cfg.output)
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
 - Pass config overrides as kebab-case CLI args, e.g. `--learning-rate 0.01` for `learning_rate`.
 - Use normal `logging` for progress and notes.
 - Use `cherries.input()`, `cherries.output()`, `cherries.temp()`, and `cherries.asset()` for files Cherries should record. The helpers queue paths, so create the files before exit.
-- Use `cherries.log_metric(s)` and `cherries.set_step()` for metrics.
+- Use `cherries.log_metric(s)` and `cherries.set_step()` for metrics. Metrics and params can be nested dicts; use `/` in metric keys to create groups such as `train/loss` and `eval/accuracy`.
 - Do not hardcode `profile="debug"` in scripts.
 
 ## Run
