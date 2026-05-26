@@ -170,11 +170,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 💥 BREAKING CHANGES
 
-- - The main entrypoint `cherries.run()` has been renamed to `cherries.main()`.
+- The main entrypoint `cherries.run()` has been renamed to `cherries.main()`.
 
-* The global `core.active_run` instance has been replaced by `core.run`.
-* Plugin methods `log_parameter`, `log_parameters`, and `log_temporary` have been renamed to `log_param`, `log_params`, and `log_temp` respectively.
-* The `Git` plugin's `commit` default is now `False` in the `ProfileDefault`. - [7c8a9fa](https://github.com/liblaf/cherries/commit/7c8a9fa2b86b431af9952ab05c384d6d0c4d1591) by [@liblaf](https://github.com/liblaf)
+- The global `core.active_run` instance has been replaced by `core.run`.
+- Plugin methods `log_parameter`, `log_parameters`, and `log_temporary` have been renamed to `log_param`, `log_params`, and `log_temp` respectively.
+- The `Git` plugin's `commit` default is now `False` in the `ProfileDefault`. - [7c8a9fa](https://github.com/liblaf/cherries/commit/7c8a9fa2b86b431af9952ab05c384d6d0c4d1591) by [@liblaf](https://github.com/liblaf)
 
 ### ✨ Features
 
