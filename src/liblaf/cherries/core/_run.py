@@ -19,8 +19,10 @@ from environs import env
 from liblaf.cherries import utils
 from liblaf.cherries.bundle import bundles, relative_or_absolute, relative_or_name
 
-from ._manager import PluginManager, delegate
 from ._typing import MethodName
+from .assets import AssetsManager
+from .metrics import MetricsManager
+from .plugin import PluginManager, delegate
 
 if TYPE_CHECKING:
     from _typeshed import StrPath
@@ -32,27 +34,38 @@ _PATH_SKIP_NAMES: set[str] = {"exp", "src"}
 
 @attrs.define
 class Run(PluginManager):
-    """Mutable state for one Cherries experiment run.
+    def _default_assets(self) -> AssetsManager:
+        return AssetsManager(plugins=self)
 
-    A run knows the entrypoint script, experiment folders, queued artifacts,
-    current step, and registered plugins. Top-level functions such as
-    [`output`][liblaf.cherries.output] forward to the process-global
-    [`run`][liblaf.cherries.core.run] instance.
+    def _default_metrics(self) -> MetricsManager:
+        return MetricsManager(plugins=self)
 
-    Path helper methods only queue paths. Cherries flushes those queues from
-    [`end`][liblaf.cherries.core.Run.end], skips missing files with a warning,
-    and expands known artifact bundles such as VTK `.series` manifests.
-    """
-
-    _assets_queue: list[Path] = attrs.field(init=False, factory=list)
-    _inputs_queue: list[Path] = attrs.field(init=False, factory=list)
-    _outputs_queue: list[Path] = attrs.field(init=False, factory=list)
-    _temps_queue: list[Path] = attrs.field(init=False, factory=list)
+    _assets: AssetsManager = attrs.field(
+        default=attrs.Factory(_default_assets, takes_self=True), kw_only=True
+    )
+    _metrics: MetricsManager = attrs.field(
+        default=attrs.Factory(_default_metrics, takes_self=True), kw_only=True
+    )
 
     @functools.cached_property
     def data_dir(self) -> Path:
         """Directory used by [`input`][liblaf.cherries.core.Run.input] and output paths."""
         return self.exp_dir / "data"
+
+    @functools.cached_property
+    def figs_dir(self) -> Path:
+        """Conventional directory for generated figures."""
+        return self.exp_dir / "figs"
+
+    @functools.cached_property
+    def logs_dir(self) -> Path:
+        """Conventional directory for log files."""
+        return self.exp_dir / "logs"
+
+    @functools.cached_property
+    def temp_dir(self) -> Path:
+        """Directory used by [`temp`][liblaf.cherries.core.Run.temp] paths."""
+        return self.exp_dir / "tmp"
 
     @functools.cached_property
     def entrypoint(self) -> Path:
@@ -82,16 +95,6 @@ class Run(PluginManager):
             if name == original:
                 break
         return name
-
-    @functools.cached_property
-    def figs_dir(self) -> Path:
-        """Conventional directory for generated figures."""
-        return self.exp_dir / "figs"
-
-    @functools.cached_property
-    def logs_dir(self) -> Path:
-        """Conventional directory for log files."""
-        return self.exp_dir / "logs"
 
     @functools.cached_property
     def project_dir(self) -> Path:
@@ -135,85 +138,58 @@ class Run(PluginManager):
     @property
     def step(self) -> int | None:
         """Current experiment step reported by plugins."""
-        return self.get_step()
+        return self._metrics.step
 
     @step.setter
-    def step(self, value: int | None) -> None:
-        self.set_step(value)
+    def step(self, value: int) -> None:
+        self._metrics.step = value
 
-    @functools.cached_property
-    def temp_dir(self) -> Path:
-        """Directory used by [`temp`][liblaf.cherries.core.Run.temp] paths."""
-        return self.exp_dir / "tmp"
+    # region Assets
 
-    @property
-    def url(self) -> str:
-        """Run URL reported by the first plugin that provides one."""
-        return self.get_url()
+    def input(
+        self, path: StrPath, *, metadata: Mapping[str, Any] | None = None
+    ) -> Path:
+        return self._assets.input(path, metadata=metadata)
 
-    def asset(self, path: StrPath, *, mkdir: bool = False) -> Path:
-        """Queue an artifact path under the experiment directory.
+    def output(
+        self,
+        path: StrPath,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+        mkdir: bool = True,
+    ) -> Path:
+        return self._assets.output(path, metadata=metadata, mkdir=mkdir)
 
-        Args:
-            path: Path relative to [`exp_dir`][liblaf.cherries.core.Run.exp_dir].
-            mkdir: Create the parent directory before returning the path.
+    def temp(
+        self,
+        path: StrPath,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+        mkdir: bool = True,
+    ) -> Path:
+        return self._assets.temp(path, metadata=metadata, mkdir=mkdir)
 
-        Returns:
-            Absolute path to the queued artifact.
-        """
-        absolute: Path = self.exp_dir / path
-        if mkdir:
-            absolute.parent.mkdir(parents=True, exist_ok=True)
-        self._assets_queue.append(absolute)
-        return absolute
+    def log_asset(
+        self, path: StrPath, metadata: Mapping[str, Any] | None = None
+    ) -> None:
+        self._assets.log_asset(path, metadata=metadata)
 
-    def input(self, path: StrPath, *, mkdir: bool = False) -> Path:
-        """Queue an input path under the experiment `data/` directory.
+    def log_input(
+        self, path: StrPath, metadata: Mapping[str, Any] | None = None
+    ) -> None:
+        self._assets.log_input(path, metadata=metadata)
 
-        Args:
-            path: Path relative to [`data_dir`][liblaf.cherries.core.Run.data_dir].
-            mkdir: Create the parent directory before returning the path.
+    def log_output(
+        self, path: StrPath, metadata: Mapping[str, Any] | None = None
+    ) -> None:
+        self._assets.log_output(path, metadata=metadata)
 
-        Returns:
-            Absolute path to the queued input.
-        """
-        absolute: Path = self.data_dir / path
-        if mkdir:
-            absolute.parent.mkdir(parents=True, exist_ok=True)
-        self._inputs_queue.append(absolute)
-        return absolute
+    def log_temp(
+        self, path: StrPath, metadata: Mapping[str, Any] | None = None
+    ) -> None:
+        self._assets.log_temp(path, metadata=metadata)
 
-    def output(self, path: StrPath, *, mkdir: bool = False) -> Path:
-        """Queue an output path under the experiment `data/` directory.
-
-        Args:
-            path: Path relative to [`data_dir`][liblaf.cherries.core.Run.data_dir].
-            mkdir: Create the parent directory before returning the path.
-
-        Returns:
-            Absolute path to the queued output.
-        """
-        absolute: Path = self.data_dir / path
-        if mkdir:
-            absolute.parent.mkdir(parents=True, exist_ok=True)
-        self._outputs_queue.append(absolute)
-        return absolute
-
-    def temp(self, path: StrPath, *, mkdir: bool = False) -> Path:
-        """Queue a temporary artifact path under the experiment `temp/` directory.
-
-        Args:
-            path: Path relative to [`temp_dir`][liblaf.cherries.core.Run.temp_dir].
-            mkdir: Create the parent directory before returning the path.
-
-        Returns:
-            Absolute path to the queued temporary artifact.
-        """
-        absolute: Path = self.temp_dir / path
-        if mkdir:
-            absolute.parent.mkdir(parents=True, exist_ok=True)
-        self._temps_queue.append(absolute)
-        return absolute
+    # endregion Assets
 
     # region Spec
 
