@@ -12,9 +12,18 @@ nav = [
   { "API Reference" = [
     { "<code class=\"doc-symbol doc-symbol-toc doc-symbol-module\"></code> cherries" = [
       "reference/liblaf/cherries/README.md",
-      "reference/liblaf/cherries/bundle/README.md",
       "reference/liblaf/cherries/config/README.md",
-      "reference/liblaf/cherries/core/README.md",
+      { "<code class=\"doc-symbol doc-symbol-toc doc-symbol-module\"></code> core" = [
+        "reference/liblaf/cherries/core/README.md",
+        { "<code class=\"doc-symbol doc-symbol-toc doc-symbol-module\"></code> assets" = [
+          "reference/liblaf/cherries/core/assets/README.md",
+          "reference/liblaf/cherries/core/assets/bundle/README.md"
+        ] },
+        "reference/liblaf/cherries/core/metrics/README.md",
+        "reference/liblaf/cherries/core/others/README.md",
+        "reference/liblaf/cherries/core/params/README.md",
+        "reference/liblaf/cherries/core/plugin/README.md"
+      ] },
       { "<code class=\"doc-symbol doc-symbol-toc doc-symbol-module\"></code> plugins" = [
         "reference/liblaf/cherries/plugins/README.md",
         "reference/liblaf/cherries/plugins/comet.md",
