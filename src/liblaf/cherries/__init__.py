@@ -7,13 +7,14 @@ for typed settings, and helpers such as [`output`][liblaf.cherries.output] to
 queue artifacts for logging at shutdown.
 """
 
-from . import bundle, config, core, plugins, utils
+from . import config, core, plugins, utils
 from ._main import end, main, start
-from ._version import __version__, __version_tuple__
+from ._version import __commit_id__, __version__, __version_tuple__
 from .config import BaseConfig
 from .core import (
     Run,
-    asset,
+    get_metric,
+    get_metrics,
     get_other,
     get_others,
     get_param,
@@ -39,13 +40,14 @@ from .core import (
 __all__ = [
     "BaseConfig",
     "Run",
+    "__commit_id__",
     "__version__",
     "__version_tuple__",
-    "asset",
-    "bundle",
     "config",
     "core",
     "end",
+    "get_metric",
+    "get_metrics",
     "get_other",
     "get_others",
     "get_param",

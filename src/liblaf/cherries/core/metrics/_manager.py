@@ -1,11 +1,13 @@
-import datetime
-from collections.abc import Iterable, Mapping
-from typing import Any, SupportsFloat, SupportsInt
+from collections.abc import Iterable
+from datetime import datetime
+from typing import SupportsFloat, SupportsInt
 
 import attrs
 import polars as pl
 
-from ._protocol import MetricPluginProtocol
+from liblaf.cherries.utils import flatten_dict
+
+from ._protocol import MetricPluginProtocol, MetricsLike
 from ._struct import Metric
 
 
@@ -18,7 +20,9 @@ class MetricsManager:
     def get_metric(self, name: str) -> pl.DataFrame:
         return self.metrics[name].to_polars()
 
-    def get_metrics(self, names: Iterable[str]) -> pl.DataFrame:
+    def get_metrics(self, names: Iterable[str] | None = None) -> pl.DataFrame:
+        if names is None:
+            names: Iterable[str] = self.metrics.keys()
         return pl.concat(
             [self.metrics[name].to_polars() for name in names], how="vertical"
         )
@@ -29,7 +33,7 @@ class MetricsManager:
         value: SupportsFloat,
         *,
         step: SupportsInt | None = None,
-        time: datetime.datetime | None = None,
+        time: datetime | None = None,
     ) -> None:
         step, time = self._parse_inputs(step, time)
         value: float = float(value)
@@ -38,42 +42,32 @@ class MetricsManager:
 
     def log_metrics(
         self,
-        metrics: Mapping[str, Any],
+        metrics: MetricsLike,
         *,
         step: SupportsInt | None = None,
-        time: datetime.datetime | None = None,
+        time: datetime | None = None,
     ) -> None:
         step, time = self._parse_inputs(step, time)
-        flat: dict[str, float] = _flatten_mapping(metrics)
+        flat: dict[str, SupportsFloat] = flatten_dict(metrics)
+        flat: dict[str, float] = {name: float(value) for name, value in flat.items()}
         for name, value in flat.items():
             self._append_metric(name, value, step=step, time=time)
         self.plugins.log_metrics(flat, step=step, time=time)
 
     def _append_metric(
-        self, name: str, value: float, *, step: int, time: datetime.datetime
+        self, name: str, value: float, *, step: int, time: datetime
     ) -> None:
         if name not in self.metrics:
             self.metrics[name] = Metric(name=name)
         self.metrics[name].append(value, step, time)
 
     def _parse_inputs(
-        self, step: SupportsInt | None, time: datetime.datetime | None
-    ) -> tuple[int, datetime.datetime]:
+        self, step: SupportsInt | None, time: datetime | None
+    ) -> tuple[int, datetime]:
         if time is None:
-            time: datetime.datetime = datetime.datetime.now()  # noqa: DTZ005
+            time: datetime = datetime.now()  # noqa: DTZ005
         if step is None:
             step: int = self.step
         else:
             step: int = int(step)
         return step, time
-
-
-def _flatten_mapping(mapping: Mapping[str, Any], prefix: str = "") -> dict[str, float]:
-    result: dict[str, float] = {}
-    for key, value in mapping.items():
-        key_flat: str = f"{prefix}/{key}" if prefix else key
-        if isinstance(value, Mapping):
-            result.update(_flatten_mapping(value, key_flat))
-        else:
-            result[key_flat] = float(value)
-    return result

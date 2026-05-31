@@ -6,6 +6,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import attrs
+import pydantic
+
+from liblaf.cherries.utils import relative_or_absolute
 
 from ._protocol import AssetPluginProtocol
 from .bundle import BundleRegistry, bundles
@@ -23,19 +26,41 @@ class PendingAsset:
     metadata: Mapping[str, Any] | None = None
 
 
+class AssetsSummary(pydantic.BaseModel):
+    assets: list[Path] = pydantic.Field(default_factory=list)
+    inputs: list[Path] = pydantic.Field(default_factory=list)
+    outputs: list[Path] = pydantic.Field(default_factory=list)
+    temps: list[Path] = pydantic.Field(default_factory=list)
+
+    def to_dict(self, prefix: StrPath | None = None) -> dict[str, Any]:
+        if prefix is not None:
+            prefix: Path = Path(prefix)
+            obj: AssetsSummary = AssetsSummary(
+                assets=[relative_or_absolute(path, prefix) for path in self.assets],
+                inputs=[relative_or_absolute(path, prefix) for path in self.inputs],
+                outputs=[relative_or_absolute(path, prefix) for path in self.outputs],
+                temps=[relative_or_absolute(path, prefix) for path in self.temps],
+            )
+        else:
+            obj: AssetsSummary = self
+        return obj.model_dump(mode="json", exclude_defaults=True)
+
+
 @attrs.define
 class AssetsManager:
+    working_dir: Path
     plugins: AssetPluginProtocol
     bundles: BundleRegistry = attrs.field(default=bundles)
     pending: list[PendingAsset] = attrs.field(factory=list)
+    summary: AssetsSummary = attrs.field(factory=AssetsSummary)
 
     @property
     def data_dir(self) -> Path:
-        return self.plugins.data_dir
+        return self.working_dir / "data"
 
     @property
     def temp_dir(self) -> Path:
-        return self.plugins.temp_dir
+        return self.working_dir / "tmp"
 
     def end(self) -> None:
         for asset in self.pending:
@@ -84,6 +109,18 @@ class AssetsManager:
         if not path.exists():
             logger.warning("No such file or directory: %s", path)
             return
+        if metadata is None:
+            self.summary.assets.append(path)
+        else:
+            match metadata.get("type"):
+                case "input":
+                    self.summary.inputs.append(path)
+                case "output":
+                    self.summary.outputs.append(path)
+                case "temp":
+                    self.summary.temps.append(path)
+                case _:
+                    self.summary.assets.append(path)
         self.plugins.log_asset(path, metadata=metadata, report=True)
         for path_, optional in self.bundles.ls_files(path):
             path: Path = Path(path_)

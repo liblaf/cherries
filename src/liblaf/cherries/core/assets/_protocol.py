@@ -4,12 +4,6 @@ from typing import Any, Protocol
 
 
 class AssetPluginProtocol(Protocol):
-    @property
-    def data_dir(self) -> Path: ...
-
-    @property
-    def temp_dir(self) -> Path: ...
-
     def log_asset(
         self,
         path: Path,

@@ -2,7 +2,6 @@ import datetime
 from zoneinfo import ZoneInfo
 
 import polars as pl
-
 from liblaf.cherries.core._metrics import MetricsManager
 
 

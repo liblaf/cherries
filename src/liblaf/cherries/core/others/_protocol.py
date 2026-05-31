@@ -1,0 +1,6 @@
+from typing import Any, Protocol
+
+
+class OtherPluginProtocol(Protocol):
+    def log_other(self, name: str, value: Any) -> None: ...
+    def log_others(self, others: dict[str, Any]) -> None: ...

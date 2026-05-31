@@ -36,12 +36,12 @@ def test_default_profile_registers_production_plugins(
     monkeypatch.setattr(core, "run", run)
 
     assert profiles.ProfileDefault().init() is run
-    assert isinstance(run.plugins["Comet"], plugins.Comet)
-    assert run.plugins["Comet"].disabled is False
-    assert isinstance(run.plugins["Git"], plugins.Git)
-    assert run.plugins["Git"].commit is True
-    assert isinstance(run.plugins["Local"], plugins.Local)
-    assert isinstance(run.plugins["Logging"], plugins.Logging)
+    assert isinstance(run.registry["Comet"], plugins.Comet)
+    assert run.registry["Comet"].disabled is False
+    assert isinstance(run.registry["Git"], plugins.Git)
+    assert run.registry["Git"].commit is True
+    assert isinstance(run.registry["Local"], plugins.Local)
+    assert isinstance(run.registry["Logging"], plugins.Logging)
 
 
 def test_debug_profile_disables_remote_and_commit_side_effects(
@@ -51,7 +51,7 @@ def test_debug_profile_disables_remote_and_commit_side_effects(
     monkeypatch.setattr(core, "run", run)
 
     assert profiles.ProfileDebug().init() is run
-    assert isinstance(run.plugins["Comet"], plugins.Comet)
-    assert run.plugins["Comet"].disabled is True
-    assert isinstance(run.plugins["Git"], plugins.Git)
-    assert run.plugins["Git"].commit is False
+    assert isinstance(run.registry["Comet"], plugins.Comet)
+    assert run.registry["Comet"].disabled is True
+    assert isinstance(run.registry["Git"], plugins.Git)
+    assert run.registry["Git"].commit is False

@@ -1,5 +1,8 @@
 import datetime
-from typing import Protocol
+from collections.abc import Mapping
+from typing import Protocol, SupportsFloat
+
+type MetricsLike = Mapping[str, SupportsFloat | MetricsLike]
 
 
 class MetricPluginProtocol(Protocol):

@@ -51,6 +51,7 @@ words:
   - trimesh
   - twemoji
   - tzlocal
+  - unflatten
   - venv
   - virtualenv
   - vtkhdf
