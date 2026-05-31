@@ -28,7 +28,10 @@ class PluginManager:
 
     def delegate(self, method: MethodName, *args, **kwargs) -> Any:
         for plugin in self._sort_plugins(method):
-            getattr(plugin, method)(*args, **kwargs)
+            try:
+                getattr(plugin, method)(*args, **kwargs)
+            except Exception:
+                logger.exception("")
 
     _sort_plugins_cache: dict[MethodName, Sequence[Plugin]] = attrs.field(
         repr=False, init=False, factory=dict

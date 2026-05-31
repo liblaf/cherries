@@ -9,7 +9,6 @@ __all__ = [
     "Plugin",
     "PluginManager",
     "PluginName",
-    "collect_impls",
     "get_impl_info",
     "impl",
 ]
