@@ -19,10 +19,17 @@ _PATH_SKIP_NAMES: set[str] = {"exp", "src"}
 
 @attrs.define
 class Local(core.Plugin, core.PluginProtocol):
+    """Copy the entrypoint, logs, and artifacts into `.cherries/runs/`.
+
+    Attributes:
+        run: Run that owns this plugin.
+    """
+
     run: core.Run
 
     @functools.cached_property
     def folder(self) -> Path:
+        """Snapshot directory for this run."""
         local_dir: Path = self.run.project_dir / ".cherries"
         exp_path: Path = self.run.working_dir.relative_to(self.run.project_dir)
         exp_path: Path = Path(
@@ -42,11 +49,13 @@ class Local(core.Plugin, core.PluginProtocol):
 
     @property
     def log_file(self) -> Path:
+        """Log file inside the local snapshot."""
         return self.folder / "logs" / self.run.entrypoint.with_suffix(".log").name
 
     @override
     @core.impl
     def start(self) -> None:
+        """Configure local logging and copy the entrypoint."""
         self._config_logging()
         self._copy(self.run.entrypoint, self.folder / "src" / self.run.entrypoint.name)
 
@@ -59,18 +68,21 @@ class Local(core.Plugin, core.PluginProtocol):
         metadata: Mapping[str, Any] | None = None,
         report: bool = True,
     ) -> None:
+        """Copy `path` under the snapshot's `assets/` directory."""
         target: Path = (
             self.folder / "assets" / relative_or_name(path, self.run.working_dir)
         )
         self._copy(path, target)
 
     def _config_logging(self) -> None:
+        """Attach a bounded file handler for the local snapshot log."""
         logger: logging.Logger = logging.getLogger()
         handler: logging.Handler = FileHandler(self.log_file)
         handler.addFilter(LimitsFilter())
         logger.addHandler(handler)
 
     def _copy(self, source: Path, target: Path) -> None:
+        """Copy a file or directory into the snapshot."""
         if target.exists():
             if target.samefile(self.log_file):
                 return

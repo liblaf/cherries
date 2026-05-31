@@ -29,21 +29,30 @@ class File(pydantic.BaseModel):
 
 
 class Series(pydantic.BaseModel):
+    """Parsed VTK `.series` manifest."""
+
     model_config: ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(
         alias_generator=snake_to_kebab
     )
     file_series_version: Literal["1.0"] = "1.0"
+    """VTK file-series schema version."""
+
     files: list[File] = pydantic.Field(default_factory=list)
+    """Frame entries referenced by the manifest."""
 
 
 @attrs.define
 class BundleSeries(Bundle):
+    """Expand a VTK `.series` manifest to its required frame files."""
+
     @override
     def match(self, path: Path) -> bool:
+        """Return whether `path` ends with `.series`."""
         return path.suffix == ".series"
 
     @override
     def ls_files(self, path: Path) -> Generator[BundleItem]:
+        """Read `path` and yield every frame listed in the manifest."""
         series: Series = Series.model_validate_json(path.read_bytes())
         for meta in series.files:
             absolute: Path = path.parent / meta.name

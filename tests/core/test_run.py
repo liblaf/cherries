@@ -1,4 +1,7 @@
 import json
+import sys
+from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -10,66 +13,67 @@ from liblaf.cherries import core
 
 @attrs.define
 class AssetRecorder(core.Plugin):
-    calls: list[tuple[str, Path, Path, bool]]
+    calls: list[tuple[Path, dict[str, Any] | None, bool]]
 
     @core.impl
     def log_asset(
-        self, path: Path, name: Path, *, report: bool = True, **_kwargs: Any
+        self,
+        path: Path,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+        report: bool = True,
     ) -> None:
-        self.calls.append(("asset", path, name, report))
-
-    @core.impl
-    def log_input(
-        self, path: Path, name: Path, *, report: bool = True, **_kwargs: Any
-    ) -> None:
-        self.calls.append(("input", path, name, report))
-
-    @core.impl
-    def log_output(
-        self, path: Path, name: Path, *, report: bool = True, **_kwargs: Any
-    ) -> None:
-        self.calls.append(("output", path, name, report))
-
-    @core.impl
-    def log_temp(
-        self, path: Path, name: Path, *, report: bool = True, **_kwargs: Any
-    ) -> None:
-        self.calls.append(("temp", path, name, report))
+        self.calls.append(
+            (path, dict(metadata) if metadata is not None else None, report)
+        )
 
 
-def test_path_helpers_queue_and_flush_existing_artifacts(
+def make_run(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    calls: list[tuple[Path, dict[str, Any] | None, bool]],
+) -> core.Run:
+    monkeypatch.setattr(sys, "argv", [str(tmp_path / "experiment.py")])
+    run = core.Run()
+    run.project_dir = tmp_path
+    run.run_name = "experiment.py"
+    run.plugins.register(AssetRecorder(calls))
+    return run
+
+
+def test_path_helpers_log_inputs_and_flush_existing_outputs(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    run = core.Run()
-    monkeypatch.setattr(run, "exp_dir", tmp_path)
-    calls: list[tuple[str, Path, Path, bool]] = []
-    run.register(AssetRecorder(calls))
+    calls: list[tuple[Path, dict[str, Any] | None, bool]] = []
+    run = make_run(monkeypatch, tmp_path, calls)
+    input_path = tmp_path / "data" / "raw" / "data.csv"
+    input_path.parent.mkdir(parents=True)
+    input_path.write_text("raw\n")
 
-    asset = run.asset("figs/plot.txt", mkdir=True)
-    input_ = run.input("raw/data.csv", mkdir=True)
-    output = run.output("metrics.json", mkdir=True)
-    temp = run.temp("scratch/state.txt", mkdir=True)
-    for path in (asset, input_, output, temp):
-        path.write_text(path.name)
+    assert run.input("raw/data.csv", metadata={"split": "train"}) == input_path
+    output = run.output("metrics.json", metadata={"kind": "metrics"})
+    temp = run.temp("scratch/state.txt")
+    output.write_text("{}\n")
+    temp.write_text("state\n")
 
     run.end()
 
     assert calls == [
-        ("asset", asset.resolve(), Path("figs/plot.txt"), True),
-        ("input", input_.resolve(), Path("raw/data.csv"), True),
-        ("output", output.resolve(), Path("metrics.json"), True),
-        ("temp", temp.resolve(), Path("scratch/state.txt"), True),
+        (input_path, {"type": "input", "split": "train"}, True),
+        (output, {"type": "output", "kind": "metrics"}, True),
+        (temp, {"type": "temp"}, True),
     ]
+    summary = run.summary(prefix=tmp_path)
+    assert summary["inputs"] == ["data/raw/data.csv"]
+    assert summary["outputs"] == ["data/metrics.json"]
+    assert summary["temps"] == ["tmp/scratch/state.txt"]
 
 
 def test_log_output_expands_series_bundles(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    run = core.Run()
-    monkeypatch.setattr(run, "exp_dir", tmp_path)
-    calls: list[tuple[str, Path, Path, bool]] = []
-    run.register(AssetRecorder(calls))
-
+    calls: list[tuple[Path, dict[str, Any] | None, bool]] = []
+    run = make_run(monkeypatch, tmp_path, calls)
     series = tmp_path / "data" / "mesh.vtp.series"
     frame_dir = series.parent / "mesh.vtp.series.d"
     frame_dir.mkdir(parents=True)
@@ -91,23 +95,15 @@ def test_log_output_expands_series_bundles(
         )
     )
 
-    run.log_output(series)
+    run.log_output(series, metadata={"mesh": "face"})
 
     assert calls == [
-        ("output", series.resolve(), Path("mesh.vtp.series"), True),
-        (
-            "output",
-            frames[0],
-            Path("mesh.vtp.series.d/mesh_000000.vtp"),
-            False,
-        ),
-        (
-            "output",
-            frames[1],
-            Path("mesh.vtp.series.d/mesh_000001.vtp"),
-            False,
-        ),
+        (series, {"type": "output", "mesh": "face"}, True),
+        (frames[0], {"type": "output", "mesh": "face"}, False),
+        (frames[1], {"type": "output", "mesh": "face"}, False),
     ]
+    run.log_other("cherries/start_time", datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC))
+    assert run.summary(prefix=tmp_path)["outputs"] == ["data/mesh.vtp.series"]
 
 
 def test_missing_artifact_warns_without_delegating(
@@ -115,10 +111,8 @@ def test_missing_artifact_warns_without_delegating(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    run = core.Run()
-    monkeypatch.setattr(run, "exp_dir", tmp_path)
-    calls: list[tuple[str, Path, Path, bool]] = []
-    run.register(AssetRecorder(calls))
+    calls: list[tuple[Path, dict[str, Any] | None, bool]] = []
+    run = make_run(monkeypatch, tmp_path, calls)
 
     run.log_output(tmp_path / "data" / "missing.txt")
 

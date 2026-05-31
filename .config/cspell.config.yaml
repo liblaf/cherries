@@ -16,11 +16,11 @@ maxFileSize: 32KB
 useGitignore: true
 words:
   - arithmatex
+  - cytoolz
   - delenv
   - fieldz
   - grimp
   - hynek
-  - impls
   - inlinehilite
   - liblaf
   - linenums
@@ -50,7 +50,6 @@ words:
   - toolz
   - trimesh
   - twemoji
-  - tzlocal
   - unflatten
   - venv
   - virtualenv

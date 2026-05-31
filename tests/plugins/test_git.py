@@ -1,28 +1,10 @@
-import logging
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 import git
-import pytest
 
+from liblaf.cherries import core
 from liblaf.cherries.plugins.git import Git
-
-logger: logging.Logger = logging.getLogger("liblaf.cherries.plugins.git")
-
-
-class GitManager:
-    def __init__(self, repo: git.Repo, exp_dir: Path) -> None:
-        self.repo = repo
-        self.exp_dir = exp_dir
-        self.exp_name = "exp/demo.py"
-        self.url = "https://example.test/run"
-        self.logged: dict[str, Any] = {}
-
-    def get_params(self) -> dict[str, Any]:
-        return {"epochs": 3, "lr": 0.01}
-
-    def log_other(self, name: str, value: Any) -> None:
-        self.logged[name] = value
 
 
 def make_repo(tmp_path: Path) -> git.Repo:
@@ -37,33 +19,41 @@ def make_repo(tmp_path: Path) -> git.Repo:
     return repo
 
 
-def test_git_summary_records_reported_paths_and_final_sha(
-    caplog: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
+def test_git_end_records_final_sha_without_committing_when_disabled(
     tmp_path: Path,
 ) -> None:
     repo = make_repo(tmp_path)
-    exp_dir = tmp_path / "exp"
-    exp_dir.mkdir()
-    monkeypatch.chdir(exp_dir)
-    manager = GitManager(repo, exp_dir)
-    plugin = Git(commit=False)
-    plugin.manager = manager
-    input_path = exp_dir / "data" / "raw.csv"
-    output_path = exp_dir / "data" / "metrics.json"
-    temp_path = exp_dir / "tmp" / "scratch.txt"
+    (tmp_path / "artifact.txt").write_text("dirty\n")
+    run = core.Run()
+    run.repo = repo
+    plugin = Git(run=run, commit=False)
 
-    plugin.log_input(input_path, Path("raw.csv"))
-    plugin.log_output(output_path, Path("metrics.json"), report=False)
-    plugin.log_temp(temp_path, Path("scratch.txt"))
-    with caplog.at_level(logging.INFO, logger=logger.name):
-        plugin.end(exc=ValueError("bad input"))
+    plugin.end()
 
-    assert manager.logged == {"cherries.git.sha": repo.head.commit.hexsha}
-    assert "name: exp/demo.py" in caplog.text
-    assert "url: https://example.test/run" in caplog.text
-    assert "params:" in caplog.text
-    assert "inputs:" in caplog.text
-    assert "temps:" in caplog.text
-    assert "outputs:" not in caplog.text
-    assert "ValueError: bad input" in caplog.text
+    assert run.get_other("cherries/git/sha") == repo.head.commit.hexsha
+    assert repo.is_dirty(untracked_files=True)
+
+
+def test_git_commit_message_includes_run_summary_with_relative_paths(
+    tmp_path: Path,
+) -> None:
+    repo = make_repo(tmp_path)
+    run = core.Run()
+    run.repo = repo
+    run.run_name = "exp/demo.py"
+    run.log_other("cherries/start_time", datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC))
+    run.log_param("epochs", 3)
+    output = tmp_path / "exp" / "data" / "metrics.json"
+    output.parent.mkdir(parents=True)
+    output.write_text("{}\n")
+    run.log_output(output)
+    plugin = Git(run=run, commit=True)
+
+    plugin.end()
+
+    message = repo.head.commit.message
+    assert message.startswith("chore(exp): exp/demo.py\n\n")
+    assert "start_time: 2026-01-02 03:04:05+00:00" in message
+    assert "params:\n  epochs: 3" in message
+    assert "outputs:\n- exp/data/metrics.json" in message
+    assert run.get_other("cherries/git/sha") == repo.head.commit.hexsha

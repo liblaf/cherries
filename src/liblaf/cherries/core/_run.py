@@ -36,6 +36,14 @@ _PATH_SKIP_NAMES: set[str] = {"exp", "src"}
 
 @attrs.define
 class Run:
+    """Mutable state for one Cherries experiment run.
+
+    A `Run` owns plugin registration, path helpers, metrics, parameters, and
+    miscellaneous metadata. Profiles configure the process-global run, while
+    [`main`][liblaf.cherries.main] starts and ends it around an experiment
+    callable.
+    """
+
     def _default_assets(self) -> AssetsManager:
         return AssetsManager(
             working_dir=self.working_dir,
@@ -67,18 +75,21 @@ class Run:
 
     @functools.cached_property
     def entrypoint(self) -> Path:
+        """Python entrypoint used to derive the experiment name and folders."""
         if sys.argv[0] == "-c":
             return Path(os.devnull).resolve()
         return Path(sys.argv[0]).resolve()
 
     @functools.cached_property
     def project_dir(self) -> Path:
+        """Git repository root, or the current directory outside a Git repo."""
         if self.repo is None:
             return Path.cwd().resolve()
         return Path(self.repo.working_dir).resolve()
 
     @functools.cached_property
     def project_name(self) -> str:
+        """Project name reported to plugins."""
         if self.repo is not None:
             try:
                 remote: git.Remote = self.repo.remote()
@@ -91,6 +102,7 @@ class Run:
 
     @functools.cached_property
     def repo(self) -> git.Repo | None:
+        """Nearest Git repository, when one exists."""
         try:
             return git.Repo(search_parent_directories=True)
         except git.exc.InvalidGitRepositoryError as err:
@@ -99,6 +111,7 @@ class Run:
 
     @functools.cached_property
     def run_name(self) -> str:
+        """Run name from `CHERRIES_NAME` or the entrypoint path."""
         if name := env.str("CHERRIES_NAME", ""):
             return name
         name: str = self.entrypoint.relative_to(self.project_dir).as_posix()
@@ -112,14 +125,17 @@ class Run:
 
     @functools.cached_property
     def start_time(self) -> datetime:
+        """Timezone-aware timestamp captured when the run object is first used."""
         return datetime.now().astimezone()
 
     @functools.cached_property
     def tags(self) -> list[str]:
+        """Tags parsed from the `CHERRIES_TAGS` environment variable."""
         return env.list("CHERRIES_TAGS", [])
 
     @functools.cached_property
     def working_dir(self) -> Path:
+        """Directory used to resolve data, temporary, log, and local snapshot paths."""
         parent: Path = self.entrypoint.parent
         while parent.name in _PATH_SKIP_NAMES:
             parent: Path = parent.parent
@@ -138,6 +154,11 @@ class Run:
         self.log_other("cherries/start_time", self.start_time)
 
     def end(self, exc: BaseException | None = None) -> None:
+        """Flush artifacts, record shutdown metadata, and end plugins.
+
+        Args:
+            exc: Exception raised by the experiment, if any.
+        """
         self.log_other("cherries/end_time", datetime.now().astimezone())
         if exc is not None:
             self.log_other(
@@ -152,6 +173,7 @@ class Run:
 
     @property
     def step(self) -> int:
+        """Default metric step."""
         return self._metrics.step
 
     @step.setter
@@ -159,12 +181,15 @@ class Run:
         self._metrics.step = value
 
     def get_step(self) -> int:
+        """Return the default metric step."""
         return self.step
 
     def set_step(self, step: int) -> None:
+        """Set the default metric step."""
         self.step = step
 
     def get_metric(self, name: str) -> pl.DataFrame:
+        """Return one metric series."""
         return self._metrics.get_metric(name)
 
     def log_metric(
@@ -175,9 +200,11 @@ class Run:
         step: int | None = None,
         time: datetime | None = None,
     ) -> None:
+        """Log one scalar metric."""
         self._metrics.log_metric(name, value, step=step, time=time)
 
     def get_metrics(self, metrics: Iterator[str] | None = None) -> pl.DataFrame:
+        """Return selected metric series concatenated into one dataframe."""
         return self._metrics.get_metrics(metrics)
 
     def log_metrics(
@@ -187,6 +214,7 @@ class Run:
         step: int | None = None,
         time: datetime | None = None,
     ) -> None:
+        """Log multiple scalar metrics, flattening nested mappings with `/`."""
         self._metrics.log_metrics(metrics, step=step, time=time)
 
     # endregion Metrics
@@ -196,6 +224,7 @@ class Run:
     def input(
         self, path: StrPath, *, metadata: Mapping[str, Any] | None = None
     ) -> Path:
+        """Resolve and immediately log an input below `data/`."""
         return self._assets.input(path, metadata=metadata)
 
     def output(
@@ -205,6 +234,7 @@ class Run:
         metadata: Mapping[str, Any] | None = None,
         mkdir: bool = True,
     ) -> Path:
+        """Resolve an output below `data/` and queue it until run end."""
         return self._assets.output(path, metadata=metadata, mkdir=mkdir)
 
     def temp(
@@ -214,26 +244,31 @@ class Run:
         metadata: Mapping[str, Any] | None = None,
         mkdir: bool = True,
     ) -> Path:
+        """Resolve a temporary artifact below `tmp/` and queue it until run end."""
         return self._assets.temp(path, metadata=metadata, mkdir=mkdir)
 
     def log_asset(
         self, path: StrPath, metadata: Mapping[str, Any] | None = None
     ) -> None:
+        """Log an existing generic artifact immediately."""
         self._assets.log_asset(path, metadata=metadata)
 
     def log_input(
         self, path: StrPath, metadata: Mapping[str, Any] | None = None
     ) -> None:
+        """Log an existing input artifact immediately."""
         self._assets.log_input(path, metadata=metadata)
 
     def log_output(
         self, path: StrPath, metadata: Mapping[str, Any] | None = None
     ) -> None:
+        """Log an existing output artifact immediately."""
         self._assets.log_output(path, metadata=metadata)
 
     def log_temp(
         self, path: StrPath, metadata: Mapping[str, Any] | None = None
     ) -> None:
+        """Log an existing temporary artifact immediately."""
         self._assets.log_temp(path, metadata=metadata)
 
     # endregion Assets
@@ -241,32 +276,48 @@ class Run:
     # region Logging
 
     def get_other(self, name: str) -> Any:
+        """Return one flattened metadata value."""
         return self._others.get_other(name)
 
     def log_other(self, name: str, value: Any) -> None:
+        """Log one metadata value."""
         self._others.log_other(name, value)
 
     def get_others(self) -> dict[str, Any]:
+        """Return logged metadata as a nested dictionary."""
         return self._others.get_others()
 
     def log_others(self, others: Mapping[str, Any]) -> None:
+        """Log multiple metadata values."""
         self._others.log_others(others)
 
     def get_param(self, name: str) -> Any:
+        """Return one flattened parameter value."""
         return self._params.get_param(name)
 
     def log_param(self, name: str, value: Any) -> None:
+        """Log one parameter value."""
         self._params.log_param(name, value)
 
     def get_params(self) -> dict[str, Any]:
+        """Return logged parameters as a nested dictionary."""
         return self._params.get_params()
 
     def log_params(self, params: Mapping[str, Any]) -> None:
+        """Log multiple parameter values."""
         self._params.log_params(params)
 
     # endregion Logging
 
     def summary(self, prefix: StrPath | None = None) -> dict[str, Any]:
+        """Build a JSON/YAML-friendly run summary.
+
+        Args:
+            prefix: Optional directory to strip from artifact paths.
+
+        Returns:
+            Run metadata, parameters, artifact paths, and user metadata.
+        """
         summary: dict[str, Any] = {"name": self.run_name}
         others: dict[str, Any] = self.get_others()
         summary.update(others.pop("cherries"))

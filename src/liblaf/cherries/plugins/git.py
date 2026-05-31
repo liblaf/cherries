@@ -16,6 +16,14 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 @attrs.define
 class Git(core.Plugin, core.PluginProtocol):
+    """Record Git metadata and optionally commit dirty experiment outputs.
+
+    Attributes:
+        run: Run that owns this plugin.
+        commit: Whether to commit dirty changes during `end()`.
+        verify: Whether Git hooks should run for the generated commit.
+    """
+
     run: core.Run
     commit: bool = attrs.field(default=True, kw_only=True)
     verify: bool = attrs.field(default=False, kw_only=True)
@@ -23,6 +31,7 @@ class Git(core.Plugin, core.PluginProtocol):
     @override
     @core.impl(before=("Comet",))
     def end(self, exc: BaseException | None = None) -> None:
+        """Commit dirty changes if configured and log the final Git SHA."""
         if self.repo is None:
             return
         if self.commit and self.repo.is_dirty(untracked_files=True):
@@ -36,6 +45,7 @@ class Git(core.Plugin, core.PluginProtocol):
         self.run.log_other("cherries/git/sha", self.repo.head.commit.hexsha)
 
     def _make_commit_message(self) -> str:
+        """Build the generated experiment commit message."""
         assert self.repo is not None
         summary: dict[str, Any] = self.run.summary(prefix=self.repo.working_dir)
         message: str = f"chore(exp): {summary.pop('name')}\n\n"
@@ -43,6 +53,7 @@ class Git(core.Plugin, core.PluginProtocol):
         return message
 
     def _relative_to_repo(self, path: Path) -> Path:
+        """Return `path` relative to the repository when possible."""
         if self.repo is None:
             return path
         try:
@@ -52,6 +63,7 @@ class Git(core.Plugin, core.PluginProtocol):
 
     @functools.cached_property
     def repo(self) -> git.Repo | None:
+        """Repository associated with the owning run."""
         return self.run.repo
 
 
@@ -66,4 +78,5 @@ def _(obj: os.PathLike) -> str:
 
 
 def _pretty_yaml(data: dict[str, Any]) -> str:
+    """Serialize `data` as YAML, converting path-like objects to strings."""
     return msgspec.yaml.encode(data, enc_hook=_enc_hook).decode()

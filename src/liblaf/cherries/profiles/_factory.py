@@ -14,6 +14,15 @@ type ProfileLike = ProfileName | Profile | type[Profile]
 
 
 def factory(profile: ProfileLike | None = None) -> Profile:
+    """Resolve a profile name, instance, class, or environment default.
+
+    Args:
+        profile: Explicit profile selector. When omitted, `DEBUG=1` selects the
+            debug profile; otherwise `PROFILE` defaults to `default`.
+
+    Returns:
+        Instantiated profile object.
+    """
     if profile is None:
         try:
             debug: bool = env.bool("DEBUG", False)

@@ -1,4 +1,3 @@
-import logging
 import sys
 from pathlib import Path
 from typing import Any
@@ -10,8 +9,6 @@ import pytest
 
 from liblaf import cherries
 from liblaf.cherries import core, profiles
-
-logger: logging.Logger = logging.getLogger(__name__)
 
 
 @attrs.define
@@ -49,12 +46,15 @@ class ProfileForTest(profiles.Profile):
 def make_run(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> tuple[core.Run, RunRecorder]:
+    monkeypatch.setattr(sys, "argv", [str(tmp_path / "experiment.py")])
     run = core.Run()
-    monkeypatch.setattr(run, "entrypoint", tmp_path / "experiment.py")
-    monkeypatch.setattr(run, "exp_dir", tmp_path)
+    entrypoint = tmp_path / "experiment.py"
+    entrypoint.write_text("print('experiment')\n")
+    monkeypatch.setattr(run, "entrypoint", entrypoint)
     monkeypatch.setattr(run, "project_dir", tmp_path)
+    monkeypatch.setattr(run, "working_dir", tmp_path)
     recorder = RunRecorder()
-    run.register(recorder)
+    run.plugins.register(recorder)
     return run, recorder
 
 
@@ -90,7 +90,7 @@ def test_main_builds_annotated_arguments_and_logs_pydantic_config(
     assert result == "Ada:2"
     assert recorder.params == [{"name": "Ada"}]
     assert recorder.ended == [None]
-    assert {"cherries.entrypoint", "cherries.exp_dir", "cherries.start_time"} <= set(
+    assert {"cherries/entrypoint", "cherries/exp_dir", "cherries/start_time"} <= set(
         recorder.others
     )
 
@@ -132,21 +132,29 @@ def test_end_delegates_to_global_run(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_main(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(sys, "argv", [__file__])
-    monkeypatch.setattr(cherries.run, "exp_dir", tmp_path)
+    monkeypatch.setattr(sys, "argv", ["experiment.py"])
+    run, recorder = make_run(monkeypatch, tmp_path)
+    source = tmp_path / "data" / "source.txt"
+    source.parent.mkdir()
+    source.write_text("source\n")
 
     class Config(cherries.BaseConfig):
         name: str = "world"
-        source: Path = cherries.input(__file__, mkdir=True)
-        temp: Path = cherries.temp("artifact.txt", mkdir=True)
-        output: Path = cherries.output("hello.txt", mkdir=True)
+        source: Path = run.input("source.txt")
+        temp: Path = run.temp("artifact.txt", mkdir=True)
+        output: Path = run.output("hello.txt", mkdir=True)
 
     def main(cfg: Config) -> None:
         for x in range(10):
             y: float = x**2
-            cherries.log_metrics({"x": x, "y": y})
+            run.log_metrics({"x": x, "y": y})
         cfg.output.write_text(f"Hello, {cfg.name}!\n")
         cfg.temp.write_text("Temporary file.\n")
-        logger.info("Hello, %s!", cfg.name)
 
-    cherries.main(main, profile="debug")
+    cherries.main(main, profile=ProfileForTest(run))
+
+    assert Config.model_fields["source"].default == source
+    assert Config.model_fields["output"].default.read_text() == "Hello, world!\n"
+    assert Config.model_fields["temp"].default.read_text() == "Temporary file.\n"
+    assert recorder.ended == [None]
+    assert run.get_metrics(iter(("x", "y"))).height == 20

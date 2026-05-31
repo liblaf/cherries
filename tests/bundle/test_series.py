@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from liblaf.cherries.bundle import BundleSeries
+
+from liblaf.cherries.core.assets.bundle import BundleItem, BundleSeries
 
 
 def generate_series_file(file: Path, *, frames: int = 10) -> None:
@@ -19,15 +20,16 @@ def generate_series_file(file: Path, *, frames: int = 10) -> None:
         json.dump(body, fp)
 
 
-@pytest.mark.parametrize("frames", [30])
+@pytest.mark.parametrize("frames", [0, 3])
 def test_bundle_series(tmp_path: Path, *, frames: int) -> None:
     series_file: Path = tmp_path / "mesh.vtp.series"
     generate_series_file(series_file, frames=frames)
     bundle = BundleSeries()
     assert bundle.match(series_file)
-    n_files: int = 0
-    for absolute, relative, optional in bundle.ls_files(series_file, tmp_path):
-        assert absolute == tmp_path / relative
-        assert not optional
-        n_files += 1
-    assert n_files == frames
+    assert list(bundle.ls_files(series_file)) == [
+        BundleItem(
+            tmp_path / f"mesh.vtp.series.d/mesh.vtp_{i:06d}.series",
+            optional=False,
+        )
+        for i in range(frames)
+    ]

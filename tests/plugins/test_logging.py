@@ -1,10 +1,12 @@
+import logging
+from datetime import UTC, datetime
 from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import Mock, call
+from unittest.mock import Mock
 
 import liblaf.logging
 import pytest
 
+from liblaf.cherries import core
 from liblaf.cherries.plugins.logging import Logging
 
 
@@ -13,9 +15,11 @@ def test_logging_start_initializes_liblaf_logging(
 ) -> None:
     init = Mock()
     monkeypatch.setattr(liblaf.logging, "init", init)
+    run = core.Run()
     entrypoint = tmp_path / "experiment.py"
-    plugin = Logging()
-    plugin.manager = SimpleNamespace(logs_dir=tmp_path / "logs", entrypoint=entrypoint)
+    monkeypatch.setattr(run, "working_dir", tmp_path)
+    monkeypatch.setattr(run, "entrypoint", entrypoint)
+    plugin = Logging(run=run)
 
     plugin.start()
 
@@ -25,21 +29,15 @@ def test_logging_start_initializes_liblaf_logging(
     )
 
 
-def test_logging_mirrors_metrics_to_liblaf_logging(
-    monkeypatch: pytest.MonkeyPatch,
+def test_logging_mirrors_metrics_to_python_logger(
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    info = Mock()
-    monkeypatch.setattr(liblaf.logging, "info", info)
-    plugin = Logging()
+    plugin = Logging(run=core.Run())
+    time = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
 
-    plugin.log_metric("loss", 0.5)
-    plugin.log_metric("loss", 0.25, step=2)
-    plugin.log_metrics({"accuracy": 0.9})
-    plugin.log_metrics({"accuracy": 0.95}, step=3)
+    with caplog.at_level(logging.INFO, logger="liblaf.cherries.plugins.logging"):
+        plugin.log_metric("loss", 0.25, step=2, time=time)
+        plugin.log_metrics({"accuracy": 0.95}, step=3, time=time)
 
-    assert info.mock_calls == [
-        call("%s: %s", "loss", 0.5),
-        call("step: %s, %s: %s", 2, "loss", 0.25),
-        call("%s", {"accuracy": 0.9}),
-        call("step: %s, %s", 3, {"accuracy": 0.95}),
-    ]
+    assert "step: 2, loss: 0.25" in caplog.text
+    assert "step: 3, {'accuracy': 0.95}" in caplog.text

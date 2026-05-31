@@ -1,9 +1,8 @@
-from typing import Any
-
 import attrs
 import pytest
 
 from liblaf.cherries import core
+from liblaf.cherries.core.plugin import PluginManager
 
 
 @attrs.define
@@ -31,7 +30,7 @@ def test_delegate_honors_before_and_after_constraints() -> None:
             self.calls.append(self.name)
 
     calls: list[str] = []
-    manager = core.PluginManager()
+    manager = PluginManager()
     manager.register(Comet(calls))
     manager.register(Local(calls))
     manager.register(Logging(calls))
@@ -56,7 +55,7 @@ def test_register_invalidates_cached_plugin_order() -> None:
             self.calls.append(self.name)
 
     calls: list[str] = []
-    manager = core.PluginManager()
+    manager = PluginManager()
     manager.register(Comet(calls))
     manager.delegate("start")
     calls.clear()
@@ -67,37 +66,18 @@ def test_register_invalidates_cached_plugin_order() -> None:
     assert calls == ["Local", "Comet"]
 
 
-def test_delegate_first_result_stops_after_first_value() -> None:
+def test_delegate_skips_methods_without_impl_marker() -> None:
     @attrs.define
-    class Empty(Recorder):
-        @core.impl
-        def get_url(self) -> None:
+    class Plain(Recorder):
+        def start(self) -> None:
             self.calls.append(self.name)
-
-    @attrs.define
-    class Found(Recorder):
-        @core.impl
-        def get_url(self) -> str:
-            self.calls.append(self.name)
-            return "https://example.test/run"
-
-    @attrs.define
-    class Later(Recorder):
-        @core.impl
-        def get_url(self) -> str:
-            self.calls.append(self.name)
-            return "unreachable"
 
     calls: list[str] = []
-    manager = core.PluginManager()
-    manager.register(Empty(calls))
-    manager.register(Found(calls))
-    manager.register(Later(calls))
+    manager = PluginManager()
+    manager.register(Plain(calls))
 
-    result: Any = manager.delegate("get_url", first_result=True)
-
-    assert result == "https://example.test/run"
-    assert calls == ["Empty", "Found"]
+    assert manager.delegate("start") is None
+    assert calls == []
 
 
 def test_delegate_logs_plugin_exceptions_and_continues(
@@ -117,11 +97,11 @@ def test_delegate_logs_plugin_exceptions_and_continues(
             self.calls.append(self.name)
 
     calls: list[str] = []
-    manager = core.PluginManager()
+    manager = PluginManager()
     manager.register(Broken(calls))
     manager.register(Later(calls))
 
     manager.delegate("start")
 
     assert calls == ["Later"]
-    assert "Plugin Broken" in caplog.text
+    assert "Plugin Broken failed in start" in caplog.text

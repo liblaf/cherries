@@ -22,11 +22,12 @@
 
 ## ✨ Features
 
-- **Typed experiment config**: use Pydantic settings models as function arguments, with CLI parsing inherited from `pydantic-settings`.
-- **Path helpers that log themselves**: create `asset`, `input`, `output`, and `temp` paths once, then let Cherries flush existing files at run end.
-- **Composable plugins**: forward params, metrics, metadata, and artifacts through ordered hooks with `before` and `after` constraints.
-- **Built-in run profiles**: choose local debug snapshots or full Comet, Git, local, and logging integration for regular runs.
-- **Artifact bundle expansion**: log VTK `.series` frames and optional mesh landmark files alongside their primary artifact.
+- **Typed experiment config**: use Pydantic settings models as callable arguments, with CLI parsing from `pydantic-settings`.
+- **Repeatable artifact paths**: resolve inputs and queue outputs or temporary artifacts below the entrypoint-derived run directory.
+- **Scalar metric history**: log one metric or nested metric mappings and read them back as Polars dataframes.
+- **Composable plugins**: order hook implementations with `before` and `after` constraints while later plugins keep running after logged failures.
+- **Built-in profiles**: use `debug` for local snapshots without remote/commit side effects, or `default` for Comet, Git, local snapshots, and logging.
+- **Bundle expansion**: include VTK `.series` frames and optional mesh `.landmarks.json` files alongside primary artifacts.
 
 ## 📦 Installation
 
@@ -58,11 +59,11 @@ if __name__ == "__main__":
     cherries.main(experiment, profile="debug")
 ```
 
-`profile="debug"` keeps Comet disabled and Git commits off while still copying the entrypoint, logs, and logged artifacts into `.cherries/`. The default profile enables Comet, writes a Git summary, commits dirty changes, and logs the final Git SHA.
+`profile="debug"` keeps Comet disabled and Git commits off while still copying the entrypoint, logs, and logged artifacts into `.cherries/runs/`. The default profile enables Comet, commits dirty changes when needed, and logs the final Git SHA.
 
 ## 🧩 Plugin Model
 
-Plugins subclass `liblaf.cherries.core.Plugin`, mark hook implementations with `liblaf.cherries.core.impl()`, and register on a `Run` or `PluginManager`. Hooks can return first results for getters, collect all non-`None` results for normal delegation, and keep running later plugins when one hook raises.
+Plugins subclass `liblaf.cherries.core.Plugin`, mark hook implementations with `liblaf.cherries.core.impl()`, and register with `run.plugins.register(...)`. Hook order is topologically sorted from each implementation's `before` and `after` constraints. Exceptions are logged so later plugins can still receive the hook.
 
 ## ⌨️ Local Development
 
@@ -88,5 +89,5 @@ mise run docs:build
 
 #### 📝 License
 
-Copyright © 2025 [liblaf](https://github.com/liblaf). <br />
+Copyright © 2026 [liblaf](https://github.com/liblaf). <br />
 This project is [MIT](https://github.com/liblaf/cherries/blob/main/LICENSE) licensed.

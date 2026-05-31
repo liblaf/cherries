@@ -17,27 +17,42 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 @attrs.define
 class PluginManager:
+    """Register plugins and delegate hook calls in dependency order."""
+
     registry: dict[PluginName, Plugin] = attrs.field(factory=dict, kw_only=True)
+    """Plugins keyed by their unique plugin name."""
 
     def __getattr__(self, name: str) -> Any:
+        """Return a callable that delegates hook `name`."""
         return functools.partial(self.delegate, name)
 
     def register(self, plugin: Plugin) -> None:
+        """Register or replace `plugin`.
+
+        The cached hook order is cleared so future delegations include the new
+        plugin and any changed ordering constraints.
+        """
         self.registry[plugin.name] = plugin
         self._sort_plugins_cache.clear()
 
     def delegate(self, method: MethodName, *args, **kwargs) -> Any:
+        """Call hook `method` on every plugin that implements it.
+
+        Hook methods must be decorated with [`impl`][liblaf.cherries.core.impl].
+        Exceptions are logged and later plugins still run.
+        """
         for plugin in self._sort_plugins(method):
             try:
                 getattr(plugin, method)(*args, **kwargs)
             except Exception:
-                logger.exception("")
+                logger.exception("Plugin %s failed in %s", plugin.name, method)
 
     _sort_plugins_cache: dict[MethodName, Sequence[Plugin]] = attrs.field(
         repr=False, init=False, factory=dict
     )
 
     def _sort_plugins(self, method_name: MethodName) -> Sequence[Plugin]:
+        """Return plugins that implement `method_name` in topological order."""
         if method_name not in self._sort_plugins_cache:
             plugins: dict[PluginName, Plugin] = {}
             sorter: graphlib.TopologicalSorter[PluginName] = (

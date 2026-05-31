@@ -1,8 +1,8 @@
 # Cherries
 
-Cherries is a small experiment runner for Python scripts. It gives each run a
-typed configuration model, path helpers for artifacts, and a plugin pipeline for
-Comet, Git, local snapshots, and Python logging.
+Cherries is a compact experiment runner for Python scripts. It gives each run a
+typed configuration model, repeatable artifact paths, scalar metric logging, and
+a plugin pipeline for Comet, Git, local snapshots, and Python logging.
 
 ```bash
 uv add liblaf-cherries
@@ -35,27 +35,28 @@ if __name__ == "__main__":
     cherries.main(experiment, profile="debug")
 ```
 
-`main()` starts a profile, builds missing arguments from annotations, logs any
-Pydantic models as parameters, runs sync or async callables, and always ends the
-run. If the experiment raises, Cherries passes the exception to `Run.end()` and
-then re-raises it.
+`main()` starts a profile, builds missing arguments from defaults or
+annotations, logs any Pydantic models as parameters, runs sync or async
+callables, and always ends the run. If the experiment raises, Cherries passes
+the exception to `Run.end()` and then re-raises it.
 
 ## Paths and Artifacts
 
-Path helpers resolve locations from the entrypoint-derived experiment directory:
+Path helpers resolve locations from the entrypoint-derived working directory:
 
-- `cherries.asset("figs/loss.png")` resolves below the experiment directory.
 - `cherries.input("raw.csv")` and `cherries.output("metrics.json")` resolve
   below the experiment `data/` directory.
-- `cherries.temp("scratch.txt")` resolves below the experiment `temp/`
+- `cherries.temp("scratch.txt")` resolves below the experiment `tmp/`
   directory.
-- `mkdir=True` creates the parent directory before returning the path.
+- `mkdir=True` on `output()` and `temp()` creates the parent directory before
+  returning the path.
 
-Helpers queue paths instead of logging immediately. At run end, existing paths
-are sent to every plugin that implements the matching hook. Missing paths are
-reported as warnings. Bundle handlers expand related files automatically: VTK
-`.series` manifests include their frames, and mesh files such as `.vtu`, `.vtp`,
-and `.stl` include an optional sibling `.landmarks.json`.
+`input()` logs immediately because inputs should already exist. `output()` and
+`temp()` queue paths and flush them at run end, so experiments can create files
+after configuration is built. Missing primary paths are reported as warnings.
+Bundle handlers expand related files automatically: VTK `.series` manifests
+include their required frames, and mesh files such as `.vtu`, `.vtp`, and `.stl`
+include an optional sibling `.landmarks.json`.
 
 ## Profiles
 
@@ -72,21 +73,19 @@ selects a named profile and defaults to `default`.
 ## Plugins
 
 Plugins subclass `core.Plugin`, decorate hook implementations with
-`core.impl()`, and register on a `Run` or `PluginManager`. Hook order is
+`core.impl()`, and register with `run.plugins.register(...)`. Hook order is
 topologically sorted from each implementation's `before` and `after`
 constraints. One plugin failure is logged without preventing later plugins from
 running.
 
 Built-in plugins:
 
-- `Logging`: initializes a run log file and mirrors metrics through
-  `liblaf.logging`.
+- `Logging`: initializes a run log file and mirrors metrics through Python
+  logging.
 - `Local`: copies the entrypoint, logs, and artifacts into a timestamped
   `.cherries/` snapshot.
-- `Git`: writes an experiment summary, optionally commits dirty changes, and
-  records the final Git SHA.
-- `Comet`: forwards params, metrics, metadata, and assets to Comet; Git-tracked
-  assets are uploaded as remote assets at run end when possible.
+- `Git`: optionally commits dirty changes and records the final Git SHA.
+- `Comet`: starts a Comet run and forwards params, metrics, and metadata.
 
 ## API Map
 
@@ -94,7 +93,7 @@ Built-in plugins:
   functions, `BaseConfig`, `Run`, bundles, plugins, and profiles.
 - [liblaf.cherries.core](reference/liblaf/cherries/core/README.md): run state,
   plugin registration, hook delegation, and the global run proxy.
-- [liblaf.cherries.bundle](reference/liblaf/cherries/bundle/README.md):
+- [liblaf.cherries.core.assets.bundle](reference/liblaf/cherries/core/assets/bundle/README.md):
   companion-file discovery for artifact bundles.
 - [liblaf.cherries.plugins](reference/liblaf/cherries/plugins/README.md):
   built-in Comet, Git, local snapshot, and logging plugins.
