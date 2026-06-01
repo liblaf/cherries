@@ -7,6 +7,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.0.0](https://github.com/liblaf/cherries/releases/tag/v3.0.0) - 2026-06-01
+
+### 💥 BREAKING CHANGES
+
+- top-level bundle and asset APIs are removed. Import bundle helpers from liblaf.cherries.core.assets.bundle and use input, output, temp, or log_asset for artifact paths. - [3843b89](https://github.com/liblaf/cherries/commit/3843b891aa999dfa08400fcaa3d55850b73cdc9a) by [@liblaf](https://github.com/liblaf)
+
+### ✨ Features
+
+- **\[breaking\]** split run state into domain managers - [3843b89](https://github.com/liblaf/cherries/commit/3843b891aa999dfa08400fcaa3d55850b73cdc9a) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf)
+
 ## [v2.0.2](https://github.com/liblaf/cherries/releases/tag/v2.0.2) - 2026-05-26
 
 ### 🐛 Bug Fixes
@@ -15,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
+- [@liblaf-release-please[bot]](https://github.com/apps/liblaf-release-please)
 - [@liblaf](https://github.com/liblaf)
 
 ## [v2.0.1](https://github.com/liblaf/cherries/releases/tag/v2.0.1) - 2026-05-26
