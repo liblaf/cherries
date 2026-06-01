@@ -6,14 +6,14 @@ from ._abc import Profile
 
 
 class ProfileDebug(Profile):
-    """Local development profile with Comet disabled and Git commits off."""
+    """Profile for local/debug runs with remote and commit side effects disabled."""
 
-    @override  # impl Profile
+    @override
     def init(self) -> core.Run:
-        """Return the process-global run configured for local debugging."""
+        """Register disabled Comet, non-committing Git, local, and logging plugins."""
         run: core.Run = core.run
-        run.register(plugins.Comet(disabled=True))
-        run.register(plugins.Git(commit=False))
-        run.register(plugins.Local())
-        run.register(plugins.Logging())
+        run.plugins.register(plugins.Comet(run=run, disabled=True))
+        run.plugins.register(plugins.Git(run=run, commit=False))
+        run.plugins.register(plugins.Local(run=run))
+        run.plugins.register(plugins.Logging(run=run))
         return run

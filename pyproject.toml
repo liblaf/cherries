@@ -3,7 +3,7 @@
 
 [project]
 name = "liblaf-cherries"
-description = "A small Python experiment runner with typed settings, artifact path helpers, plugin hooks, and Comet/Git/local logging."
+description = "A lightweight Python experiment runner for typed configs, reproducible artifact paths, scalar metrics, and Comet/Git/local logging."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -42,14 +42,17 @@ classifiers = [
 dependencies = [
   "attrs>=26",
   "autoregistry>=1.2.1",
-  "comet-ml>=3.40",
+  "comet-ml>=3.58.0",
+  "cytoolz>=1.1.0",
   "environs>=14",
   "gitpython>=3.1",
   "giturlparse>=0.14",
   "liblaf-logging>=0.1.0",
   "msgspec[yaml]>=0.21.1",
+  "polars[timezone]>=1.41.2",
   "pydantic>=2",
   "pydantic-settings>=2",
+  "python-slugify>=8.0.4",
   "toolz>=1.1"
 ]
 dynamic = ["version"]

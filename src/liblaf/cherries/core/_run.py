@@ -3,24 +3,28 @@ from __future__ import annotations
 import functools
 import logging
 import os
+import shlex
 import sys
-from collections.abc import Mapping
+import traceback
+from collections.abc import Iterator, Mapping
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, SupportsFloat, cast
 
 import attrs
 import git
 import git.exc
-import liblaf.logging as _log
-import tlz
+import polars as pl
 from environs import env
+from slugify import slugify
 
-from liblaf.cherries import utils
-from liblaf.cherries.bundle import bundles, relative_or_absolute, relative_or_name
+from liblaf.cherries.utils import GitUrlParsed, giturlparse, relative_or_absolute
 
-from ._manager import PluginManager, delegate
-from ._typing import MethodName
+from .assets import AssetPluginProtocol, AssetsManager
+from .metrics import MetricPluginProtocol, MetricsLike, MetricsManager
+from .others import OtherPluginProtocol, OthersManager
+from .params import ParamPluginProtocol, ParamsManager
+from .plugin import PluginManager
 
 if TYPE_CHECKING:
     from _typeshed import StrPath
@@ -31,312 +35,305 @@ _PATH_SKIP_NAMES: set[str] = {"exp", "src"}
 
 
 @attrs.define
-class Run(PluginManager):
+class Run:
     """Mutable state for one Cherries experiment run.
 
-    A run knows the entrypoint script, experiment folders, queued artifacts,
-    current step, and registered plugins. Top-level functions such as
-    [`output`][liblaf.cherries.output] forward to the process-global
-    [`run`][liblaf.cherries.core.run] instance.
-
-    Path helper methods only queue paths. Cherries flushes those queues from
-    [`end`][liblaf.cherries.core.Run.end], skips missing files with a warning,
-    and expands known artifact bundles such as VTK `.series` manifests.
+    A `Run` owns plugin registration, path helpers, metrics, parameters, and
+    miscellaneous metadata. Profiles configure the process-global run, while
+    [`main`][liblaf.cherries.main] starts and ends it around an experiment
+    callable.
     """
 
-    _assets_queue: list[Path] = attrs.field(init=False, factory=list)
-    _inputs_queue: list[Path] = attrs.field(init=False, factory=list)
-    _outputs_queue: list[Path] = attrs.field(init=False, factory=list)
-    _temps_queue: list[Path] = attrs.field(init=False, factory=list)
+    def _default_assets(self) -> AssetsManager:
+        return AssetsManager(
+            working_dir=self.working_dir,
+            plugins=cast("AssetPluginProtocol", self.plugins),
+        )
 
-    @functools.cached_property
-    def data_dir(self) -> Path:
-        """Directory used by [`input`][liblaf.cherries.core.Run.input] and output paths."""
-        return self.exp_dir / "data"
+    def _default_metrics(self) -> MetricsManager:
+        return MetricsManager(plugins=cast("MetricPluginProtocol", self.plugins))
+
+    def _default_others(self) -> OthersManager:
+        return OthersManager(plugins=cast("OtherPluginProtocol", self.plugins))
+
+    def _default_params(self) -> ParamsManager:
+        return ParamsManager(plugins=cast("ParamPluginProtocol", self.plugins))
+
+    plugins: PluginManager = attrs.field(factory=PluginManager)
+    _assets: AssetsManager = attrs.field(
+        default=attrs.Factory(_default_assets, takes_self=True), kw_only=True
+    )
+    _metrics: MetricsManager = attrs.field(
+        default=attrs.Factory(_default_metrics, takes_self=True), kw_only=True
+    )
+    _others: OthersManager = attrs.field(
+        default=attrs.Factory(_default_others, takes_self=True), kw_only=True
+    )
+    _params: ParamsManager = attrs.field(
+        default=attrs.Factory(_default_params, takes_self=True), kw_only=True
+    )
 
     @functools.cached_property
     def entrypoint(self) -> Path:
-        """Resolved path to the script that started the process."""
+        """Python entrypoint used to derive the experiment name and folders."""
         if sys.argv[0] == "-c":
             return Path(os.devnull).resolve()
         return Path(sys.argv[0]).resolve()
 
     @functools.cached_property
-    def exp_dir(self) -> Path:
-        """Experiment directory inferred from the entrypoint path."""
-        parent: Path = self.entrypoint.parent
-        while parent.name in _PATH_SKIP_NAMES:
-            parent: Path = parent.parent
-        return parent
-
-    @functools.cached_property
-    def exp_name(self) -> str:
-        """Experiment name used by plugins and summaries."""
-        if name := env.str("CHERRIES_NAME", ""):
-            return name
-        name: str = self.entrypoint.relative_to(self.project_dir).as_posix()
-        while True:
-            original: str = name
-            for folder in _PATH_SKIP_NAMES:
-                name: str = name.removeprefix(f"{folder}/")
-            if name == original:
-                break
-        return name
-
-    @functools.cached_property
-    def figs_dir(self) -> Path:
-        """Conventional directory for generated figures."""
-        return self.exp_dir / "figs"
-
-    @functools.cached_property
-    def logs_dir(self) -> Path:
-        """Conventional directory for log files."""
-        return self.exp_dir / "logs"
-
-    @functools.cached_property
     def project_dir(self) -> Path:
-        """Git working tree directory, or the current directory outside Git."""
+        """Git repository root, or the current directory outside a Git repo."""
         if self.repo is None:
             return Path.cwd().resolve()
         return Path(self.repo.working_dir).resolve()
 
     @functools.cached_property
     def project_name(self) -> str:
-        """Project name inferred from the Git remote or project directory."""
-        if self.repo is not None:
-            try:
-                remote: git.Remote = self.repo.remote()
-                parsed: utils.GitUrlParsed = utils.giturlparse(remote.url)
-            except ValueError:
-                pass
-            else:
-                return parsed.repo
-        return self.project_dir.name
+        """Project name reported to plugins."""
+        if self.repo is None:
+            return self.project_dir.name
+        try:
+            remote: git.Remote = self.repo.remote()
+            parsed: GitUrlParsed = giturlparse(remote.url)
+        except ValueError:
+            return self.project_dir.name
+        else:
+            return parsed.repo
 
     @functools.cached_property
     def repo(self) -> git.Repo | None:
-        """Nearest Git repository, if the process is running inside one."""
         try:
             return git.Repo(search_parent_directories=True)
-        except git.exc.InvalidGitRepositoryError as err:
-            logger.warning("%s", err)
-            return None
+        except git.exc.InvalidGitRepositoryError as exc:
+            logger.warning("%s", exc)
+
+    @functools.cached_property
+    def run_key(self) -> Path:
+        run_key: Path = self.entrypoint.relative_to(self.project_dir)
+        run_key: Path = _strip_path(run_key)
+        run_key: Path = run_key.with_suffix("")
+        name: str = self.start_time.strftime("%Y-%m-%dT%H%M%S")
+        if custom_name := env.str("CHERRIES_NAME", ""):
+            slug: str = slugify(custom_name, lowercase=False, allow_unicode=True)
+            name: str = f"{name}-{slug}"
+        run_key /= name
+        return run_key
+
+    @functools.cached_property
+    def run_name(self) -> str:
+        """Run name from `CHERRIES_NAME` or the entrypoint path."""
+        if name := env.str("CHERRIES_NAME", ""):
+            return name
+        run_path: Path = self.entrypoint.relative_to(self.project_dir)
+        run_path: Path = _strip_path(run_path)
+        run_path: Path = run_path.with_suffix("")
+        return run_path.as_posix()
 
     @functools.cached_property
     def start_time(self) -> datetime:
-        """Timezone-aware timestamp captured when first accessed."""
+        """Timezone-aware timestamp captured when the run object is first used."""
         return datetime.now().astimezone()
 
     @functools.cached_property
     def tags(self) -> list[str]:
-        """Run tags from the `CHERRIES_TAGS` environment variable."""
+        """Tags parsed from the `CHERRIES_TAGS` environment variable."""
         return env.list("CHERRIES_TAGS", [])
 
+    @functools.cached_property
+    def working_dir(self) -> Path:
+        """Directory used to resolve data, temporary, log, and local snapshot paths."""
+        parent: Path = self.entrypoint.parent
+        while parent.name in _PATH_SKIP_NAMES:
+            parent: Path = parent.parent
+        return parent
+
+    # region Lifecycle
+
+    def start(self) -> None:
+        """Start plugins and record Cherries run metadata."""
+        self.plugins.delegate("start")
+        entrypoint: Path = relative_or_absolute(self.entrypoint, self.project_dir)
+        exp_dir: Path = relative_or_absolute(self.working_dir, self.project_dir)
+        self.log_other("cherries/cmd", shlex.join(sys.orig_argv))
+        self.log_other("cherries/entrypoint", entrypoint)
+        self.log_other("cherries/exp_dir", exp_dir)
+        self.log_other("cherries/start_time", self.start_time)
+
+    def end(self, exc: BaseException | None = None) -> None:
+        """Flush artifacts, record shutdown metadata, and end plugins.
+
+        Args:
+            exc: Exception raised by the experiment, if any.
+        """
+        self.log_other("cherries/end_time", datetime.now().astimezone())
+        if exc is not None:
+            self.log_other(
+                "cherries/exception", "\n".join(traceback.format_exception_only(exc))
+            )
+        self._assets.end()
+        self.plugins.delegate("end", exc=exc)
+
+    # endregion Lifecycle
+
+    # region Metrics
+
     @property
-    def step(self) -> int | None:
-        """Current experiment step reported by plugins."""
-        return self.get_step()
+    def step(self) -> int:
+        """Default metric step."""
+        return self._metrics.step
 
     @step.setter
-    def step(self, value: int | None) -> None:
-        self.set_step(value)
+    def step(self, value: int) -> None:
+        self._metrics.step = value
 
-    @functools.cached_property
-    def temp_dir(self) -> Path:
-        """Directory used by [`temp`][liblaf.cherries.core.Run.temp] paths."""
-        return self.exp_dir / "tmp"
+    def get_step(self) -> int:
+        """Return the default metric step."""
+        return self.step
 
-    @property
-    def url(self) -> str:
-        """Run URL reported by the first plugin that provides one."""
-        return self.get_url()
+    def set_step(self, step: int) -> None:
+        """Set the default metric step."""
+        self.step = step
 
-    def asset(self, path: StrPath, *, mkdir: bool = False) -> Path:
-        """Queue an artifact path under the experiment directory.
+    def get_metric(self, name: str) -> pl.DataFrame:
+        """Return one metric series."""
+        return self._metrics.get_metric(name)
 
-        Args:
-            path: Path relative to [`exp_dir`][liblaf.cherries.core.Run.exp_dir].
-            mkdir: Create the parent directory before returning the path.
-
-        Returns:
-            Absolute path to the queued artifact.
-        """
-        absolute: Path = self.exp_dir / path
-        if mkdir:
-            absolute.parent.mkdir(parents=True, exist_ok=True)
-        self._assets_queue.append(absolute)
-        return absolute
-
-    def input(self, path: StrPath, *, mkdir: bool = False) -> Path:
-        """Queue an input path under the experiment `data/` directory.
-
-        Args:
-            path: Path relative to [`data_dir`][liblaf.cherries.core.Run.data_dir].
-            mkdir: Create the parent directory before returning the path.
-
-        Returns:
-            Absolute path to the queued input.
-        """
-        absolute: Path = self.data_dir / path
-        if mkdir:
-            absolute.parent.mkdir(parents=True, exist_ok=True)
-        self._inputs_queue.append(absolute)
-        return absolute
-
-    def output(self, path: StrPath, *, mkdir: bool = False) -> Path:
-        """Queue an output path under the experiment `data/` directory.
-
-        Args:
-            path: Path relative to [`data_dir`][liblaf.cherries.core.Run.data_dir].
-            mkdir: Create the parent directory before returning the path.
-
-        Returns:
-            Absolute path to the queued output.
-        """
-        absolute: Path = self.data_dir / path
-        if mkdir:
-            absolute.parent.mkdir(parents=True, exist_ok=True)
-        self._outputs_queue.append(absolute)
-        return absolute
-
-    def temp(self, path: StrPath, *, mkdir: bool = False) -> Path:
-        """Queue a temporary artifact path under the experiment `temp/` directory.
-
-        Args:
-            path: Path relative to [`temp_dir`][liblaf.cherries.core.Run.temp_dir].
-            mkdir: Create the parent directory before returning the path.
-
-        Returns:
-            Absolute path to the queued temporary artifact.
-        """
-        absolute: Path = self.temp_dir / path
-        if mkdir:
-            absolute.parent.mkdir(parents=True, exist_ok=True)
-        self._temps_queue.append(absolute)
-        return absolute
-
-    # region Spec
-
-    def start(self, *args, **kwargs) -> None:
-        """Start plugins and record Cherries run metadata."""
-        __tracebackhide__ = True
-        self.delegate("start", args, kwargs)
-        entrypoint: Path = relative_or_absolute(self.entrypoint, self.project_dir)
-        exp_dir: Path = relative_or_absolute(self.exp_dir, self.project_dir)
-        self.log_other("cherries.entrypoint", entrypoint)
-        self.log_other("cherries.exp_dir", exp_dir)
-        self.log_other("cherries.start_time", self.start_time)
-
-    def end(self, *args: Any, exc: BaseException | None = None, **kwargs: Any) -> None:
-        """Flush queued artifacts and end plugins.
-
-        Args:
-            *args: Positional values forwarded to plugin `end` hooks.
-            exc: Exception raised by the experiment, if any.
-            **kwargs: Keyword values forwarded to plugin `end` hooks.
-        """
-        __tracebackhide__ = True
-        self.log_other("cherries.end_time", datetime.now().astimezone())
-        for path in self._assets_queue:
-            self.log_asset(path)
-        for path in self._inputs_queue:
-            self.log_input(path)
-        for path in self._outputs_queue:
-            self.log_output(path)
-        for path in self._temps_queue:
-            self.log_temp(path)
-        kwargs["exc"] = exc
-        self.delegate("end", args, kwargs)
-
-    @delegate(first_result=True)
-    def get_other(self, name: str) -> Any:
-        raise NotImplementedError
-
-    @delegate
-    def log_other(self, name: str, value: Any) -> None: ...
-
-    @delegate(first_result=True)
-    def get_others(self) -> Mapping[str, Any]:
-        raise NotImplementedError
-
-    @delegate
-    def log_others(self, others: Mapping[str, Any]) -> None: ...
-
-    @delegate(first_result=True)
-    def get_param(self, name: str) -> Any:
-        raise NotImplementedError
-
-    @delegate
-    def log_param(self, name: str, value: Any) -> None: ...
-
-    @delegate(first_result=True)
-    def get_params(self) -> Mapping[str, Any]:
-        raise NotImplementedError
-
-    @delegate
-    def log_params(self, params: Mapping[str, Any]) -> None: ...
-
-    @delegate(first_result=True)
-    def get_step(self) -> int | None:
-        raise NotImplementedError
-
-    @delegate
-    def set_step(self, step: int | None = None) -> None: ...
-
-    @delegate
     def log_metric(
-        self, name: str, value: Any, step: int | None = None, **kwargs
-    ) -> None: ...
-
-    @delegate
-    def log_metrics(
-        self, metrics: Mapping[str, Any], step: int | None = None, **kwargs
-    ) -> None: ...
-
-    @delegate(first_result=True)
-    def get_url(self) -> str:
-        raise NotImplementedError
-
-    def log_asset(self, path: StrPath, **kwargs) -> None:
-        """Log an artifact relative to the experiment directory."""
-        __tracebackhide__ = True
-        self._log_asset(path, "log_asset", self.exp_dir, **kwargs)
-
-    def log_input(self, path: StrPath, **kwargs) -> None:
-        """Log an input artifact relative to the experiment `data/` directory."""
-        __tracebackhide__ = True
-        self._log_asset(path, "log_input", self.data_dir, **kwargs)
-
-    def log_output(self, path: StrPath, **kwargs) -> None:
-        """Log an output artifact relative to the experiment `data/` directory."""
-        __tracebackhide__ = True
-        self._log_asset(path, "log_output", self.data_dir, **kwargs)
-
-    def log_temp(self, path: StrPath, **kwargs) -> None:
-        """Log a temporary artifact relative to the experiment `temp/` directory."""
-        __tracebackhide__ = True
-        self._log_asset(path, "log_temp", self.temp_dir, **kwargs)
-
-    # endregion Spec
-
-    def _log_asset(
-        self, path: StrPath, method_name: MethodName, prefix: StrPath, **kwargs
+        self,
+        name: str,
+        value: SupportsFloat,
+        *,
+        step: int | None = None,
+        time: datetime | None = None,
     ) -> None:
-        """Delegate one asset and any bundle-discovered related files."""
-        __tracebackhide__ = True
-        path: Path = Path(path).resolve()
-        if not path.exists():
-            _log.warning("No such file or directory: %s", path)
-            return
-        prefix: Path = Path(prefix).resolve()
-        name: Path = relative_or_name(path, prefix)
-        self.delegate(method_name, args=(path, name), kwargs=kwargs)
-        kwargs: dict[str, Any] = tlz.assoc(kwargs, "report", False)  # noqa: FBT003
-        for absolute_, relative_, optional in bundles.ls_files(path, prefix):
-            absolute: Path = Path(absolute_)
-            relative: Path = Path(relative_)
-            if not absolute.exists():
-                if not optional:
-                    _log.warning("No such file or directory: %s", absolute)
-                continue
-            self.delegate(method_name, args=(absolute, relative), kwargs=kwargs)
+        """Log one scalar metric."""
+        self._metrics.log_metric(name, value, step=step, time=time)
+
+    def get_metrics(self, metrics: Iterator[str] | None = None) -> pl.DataFrame:
+        """Return selected metric series concatenated into one dataframe."""
+        return self._metrics.get_metrics(metrics)
+
+    def log_metrics(
+        self,
+        metrics: MetricsLike,
+        *,
+        step: int | None = None,
+        time: datetime | None = None,
+    ) -> None:
+        """Log multiple scalar metrics, flattening nested mappings with `/`."""
+        self._metrics.log_metrics(metrics, step=step, time=time)
+
+    # endregion Metrics
+
+    # region Assets
+
+    def input(
+        self, path: StrPath, *, metadata: Mapping[str, Any] | None = None
+    ) -> Path:
+        """Resolve and immediately log an input below `data/`."""
+        return self._assets.input(path, metadata=metadata)
+
+    def output(
+        self,
+        path: StrPath,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+        mkdir: bool = True,
+    ) -> Path:
+        """Resolve an output below `data/` and queue it until run end."""
+        return self._assets.output(path, metadata=metadata, mkdir=mkdir)
+
+    def temp(
+        self,
+        path: StrPath,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+        mkdir: bool = True,
+    ) -> Path:
+        """Resolve a temporary artifact below `tmp/` and queue it until run end."""
+        return self._assets.temp(path, metadata=metadata, mkdir=mkdir)
+
+    def log_asset(
+        self, path: StrPath, metadata: Mapping[str, Any] | None = None
+    ) -> None:
+        """Log an existing generic artifact immediately."""
+        self._assets.log_asset(path, metadata=metadata)
+
+    def log_input(
+        self, path: StrPath, metadata: Mapping[str, Any] | None = None
+    ) -> None:
+        """Log an existing input artifact immediately."""
+        self._assets.log_input(path, metadata=metadata)
+
+    def log_output(
+        self, path: StrPath, metadata: Mapping[str, Any] | None = None
+    ) -> None:
+        """Log an existing output artifact immediately."""
+        self._assets.log_output(path, metadata=metadata)
+
+    def log_temp(
+        self, path: StrPath, metadata: Mapping[str, Any] | None = None
+    ) -> None:
+        """Log an existing temporary artifact immediately."""
+        self._assets.log_temp(path, metadata=metadata)
+
+    # endregion Assets
+
+    # region Logging
+
+    def get_other(self, name: str) -> Any:
+        """Return one flattened metadata value."""
+        return self._others.get_other(name)
+
+    def log_other(self, name: str, value: Any) -> None:
+        """Log one metadata value."""
+        self._others.log_other(name, value)
+
+    def get_others(self) -> dict[str, Any]:
+        """Return logged metadata as a nested dictionary."""
+        return self._others.get_others()
+
+    def log_others(self, others: Mapping[str, Any]) -> None:
+        """Log multiple metadata values."""
+        self._others.log_others(others)
+
+    def get_param(self, name: str) -> Any:
+        """Return one flattened parameter value."""
+        return self._params.get_param(name)
+
+    def log_param(self, name: str, value: Any) -> None:
+        """Log one parameter value."""
+        self._params.log_param(name, value)
+
+    def get_params(self) -> dict[str, Any]:
+        """Return logged parameters as a nested dictionary."""
+        return self._params.get_params()
+
+    def log_params(self, params: Mapping[str, Any]) -> None:
+        """Log multiple parameter values."""
+        self._params.log_params(params)
+
+    # endregion Logging
+
+    def summary(self, prefix: StrPath | None = None) -> dict[str, Any]:
+        """Build a JSON/YAML-friendly run summary.
+
+        Args:
+            prefix: Optional directory to strip from artifact paths.
+
+        Returns:
+            Run metadata, parameters, artifact paths, and user metadata.
+        """
+        summary: dict[str, Any] = {"name": self.run_name}
+        if self.tags:
+            summary["tags"] = self.tags
+        others: dict[str, Any] = self.get_others()
+        summary.update(others.pop("cherries"))
+        summary["params"] = self.get_params()
+        summary.update(self._assets.summary.to_dict(prefix=prefix))
+        summary["others"] = others
+        return summary
+
+
+def _strip_path(path: Path) -> Path:
+    return Path(*filter(lambda p: p not in _PATH_SKIP_NAMES, path.parts))

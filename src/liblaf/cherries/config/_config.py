@@ -9,7 +9,8 @@ class BaseConfig(BaseSettings):
     Subclass `BaseConfig` when an experiment callable should receive structured
     settings. [`main`][liblaf.cherries.main] instantiates missing annotated
     arguments, logs Pydantic models as parameters, and then calls the
-    experiment.
+    experiment. The default settings config enables CLI parsing and converts
+    field names to kebab-case flags.
 
     Examples:
         >>> class Config(BaseConfig):

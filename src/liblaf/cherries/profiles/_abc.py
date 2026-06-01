@@ -6,8 +6,9 @@ from liblaf.cherries import core
 
 
 class Profile(abc.ABC, autoregistry.Registry, prefix="Profile"):
-    """Factory for a configured [`Run`][liblaf.cherries.core.Run]."""
+    """Base class for named run profiles."""
 
     @abc.abstractmethod
     def init(self) -> core.Run:
-        """Create or configure a run for this profile."""
+        """Configure and return the process-global run."""
+        raise NotImplementedError
