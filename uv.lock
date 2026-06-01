@@ -1186,7 +1186,7 @@ typing = [
 requires-dist = [
     { name = "attrs", specifier = ">=26" },
     { name = "autoregistry", specifier = ">=1.2.1" },
-    { name = "comet-ml", specifier = ">=3.40" },
+    { name = "comet-ml", specifier = ">=3.58.0" },
     { name = "cytoolz", specifier = ">=1.1.0" },
     { name = "environs", specifier = ">=14" },
     { name = "gitpython", specifier = ">=3.1" },

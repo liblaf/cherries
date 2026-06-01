@@ -69,9 +69,10 @@ class Local(core.Plugin, core.PluginProtocol):
         report: bool = True,
     ) -> None:
         """Copy `path` under the snapshot's `assets/` directory."""
-        target: Path = (
-            self.folder / "assets" / relative_or_name(path, self.run.working_dir)
-        )
+        if path.is_relative_to(self.run.working_dir):
+            target: Path = self.folder / path.relative_to(self.run.working_dir)
+        else:
+            target: Path = self.folder / "assets" / path.name
         self._copy(path, target)
 
     def _config_logging(self) -> None:

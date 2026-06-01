@@ -42,7 +42,7 @@ classifiers = [
 dependencies = [
   "attrs>=26",
   "autoregistry>=1.2.1",
-  "comet-ml>=3.40",
+  "comet-ml>=3.58.0",
   "cytoolz>=1.1.0",
   "environs>=14",
   "gitpython>=3.1",
@@ -52,7 +52,7 @@ dependencies = [
   "polars[timezone]>=1.41.2",
   "pydantic>=2",
   "pydantic-settings>=2",
-  "toolz>=1.1"
+  "toolz>=1.1",
 ]
 dynamic = ["version"]
 

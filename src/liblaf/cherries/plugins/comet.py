@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-import inspect
 import logging
 import unittest.mock
 from collections.abc import Mapping
@@ -37,27 +34,17 @@ class Comet(core.Plugin, core.PluginProtocol):
     @core.impl
     def start(self) -> None:
         """Start a Comet experiment for the owning run."""
-        config_kwargs: dict[str, Any] = {"disabled": self.disabled}
-        config_params = inspect.signature(comet.ExperimentConfig).parameters
-        supports_name = "name" in config_params
-        supports_tags = "tags" in config_params
-        if supports_name:
-            config_kwargs["name"] = self.run.run_name
-        if supports_tags:
-            config_kwargs["tags"] = self.run.tags
         try:
             exp: comet.CometExperiment = comet.start(
                 project_name=self.run.project_name,
-                experiment_config=comet.ExperimentConfig(**config_kwargs),
+                experiment_config=comet.ExperimentConfig(
+                    disabled=self.disabled, name=self.run.run_name, tags=self.run.tags
+                ),
             )
         except ValueError:
             logger.exception("")
         else:
-            if not supports_name and hasattr(exp, "set_name"):
-                exp.set_name(self.run.run_name)
-            if not supports_tags and self.run.tags and hasattr(exp, "add_tags"):
-                exp.add_tags(self.run.tags)
-            exp.log_other("cherries/comet/url", exp.url)
+            self.run.log_other("cherries/comet/url", exp.url)
 
     @override
     @core.impl(after=("Git",))
@@ -89,7 +76,7 @@ class Comet(core.Plugin, core.PluginProtocol):
         self, metrics: dict[str, float], *, step: int, time: datetime
     ) -> None:
         """Log multiple metrics to Comet."""
-        return self.experiment.log_metrics(dict(metrics), step=step)
+        return self.experiment.log_metrics(metrics, step=step)
 
     @override
     @core.impl
@@ -99,9 +86,9 @@ class Comet(core.Plugin, core.PluginProtocol):
 
     @override
     @core.impl
-    def log_others(self, others: Mapping[str, Any]) -> None:
+    def log_others(self, others: dict[str, Any]) -> None:
         """Log multiple metadata values to Comet."""
-        return self.experiment.log_others(dict(others))
+        return self.experiment.log_others(others)
 
     @override
     @core.impl
@@ -111,6 +98,6 @@ class Comet(core.Plugin, core.PluginProtocol):
 
     @override
     @core.impl
-    def log_params(self, params: Mapping[str, Any]) -> None:
+    def log_params(self, params: dict[str, Any]) -> None:
         """Log multiple parameters to Comet."""
-        return self.experiment.log_parameters(dict(params))
+        return self.experiment.log_parameters(params)
