@@ -92,6 +92,24 @@ Profiles configure the process-global `Run`.
 When `profile` is omitted, `DEBUG=1` selects `debug`; otherwise `PROFILE`
 selects a named profile and defaults to `default`.
 
+## Run Identity
+
+The entrypoint path gives each run its default name. Cherries strips structural
+`exp/` and `src/` path segments, removes the Python suffix, and uses the result
+as the display name. For example,
+`exp/2026/06/01/demo/src/10-main.py` becomes
+`2026/06/01/demo/10-main`.
+
+Set `CHERRIES_NAME` when a run needs a human-readable name. The display name is
+used as-is for metadata and Comet, while the local snapshot key appends a
+filesystem-safe slug to the timestamp. Set `CHERRIES_TAGS` to a comma-separated
+list such as `debug,smoke` to attach tags to the run summary and Comet
+experiment.
+
+The local plugin writes snapshots below `.cherries/runs/<run-key>/`. The run key
+contains the stripped entrypoint path plus a start timestamp, so repeated runs of
+the same script do not overwrite each other.
+
 ## Plugins
 
 Plugins subclass `core.Plugin`, decorate hook implementations with

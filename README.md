@@ -82,6 +82,8 @@ Git SHA.
   existing files when the run ends.
 - `cherries.log_metric()` records one scalar; `cherries.log_metrics()` flattens
   nested mappings with `/`.
+- `CHERRIES_NAME` sets the human-readable run name; `CHERRIES_TAGS` attaches a
+  comma-separated tag list to summaries and Comet.
 - Plugins subclass `liblaf.cherries.core.Plugin`, decorate hooks with
   `liblaf.cherries.core.impl()`, and use `before` or `after` constraints for
   deterministic order.

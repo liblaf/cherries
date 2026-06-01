@@ -38,10 +38,7 @@ class Comet(core.Plugin, core.PluginProtocol):
             exp: comet.CometExperiment = comet.start(
                 project_name=self.run.project_name,
                 experiment_config=comet.ExperimentConfig(
-                    disabled=self.disabled,
-                    display_summary_level=2,
-                    name=self.run.run_name,
-                    tags=self.run.tags,
+                    disabled=self.disabled, name=self.run.run_name, tags=self.run.tags
                 ),
             )
         except ValueError:

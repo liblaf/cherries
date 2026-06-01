@@ -112,7 +112,11 @@ class Run:
         run_key: Path = self.entrypoint.relative_to(self.project_dir)
         run_key: Path = _strip_path(run_key)
         run_key: Path = run_key.with_suffix("")
-        run_key /= f"{self.start_time.strftime('%Y-%m-%dT%H%M%S')}-{self.run_slug}"
+        name: str = self.start_time.strftime("%Y-%m-%dT%H%M%S")
+        if custom_name := env.str("CHERRIES_NAME", ""):
+            slug: str = slugify(custom_name, lowercase=False, allow_unicode=True)
+            name: str = f"{name}-{slug}"
+        run_key /= name
         return run_key
 
     @functools.cached_property
@@ -124,10 +128,6 @@ class Run:
         run_path: Path = _strip_path(run_path)
         run_path: Path = run_path.with_suffix("")
         return run_path.as_posix()
-
-    @functools.cached_property
-    def run_slug(self) -> str:
-        return slugify(self.run_name, lowercase=False, allow_unicode=True)
 
     @functools.cached_property
     def start_time(self) -> datetime:
@@ -324,7 +324,9 @@ class Run:
         Returns:
             Run metadata, parameters, artifact paths, and user metadata.
         """
-        summary: dict[str, Any] = {"name": self.run_name, "tags": self.tags}
+        summary: dict[str, Any] = {"name": self.run_name}
+        if self.tags:
+            summary["tags"] = self.tags
         others: dict[str, Any] = self.get_others()
         summary.update(others.pop("cherries"))
         summary["params"] = self.get_params()

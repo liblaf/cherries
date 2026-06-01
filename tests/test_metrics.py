@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 
 from liblaf.cherries.core.metrics import MetricsManager
 
@@ -67,4 +67,36 @@ def test_log_metrics_flattens_nested_mappings_once_per_batch() -> None:
     ]
     assert plugin.metrics_calls == [
         ({"train/loss": 0.5, "valid/accuracy": 0.75}, 2, when)
+    ]
+
+
+def test_metric_timestamps_accept_fixed_offset_timezone_names() -> None:
+    plugin = RecordingMetricsPlugin()
+    manager = MetricsManager(plugins=plugin)
+    cst = timezone(timedelta(hours=8), "CST")
+    when = datetime(2026, 1, 2, 3, 4, 5, 123000, tzinfo=cst)
+
+    manager.log_metric("loss", 1.5, time=when)
+    row = manager.get_metric("loss").row(0, named=True)
+
+    assert row == {
+        "name": "loss",
+        "value": 1.5,
+        "step": 0,
+        "time": when.astimezone(UTC).replace(tzinfo=None),
+    }
+    assert plugin.metric_calls == [("loss", 1.5, 0, when)]
+
+
+def test_get_metrics_without_names_returns_all_series() -> None:
+    plugin = RecordingMetricsPlugin()
+    manager = MetricsManager(plugins=plugin)
+    when = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+
+    manager.log_metric("train/loss", 0.4, step=1, time=when)
+    manager.log_metric("valid/loss", 0.5, step=1, time=when)
+
+    assert manager.get_metrics().select("name", "value").to_dicts() == [
+        {"name": "train/loss", "value": 0.4},
+        {"name": "valid/loss", "value": 0.5},
     ]
