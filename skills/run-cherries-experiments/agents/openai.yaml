@@ -1,4 +1,4 @@
 interface:
   display_name: "Run Cherries Experiments"
-  short_description: "Run Cherries experiments and reports"
-  default_prompt: "Use $run-cherries-experiments to create or run a Cherries experiment and write its report."
+  short_description: "Create, run, and report Cherries experiments"
+  default_prompt: "Use $run-cherries-experiments to create a Cherries experiment script, run it with readable metadata, and write the report."
