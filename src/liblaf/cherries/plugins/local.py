@@ -1,5 +1,4 @@
 import functools
-import itertools
 import logging
 import shutil
 from collections.abc import Mapping
@@ -10,7 +9,6 @@ import attrs
 from liblaf.logging import FileHandler, LimitsFilter
 
 from liblaf.cherries import core
-from liblaf.cherries.utils import relative_or_name
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -31,18 +29,7 @@ class Local(core.Plugin, core.PluginProtocol):
     def folder(self) -> Path:
         """Snapshot directory for this run."""
         local_dir: Path = self.run.project_dir / ".cherries"
-        exp_path: Path = self.run.working_dir.relative_to(self.run.project_dir)
-        exp_path: Path = Path(
-            *itertools.dropwhile(_PATH_SKIP_NAMES.__contains__, exp_path.parts)
-        )
-        entrypoint: Path = self.run.entrypoint
-        folder: Path = (
-            local_dir
-            / "runs"
-            / exp_path
-            / entrypoint.stem
-            / self.run.start_time.strftime("%Y-%m-%dT%H%M%S")
-        )
+        folder: Path = local_dir / "runs" / self.run.run_key
         local_dir.mkdir(parents=True, exist_ok=True)
         (local_dir / ".gitignore").write_text("*\n")
         return folder

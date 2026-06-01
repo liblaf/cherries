@@ -38,7 +38,10 @@ class Comet(core.Plugin, core.PluginProtocol):
             exp: comet.CometExperiment = comet.start(
                 project_name=self.run.project_name,
                 experiment_config=comet.ExperimentConfig(
-                    disabled=self.disabled, name=self.run.run_name, tags=self.run.tags
+                    disabled=self.disabled,
+                    display_summary_level=2,
+                    name=self.run.run_name,
+                    tags=self.run.tags,
                 ),
             )
         except ValueError:
@@ -62,7 +65,7 @@ class Comet(core.Plugin, core.PluginProtocol):
         report: bool = True,
     ) -> None:
         """Reserve the asset hook for future Comet artifact support."""
-        # TODO: use `log_remote_asset`
+        # TODO: `log_remote_asset` once CAS infra is ready
 
     @override
     @core.impl

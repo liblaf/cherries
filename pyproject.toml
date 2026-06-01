@@ -52,7 +52,8 @@ dependencies = [
   "polars[timezone]>=1.41.2",
   "pydantic>=2",
   "pydantic-settings>=2",
-  "toolz>=1.1",
+  "python-slugify>=8.0.4",
+  "toolz>=1.1"
 ]
 dynamic = ["version"]
 

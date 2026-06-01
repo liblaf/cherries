@@ -16,11 +16,11 @@ import git
 import git.exc
 import polars as pl
 from environs import env
+from slugify import slugify
 
-from liblaf.cherries import utils
+from liblaf.cherries.utils import GitUrlParsed, giturlparse, relative_or_absolute
 
 from .assets import AssetPluginProtocol, AssetsManager
-from .assets.bundle import relative_or_absolute
 from .metrics import MetricPluginProtocol, MetricsLike, MetricsManager
 from .others import OtherPluginProtocol, OthersManager
 from .params import ParamPluginProtocol, ParamsManager
@@ -90,38 +90,44 @@ class Run:
     @functools.cached_property
     def project_name(self) -> str:
         """Project name reported to plugins."""
-        if self.repo is not None:
-            try:
-                remote: git.Remote = self.repo.remote()
-                parsed: utils.GitUrlParsed = utils.giturlparse(remote.url)
-            except ValueError:
-                pass
-            else:
-                return parsed.repo
-        return self.project_dir.name
+        if self.repo is None:
+            return self.project_dir.name
+        try:
+            remote: git.Remote = self.repo.remote()
+            parsed: GitUrlParsed = giturlparse(remote.url)
+        except ValueError:
+            return self.project_dir.name
+        else:
+            return parsed.repo
 
     @functools.cached_property
     def repo(self) -> git.Repo | None:
-        """Nearest Git repository, when one exists."""
         try:
             return git.Repo(search_parent_directories=True)
-        except git.exc.InvalidGitRepositoryError as err:
-            logger.warning("%s", err)
-            return None
+        except git.exc.InvalidGitRepositoryError as exc:
+            logger.warning("%s", exc)
+
+    @functools.cached_property
+    def run_key(self) -> Path:
+        run_key: Path = self.entrypoint.relative_to(self.project_dir)
+        run_key: Path = _strip_path(run_key)
+        run_key: Path = run_key.with_suffix("")
+        run_key /= f"{self.start_time.strftime('%Y-%m-%dT%H%M%S')}-{self.run_slug}"
+        return run_key
 
     @functools.cached_property
     def run_name(self) -> str:
         """Run name from `CHERRIES_NAME` or the entrypoint path."""
         if name := env.str("CHERRIES_NAME", ""):
             return name
-        name: str = self.entrypoint.relative_to(self.project_dir).as_posix()
-        while True:
-            original: str = name
-            for folder in _PATH_SKIP_NAMES:
-                name: str = name.removeprefix(f"{folder}/")
-            if name == original:
-                break
-        return name
+        run_path: Path = self.entrypoint.relative_to(self.project_dir)
+        run_path: Path = _strip_path(run_path)
+        run_path: Path = run_path.with_suffix("")
+        return run_path.as_posix()
+
+    @functools.cached_property
+    def run_slug(self) -> str:
+        return slugify(self.run_name, lowercase=False, allow_unicode=True)
 
     @functools.cached_property
     def start_time(self) -> datetime:
@@ -318,10 +324,14 @@ class Run:
         Returns:
             Run metadata, parameters, artifact paths, and user metadata.
         """
-        summary: dict[str, Any] = {"name": self.run_name}
+        summary: dict[str, Any] = {"name": self.run_name, "tags": self.tags}
         others: dict[str, Any] = self.get_others()
         summary.update(others.pop("cherries"))
         summary["params"] = self.get_params()
         summary.update(self._assets.summary.to_dict(prefix=prefix))
         summary["others"] = others
         return summary
+
+
+def _strip_path(path: Path) -> Path:
+    return Path(*filter(lambda p: p not in _PATH_SKIP_NAMES, path.parts))

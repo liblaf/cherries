@@ -1,15 +1,14 @@
 import functools
 import logging
-import os
 import subprocess
 from pathlib import Path
 from typing import Any, override
 
 import attrs
 import git
-import msgspec
 
 from liblaf.cherries import core
+from liblaf.cherries.utils import pretty_yaml
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ class Git(core.Plugin, core.PluginProtocol):
     """
 
     run: core.Run
-    commit: bool = attrs.field(default=True, kw_only=True)
+    commit: bool = attrs.field(default=False, kw_only=True)
     verify: bool = attrs.field(default=False, kw_only=True)
 
     @override
@@ -49,7 +48,7 @@ class Git(core.Plugin, core.PluginProtocol):
         assert self.repo is not None
         summary: dict[str, Any] = self.run.summary(prefix=self.repo.working_dir)
         message: str = f"chore(exp): {summary.pop('name')}\n\n"
-        message += _pretty_yaml(summary)
+        message += pretty_yaml(summary)
         return message
 
     def _relative_to_repo(self, path: Path) -> Path:
@@ -65,18 +64,3 @@ class Git(core.Plugin, core.PluginProtocol):
     def repo(self) -> git.Repo | None:
         """Repository associated with the owning run."""
         return self.run.repo
-
-
-@functools.singledispatch
-def _enc_hook(obj: Any) -> Any:
-    return obj
-
-
-@_enc_hook.register(os.PathLike)
-def _(obj: os.PathLike) -> str:
-    return os.fsdecode(obj)
-
-
-def _pretty_yaml(data: dict[str, Any]) -> str:
-    """Serialize `data` as YAML, converting path-like objects to strings."""
-    return msgspec.yaml.encode(data, enc_hook=_enc_hook).decode()

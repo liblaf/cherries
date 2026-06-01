@@ -1,5 +1,5 @@
 from liblaf.cherries import core, profiles
-from liblaf.cherries.profiles import ProfileLike
+from liblaf.cherries.profiles import Profile, ProfileLike
 
 
 def start(profile: ProfileLike | None = None) -> core.Run:
@@ -12,7 +12,7 @@ def start(profile: ProfileLike | None = None) -> core.Run:
     Returns:
         Started run.
     """
-    profile = profiles.factory(profile)
+    profile: Profile = profiles.factory(profile)
     run: core.Run = profile.init()
     run.start()
     return run
