@@ -13,8 +13,16 @@ class PluginProtocol(
     ParamPluginProtocol,
     Protocol,
 ):
+    """Complete hook surface implemented by Cherries plugin delegates."""
+
     def start(self) -> None:
+        """Start a run."""
         raise NotImplementedError
 
     def end(self, exc: BaseException | None = None) -> None:
+        """End a run.
+
+        Args:
+            exc: Exception raised by the experiment, if any.
+        """
         raise NotImplementedError

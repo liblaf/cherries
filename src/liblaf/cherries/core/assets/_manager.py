@@ -22,7 +22,12 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 @attrs.frozen
 class PendingAsset:
-    """Artifact that should be flushed when a run ends."""
+    """Artifact that should be flushed when a run ends.
+
+    `output()` and `temp()` return paths before the user has written them. The
+    manager stores those paths as pending assets and reports only the ones that
+    exist when [`end`][liblaf.cherries.core.assets.AssetsManager.end] runs.
+    """
 
     path: Path
     """Path to log at shutdown."""
@@ -32,7 +37,11 @@ class PendingAsset:
 
 
 class AssetsSummary(pydantic.BaseModel):
-    """Paths successfully reported during a run."""
+    """Paths successfully reported during a run.
+
+    The summary contains only primary artifacts. Bundle companions are sent to
+    plugins, but omitted from this user-facing record.
+    """
 
     assets: list[Path] = pydantic.Field(default_factory=list)
     """Generic asset paths."""
@@ -54,6 +63,11 @@ class AssetsSummary(pydantic.BaseModel):
 
         Returns:
             JSON-compatible dictionary with empty/default groups omitted.
+
+        Examples:
+            >>> summary = AssetsSummary(outputs=[Path("/tmp/cherries/data/out.txt")])
+            >>> summary.to_dict(prefix="/tmp/cherries")
+            {'outputs': ['data/out.txt']}
         """
         if prefix is not None:
             prefix: Path = Path(prefix)
@@ -70,7 +84,12 @@ class AssetsSummary(pydantic.BaseModel):
 
 @attrs.define
 class AssetsManager:
-    """Resolve experiment paths and flush existing artifacts to plugins."""
+    """Resolve experiment paths and flush existing artifacts to plugins.
+
+    Inputs are reported immediately because they should already exist. Outputs
+    and temporary artifacts are queued until run shutdown so an experiment can
+    create them after configuration is built.
+    """
 
     working_dir: Path
     """Directory used as the base for `data/` and `tmp/` paths."""
@@ -98,7 +117,10 @@ class AssetsManager:
         return self.working_dir / "tmp"
 
     def end(self) -> None:
-        """Flush queued output and temporary paths."""
+        """Flush queued output and temporary paths.
+
+        Missing queued paths produce warnings and are left out of the summary.
+        """
         for asset in self.pending:
             self.log_asset(asset.path, metadata=asset.metadata)
 

@@ -13,7 +13,12 @@ from ._struct import Metric
 
 @attrs.define
 class MetricsManager:
-    """Store scalar metrics and mirror them to plugins."""
+    """Store scalar metrics and mirror them to plugins.
+
+    Metrics are kept in memory as named series and can be exported as Polars
+    dataframes. Batch logging accepts nested mappings and stores them with
+    slash-delimited names.
+    """
 
     plugins: MetricPluginProtocol
     """Plugin delegate that receives metric events."""
@@ -25,7 +30,11 @@ class MetricsManager:
     """Default step used when a log call does not provide one."""
 
     def get_metric(self, name: str) -> pl.DataFrame:
-        """Return one metric as a Polars dataframe."""
+        """Return one metric as a Polars dataframe.
+
+        Raises:
+            KeyError: If `name` has not been logged.
+        """
         return self.metrics[name].to_polars()
 
     def get_metrics(self, names: Iterable[str] | None = None) -> pl.DataFrame:
@@ -34,6 +43,9 @@ class MetricsManager:
         Args:
             names: Metric names to include. When omitted, all known metrics are
                 returned.
+
+        Raises:
+            KeyError: If any requested name has not been logged.
         """
         if names is None:
             names: Iterable[str] = self.metrics.keys()
@@ -73,6 +85,11 @@ class MetricsManager:
 
         Nested mappings are flattened with `/`, so `{"train": {"loss": 0.5}}`
         is stored as `train/loss`.
+
+        Args:
+            metrics: Metric values to log.
+            step: Optional step override shared by all values.
+            time: Optional timestamp shared by all values.
         """
         step, time = self._parse_inputs(step, time)
         flat: dict[str, SupportsFloat] = flatten_dict(metrics)

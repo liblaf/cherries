@@ -4,7 +4,7 @@
 # Basics
 site_name = "Cherries"
 site_url = "__SITE_URL__"
-site_description = "A compact Python experiment runner with typed settings, repeatable artifact paths, metric history, and Comet/Git/local logging."
+site_description = "A lightweight Python experiment runner for typed configs, reproducible artifact paths, scalar metrics, and Comet/Git/local logging."
 site_author = "liblaf"
 # Navigation
 nav = [

@@ -10,7 +10,11 @@ from ._protocol import ParamPluginProtocol
 
 @attrs.define
 class ParamsManager:
-    """Store experiment parameters and mirror them to plugins."""
+    """Store experiment parameters and mirror them to plugins.
+
+    Parameters are stored internally with slash-delimited keys and returned as a
+    nested dictionary for summaries.
+    """
 
     plugins: ParamPluginProtocol
     """Plugin delegate that receives parameter events."""

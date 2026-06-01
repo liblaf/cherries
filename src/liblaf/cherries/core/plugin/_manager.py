@@ -17,13 +17,22 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 @attrs.define
 class PluginManager:
-    """Register plugins and delegate hook calls in dependency order."""
+    """Register plugins and delegate hook calls in dependency order.
+
+    Only methods decorated with [`impl`][liblaf.cherries.core.impl] are invoked.
+    Hook order is cached per method and recalculated whenever a plugin is
+    registered.
+    """
 
     registry: dict[PluginName, Plugin] = attrs.field(factory=dict, kw_only=True)
     """Plugins keyed by their unique plugin name."""
 
     def __getattr__(self, name: str) -> Any:
-        """Return a callable that delegates hook `name`."""
+        """Return a callable that delegates hook `name`.
+
+        This allows plugin delegates to satisfy protocol methods such as
+        `log_metric()` without defining each hook explicitly.
+        """
         return functools.partial(self.delegate, name)
 
     def register(self, plugin: Plugin) -> None:

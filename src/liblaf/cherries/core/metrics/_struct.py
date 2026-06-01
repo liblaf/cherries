@@ -7,7 +7,11 @@ import polars as pl
 
 @attrs.define
 class Metric:
-    """In-memory samples for one scalar metric."""
+    """In-memory samples for one scalar metric.
+
+    Values, steps, and timestamps are stored in compact arrays and materialized
+    as a Polars dataframe only when requested.
+    """
 
     name: str
     """Metric name."""
@@ -22,7 +26,13 @@ class Metric:
     """Sample timestamps as milliseconds since the Unix epoch."""
 
     def append(self, value: float, step: int, time: datetime.datetime) -> None:
-        """Append one metric sample."""
+        """Append one metric sample.
+
+        Args:
+            value: Scalar value.
+            step: Metric step.
+            time: Sample timestamp.
+        """
         timestamp_ms: int = int(time.timestamp() * 1000)
         self.value.append(value)
         self.step.append(step)

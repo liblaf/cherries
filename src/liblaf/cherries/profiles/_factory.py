@@ -10,7 +10,10 @@ from ._debug import ProfileDebug  # noqa: F401
 from ._default import ProfileDefault  # noqa: F401
 
 type ProfileName = Literal["default", "debug"] | str  # noqa: PYI051
+"""Registered profile name."""
+
 type ProfileLike = ProfileName | Profile | type[Profile]
+"""Profile selector accepted by [`factory`][liblaf.cherries.profiles.factory]."""
 
 
 def factory(profile: ProfileLike | None = None) -> Profile:

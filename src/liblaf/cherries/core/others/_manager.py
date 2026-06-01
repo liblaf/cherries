@@ -10,7 +10,11 @@ from ._protocol import OtherPluginProtocol
 
 @attrs.define
 class OthersManager:
-    """Store miscellaneous run metadata and mirror it to plugins."""
+    """Store miscellaneous run metadata and mirror it to plugins.
+
+    Metadata is stored internally with slash-delimited keys and returned as a
+    nested dictionary for summaries.
+    """
 
     plugins: OtherPluginProtocol
     """Plugin delegate that receives metadata events."""

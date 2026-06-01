@@ -1,8 +1,9 @@
 # Cherries
 
-Cherries is a compact experiment runner for Python scripts. It gives each run a
-typed configuration model, repeatable artifact paths, scalar metric logging, and
-a plugin pipeline for Comet, Git, local snapshots, and Python logging.
+Cherries is a lightweight experiment runner for Python scripts. It gives each
+run a typed configuration model, reproducible artifact paths, scalar metric
+history, and a plugin pipeline for Comet, Git, local snapshots, and Python
+logging.
 
 ```bash
 uv add liblaf-cherries
@@ -10,8 +11,8 @@ uv add liblaf-cherries
 
 ## Quick Start
 
-Declare a config model, create paths as model defaults, and hand the experiment
-function to `cherries.main()`.
+Declare a config model, create artifact paths as model defaults, and hand the
+experiment function to `cherries.main()`.
 
 ```python
 from pathlib import Path
@@ -36,9 +37,20 @@ if __name__ == "__main__":
 ```
 
 `main()` starts a profile, builds missing arguments from defaults or
-annotations, logs any Pydantic models as parameters, runs sync or async
-callables, and always ends the run. If the experiment raises, Cherries passes
-the exception to `Run.end()` and then re-raises it.
+annotations, logs Pydantic models as parameters, runs sync or async callables,
+and always ends the run. If the experiment raises, Cherries passes the exception
+to `Run.end()` and then re-raises it.
+
+## Execution Model
+
+Cherries keeps one process-global `Run`. Profiles configure that run, register
+plugins, and call `Run.start()` before your experiment body executes. During the
+run, convenience functions such as `cherries.log_metric()` and
+`cherries.output()` forward to the active run.
+
+At shutdown, `Run.end()` records end metadata, flushes queued artifacts, and
+calls plugin `end()` hooks. Plugin failures are logged, and later plugins still
+receive the same hook.
 
 ## Paths and Artifacts
 
@@ -57,6 +69,16 @@ after configuration is built. Missing primary paths are reported as warnings.
 Bundle handlers expand related files automatically: VTK `.series` manifests
 include their required frames, and mesh files such as `.vtu`, `.vtp`, and `.stl`
 include an optional sibling `.landmarks.json`.
+
+## Metrics and Parameters
+
+Use `log_metric()` for one scalar value and `log_metrics()` for a batch. Nested
+metric mappings are flattened with `/`, so `{"train": {"loss": 0.4}}` becomes
+`train/loss`. Metrics are stored as in-memory series and returned as Polars
+dataframes with `name`, `value`, `step`, and `time` columns.
+
+Parameters and metadata use the same flattening convention internally. Their
+summary views are expanded back into nested dictionaries.
 
 ## Profiles
 
