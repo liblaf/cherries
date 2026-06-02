@@ -61,16 +61,24 @@ class Run:
 
     plugins: PluginManager = attrs.field(factory=PluginManager)
     _assets: AssetsManager = attrs.field(
-        default=attrs.Factory(_default_assets, takes_self=True), kw_only=True
+        default=attrs.Factory(_default_assets, takes_self=True),
+        repr=False,
+        kw_only=True,
     )
     _metrics: MetricsManager = attrs.field(
-        default=attrs.Factory(_default_metrics, takes_self=True), kw_only=True
+        default=attrs.Factory(_default_metrics, takes_self=True),
+        repr=False,
+        kw_only=True,
     )
     _others: OthersManager = attrs.field(
-        default=attrs.Factory(_default_others, takes_self=True), kw_only=True
+        default=attrs.Factory(_default_others, takes_self=True),
+        repr=False,
+        kw_only=True,
     )
     _params: ParamsManager = attrs.field(
-        default=attrs.Factory(_default_params, takes_self=True), kw_only=True
+        default=attrs.Factory(_default_params, takes_self=True),
+        repr=False,
+        kw_only=True,
     )
 
     @functools.cached_property
