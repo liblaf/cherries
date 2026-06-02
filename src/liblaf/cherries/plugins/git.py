@@ -23,7 +23,7 @@ class Git(core.Plugin, core.PluginProtocol):
         verify: Whether Git hooks should run for the generated commit.
     """
 
-    run: core.Run
+    run: core.Run = attrs.field(repr=False)
     commit: bool = attrs.field(default=False, kw_only=True)
     verify: bool = attrs.field(default=False, kw_only=True)
 

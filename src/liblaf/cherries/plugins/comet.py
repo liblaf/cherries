@@ -22,7 +22,7 @@ class Comet(core.Plugin, core.PluginProtocol):
         disabled: Whether to start Comet in disabled/offline mode.
     """
 
-    run: core.Run
+    run: core.Run = attrs.field(repr=False)
     disabled: bool = attrs.field(default=False)
 
     @property

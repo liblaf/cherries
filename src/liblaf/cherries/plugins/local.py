@@ -23,7 +23,7 @@ class Local(core.Plugin, core.PluginProtocol):
         run: Run that owns this plugin.
     """
 
-    run: core.Run
+    run: core.Run = attrs.field(repr=False)
 
     @functools.cached_property
     def folder(self) -> Path:
