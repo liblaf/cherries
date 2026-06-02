@@ -7,6 +7,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.0.1](https://github.com/liblaf/cherries/releases/tag/v3.0.1) - 2026-06-02
+
+### 🐛 Bug Fixes
+
+- hide plugin run references from attrs repr - [17a7862](https://github.com/liblaf/cherries/commit/17a786229cdc9a41f077968adef76417ce38131d) by [@liblaf](https://github.com/liblaf)
+
+### 📝 Documentation
+
+- clarify Cherries experiment workflow - [5513122](https://github.com/liblaf/cherries/commit/5513122789bf12ce97fe1ea2079db42c49d120ae) by [@liblaf](https://github.com/liblaf)
+
+### ♻️ Code Refactoring
+
+- hide run managers from repr - [afde0e3](https://github.com/liblaf/cherries/commit/afde0e394d09d1e883049e80c522b43e8c1c8bf5) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf)
+
 ## [v3.0.0](https://github.com/liblaf/cherries/releases/tag/v3.0.0) - 2026-06-01
 
 ### 💥 BREAKING CHANGES
@@ -19,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
+- [@liblaf-release-please[bot]](https://github.com/apps/liblaf-release-please)
 - [@liblaf](https://github.com/liblaf)
 
 ## [v2.0.2](https://github.com/liblaf/cherries/releases/tag/v2.0.2) - 2026-05-26
