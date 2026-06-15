@@ -136,6 +136,7 @@ class AssetsManager:
         Returns:
             Resolved input path.
         """
+        name: Path = Path(name).expanduser()
         path: Path = self.data_dir / name
         metadata: dict[str, Any] = _metadata_with_type(metadata, "input")
         self.log_input(path, metadata=metadata)
@@ -158,6 +159,7 @@ class AssetsManager:
         Returns:
             Resolved output path.
         """
+        name: Path = Path(name).expanduser()
         path: Path = self.data_dir / name
         if mkdir:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -182,6 +184,7 @@ class AssetsManager:
         Returns:
             Resolved temporary path.
         """
+        name: Path = Path(name).expanduser()
         path: Path = self.temp_dir / name
         if mkdir:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -197,7 +200,7 @@ class AssetsManager:
         Missing primary paths are reported as warnings. Missing optional bundle
         files are ignored, while missing required bundle files are warned.
         """
-        path: Path = Path(path)
+        path: Path = Path(path).expanduser()
         if not path.exists():
             logger.warning("No such file or directory: %s", path)
             return
@@ -215,7 +218,7 @@ class AssetsManager:
                     self.summary.assets.append(path)
         self.plugins.log_asset(path, metadata=metadata, report=True)
         for path_, optional in self.bundles.ls_files(path):
-            path: Path = Path(path_)
+            path: Path = Path(path_).expanduser()
             if not path.exists():
                 if not optional:
                     logger.warning("No such file or directory: %s", path)
