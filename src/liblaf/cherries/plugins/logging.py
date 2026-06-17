@@ -31,7 +31,7 @@ class Logging(core.Plugin, core.PluginProtocol):
         )
 
     @override
-    @core.impl
+    @core.impl(before=("Local",))
     def start(self, *args, **kwargs) -> None:
         """Initialize `liblaf.logging` for the run log file."""
         liblaf.logging.init(file=self.log_file, force=True)

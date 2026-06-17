@@ -43,6 +43,7 @@ words:
   - pyplot
   - pytest
   - pyvista
+  - reraises
   - rumdl
   - sdist
   - taiki

@@ -40,7 +40,7 @@ class Local(core.Plugin, core.PluginProtocol):
         return self.folder / "logs" / self.run.entrypoint.with_suffix(".log").name
 
     @override
-    @core.impl
+    @core.impl(after=("Logging",))
     def start(self) -> None:
         """Configure local logging and copy the entrypoint."""
         self._config_logging()
