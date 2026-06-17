@@ -7,6 +7,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.0.3](https://github.com/liblaf/cherries/releases/tag/v3.0.3) - 2026-06-17
+
+### 🐛 Bug Fixes
+
+- order logging plugin before local startup - [ef6439b](https://github.com/liblaf/cherries/commit/ef6439b8ddc3d2ff17e10c4333148f5e863733b6) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf)
+
 ## [v3.0.2](https://github.com/liblaf/cherries/releases/tag/v3.0.2) - 2026-06-15
 
 ### 🐛 Bug Fixes
@@ -15,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
+- [@liblaf-release-please[bot]](https://github.com/apps/liblaf-release-please)
 - [@liblaf](https://github.com/liblaf)
 - [@renovate[bot]](https://github.com/apps/renovate)
 
