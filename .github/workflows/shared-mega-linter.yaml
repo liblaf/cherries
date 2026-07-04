@@ -33,7 +33,7 @@ jobs:
     steps:
       - id: auth
         name: Auth
-        uses: liblaf/actions/auth@512d1652c6a71a8f141d1901f50994afaddc925e # v3
+        uses: liblaf/actions/auth@ce9dc3a1daa92e93ddfe62d8378b93cedaa5056c # v3
         with:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - id: lint
         name: MegaLinter
-        uses: liblaf/megalinter-custom-flavor-all@2ce9ad17fcc1129eb4e52946f5115d7bf512bff9 # main
+        uses: liblaf/megalinter-custom-flavor-all@efed9cede0b9cab354bd59d1f8ee96a51ed654e5 # main
         env:
           GITHUB_TOKEN: ${{ steps.auth.outputs.token }}
           MEGALINTER_CONFIG: https://raw.githubusercontent.com/liblaf/megalinter-custom-flavor-all/refs/heads/main/.mega-linter.yml
@@ -90,12 +90,12 @@ jobs:
     steps:
       - id: auth
         name: Auth
-        uses: liblaf/actions/auth@512d1652c6a71a8f141d1901f50994afaddc925e # v3
+        uses: liblaf/actions/auth@ce9dc3a1daa92e93ddfe62d8378b93cedaa5056c # v3
         with:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
       - name: Approve
-        uses: liblaf/actions/approve@512d1652c6a71a8f141d1901f50994afaddc925e # v3
+        uses: liblaf/actions/approve@ce9dc3a1daa92e93ddfe62d8378b93cedaa5056c # v3
         with:
           approve-token: ${{ steps.auth.outputs.token }}
           pull: ${{ needs.mega-linter.outputs.pull-request-url }}
