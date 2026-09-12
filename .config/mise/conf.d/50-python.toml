@@ -20,17 +20,13 @@ description = "Serve the documentation site locally"
 run = ["rm --force --recursive '{{ config_root }}/.cache'", "zensical serve"]
 #
 
-[tasks."gen:init"]
-description = "Generate lazy-loading __init__.py files from __init__.pyi stubs"
-file = "https://cdn.jsdelivr.net/gh/liblaf/copier-python@addd69237fe11c73d0d32a08f5d605818b91a441/mise-tasks/gen/init.py"
-
 [tasks."gen:ref-pages"]
 description = "Generate API reference pages from public Python modules"
-file = "https://cdn.jsdelivr.net/gh/liblaf/copier-python@addd69237fe11c73d0d32a08f5d605818b91a441/mise-tasks/gen/ref-pages.py"
+file = "https://cdn.jsdelivr.net/gh/liblaf/copier-python@9aad70d12643e4c4eaae94020619eef857d49adb/mise-tasks/gen/ref-pages.py"
 
 [tasks.install]
 description = "Install project dependencies from pixi.lock or uv.lock"
-file = "https://cdn.jsdelivr.net/gh/liblaf/copier-python@addd69237fe11c73d0d32a08f5d605818b91a441/mise-tasks/install.sh"
+file = "https://cdn.jsdelivr.net/gh/liblaf/copier-python@9aad70d12643e4c4eaae94020619eef857d49adb/mise-tasks/install.sh"
 
 [tasks.lint]
 description = "Run all linters"
@@ -42,8 +38,8 @@ run = ["lint-imports", "ruff check --fix", "ruff format", "ty check --fix"]
 
 [tasks."lint:toml"]
 description = "Sort, format, and lint TOML files with toml-sort and tombi"
-file = "https://cdn.jsdelivr.net/gh/liblaf/copier-python@addd69237fe11c73d0d32a08f5d605818b91a441/mise-tasks/lint/toml.sh"
+file = "https://cdn.jsdelivr.net/gh/liblaf/copier-python@9aad70d12643e4c4eaae94020619eef857d49adb/mise-tasks/lint/toml.sh"
 
 [tasks.upgrade]
 description = "Upgrade project dependencies from pixi.lock or uv.lock"
-file = "https://cdn.jsdelivr.net/gh/liblaf/copier-python@addd69237fe11c73d0d32a08f5d605818b91a441/mise-tasks/upgrade.sh"
+file = "https://cdn.jsdelivr.net/gh/liblaf/copier-python@9aad70d12643e4c4eaae94020619eef857d49adb/mise-tasks/upgrade.sh"
