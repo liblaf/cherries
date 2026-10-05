@@ -89,7 +89,9 @@ if __name__ == "__main__":
     cherries.main(main)
 ```
 
-`BaseConfig` parses normal kebab-case Python arguments. `main()` creates a fresh
+`BaseConfig` parses normal kebab-case Python arguments before recording starts.
+CLI help and invalid configuration exit without creating a run or work folder.
+`main()` creates a fresh
 local work directory at the collection's `work/<id>/`, captures source/runtime
 evidence, invokes the callable once,
 and seals the result only after declared outputs were written. It does not

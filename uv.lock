@@ -1380,7 +1380,7 @@ requires-dist = [
     { name = "msgspec", extras = ["yaml"], specifier = ">=0.21.1" },
     { name = "polars", extras = ["timezone"], specifier = ">=1.41.2" },
     { name = "pydantic", specifier = ">=2" },
-    { name = "pydantic-settings", specifier = ">=2" },
+    { name = "pydantic-settings", specifier = ">=2.7" },
     { name = "python-slugify", specifier = ">=8.0.4" },
     { name = "toolz", specifier = ">=1.1" },
 ]

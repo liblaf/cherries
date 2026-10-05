@@ -607,8 +607,11 @@ def command_rerun(args: argparse.Namespace) -> dict[str, Any]:
         "CHERRIES_REPLAY_INPUTS": str(prepared["input_mapping"]),
     }
     # Captured projects with a lock replay it exactly; unlocked projects may
-    # sync normally. Never inherit an unrelated caller's frozen-mode setting.
+    # sync normally. Never inherit caller-specific uv environment selection
+    # or frozen-mode settings: replay must use the captured project's .venv.
     environment.pop("UV_FROZEN", None)
+    environment.pop("UV_PROJECT_ENVIRONMENT", None)
+    environment.pop("VIRTUAL_ENV", None)
     command = ["uv", "run"]
     if (Path(prepared["project"]) / "uv.lock").is_file():
         command.append("--locked")

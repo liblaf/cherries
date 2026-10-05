@@ -168,6 +168,24 @@ def test_capture_keeps_explicit_ignored_build_input(
     ).read_text() == "VALUE = 42\n"
 
 
+def test_capture_does_not_follow_untracked_symlink_outside_repository(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = git_repo(tmp_path)
+    entrypoint = project / "run.py"
+    entrypoint.write_text("print('run')\n")
+    commit_all(project)
+    private = tmp_path / "outside.py"
+    private.write_text("PRIVATE = 'do not capture'\n")
+    (project / "linked.py").symlink_to(private)
+
+    evidence = capture(project, entrypoint, tmp_path / "capture", monkeypatch)
+
+    root = next(item for item in evidence["repositories"] if item["path"] == ".")
+    assert root["untracked"] == []
+    assert not (tmp_path / "capture/git/project/untracked/linked.py").exists()
+
+
 def make_replay_record(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[Store, str, Path]:

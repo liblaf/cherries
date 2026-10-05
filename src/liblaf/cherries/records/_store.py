@@ -309,6 +309,7 @@ class Store:
         if self._record_dir(run_id).exists():
             msg = f"run already sealed: {run_id}"
             raise IntegrityError(msg)
+        self._validate_bindings(record)
         ignored = set(exclude) | {".cherries-work.json"}
         files: list[dict[str, Any]] = []
         pending = self._pending(run_id)
@@ -623,7 +624,11 @@ class Store:
         if _digest_bytes(b"cherries-tree-v1\0" + data) != digest:
             msg = f"downloaded tree does not match {asset_id}"
             raise IntegrityError(msg)
-        descriptor = json.loads(data)
+        try:
+            descriptor = json.loads(data)
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            msg = "downloaded tree is not valid JSON"
+            raise IntegrityError(msg) from error
         self._validate_tree(descriptor)
         if _canonical_bytes(descriptor) != data:
             msg = "downloaded tree is not canonical JSON"
@@ -739,8 +744,12 @@ class Store:
             isinstance(record.get("record"), Mapping) and "legacy" in record["record"]
         )
         if (
-            record.get("format") != self.format_version
-            or manifest.get("format") != self.format_version
+            not isinstance(record.get("format"), int)
+            or isinstance(record.get("format"), bool)
+            or record["format"] != self.format_version
+            or not isinstance(manifest.get("format"), int)
+            or isinstance(manifest.get("format"), bool)
+            or manifest["format"] != self.format_version
             or not isinstance(record.get("record"), Mapping)
             or not isinstance(record.get("parents"), list)
             or any(not isinstance(parent, str) for parent in record["parents"])
@@ -1741,19 +1750,34 @@ class Store:
                 raise IntegrityError(msg)
             seen.add(relative)
             self._asset_digest(entry.get("asset_id", ""))
-            if not isinstance(entry.get("size"), int) or entry["size"] < 0:
+            if (
+                not isinstance(entry.get("size"), int)
+                or isinstance(entry.get("size"), bool)
+                or entry["size"] < 0
+            ):
                 msg = "asset size must be a nonnegative integer"
                 raise IntegrityError(msg)
 
     def _validate_bindings(self, record: Mapping[str, Any]) -> None:
-        for binding in [*record.get("bundles", []), *record.get("input_bindings", [])]:
+        bundles = record.get("bundles", [])
+        input_bindings = record.get("input_bindings", [])
+        if not isinstance(bundles, list) or not isinstance(input_bindings, list):
+            msg = "asset bindings must be lists"
+            raise IntegrityError(msg)
+        for binding in [*bundles, *input_bindings]:
+            if not isinstance(binding, Mapping):
+                msg = "asset binding must be an object"
+                raise IntegrityError(msg)
             destination = binding.get("staged_path", binding.get("path"))
             if destination is not None:
                 _relative_path(destination)
 
-    def _validate_tree(self, descriptor: Mapping[str, Any]) -> None:
+    def _validate_tree(self, descriptor: Any) -> None:
         if (
-            descriptor.get("format") != self.format_version
+            not isinstance(descriptor, Mapping)
+            or not isinstance(descriptor.get("format"), int)
+            or isinstance(descriptor.get("format"), bool)
+            or descriptor["format"] != self.format_version
             or descriptor.get("kind") != "cherries-tree"
         ):
             msg = "tree has an unsupported descriptor"

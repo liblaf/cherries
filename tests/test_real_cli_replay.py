@@ -6,12 +6,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from liblaf.cherries import _cli
 from liblaf.cherries.records import Store
 from tests.test_source_capture import commit_all, git_repo
 
 
-def test_replay_runs_saved_script_and_uses_saved_inputs(tmp_path: Path) -> None:
+def test_replay_runs_saved_script_and_uses_saved_inputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     project = git_repo(tmp_path)
     checkout = Path(__file__).resolve().parents[1]
     (tmp_path / "cherries").symlink_to(checkout, target_is_directory=True)
@@ -53,6 +57,8 @@ def test_replay_runs_saved_script_and_uses_saved_inputs(tmp_path: Path) -> None:
     assert store.read_record(parent)["record"]["source_stability"] is True
     raw.write_text("changed live input")
     script.write_text("raise RuntimeError('live script must not execute')\n")
+    caller_environment = tmp_path / "caller-environment"
+    monkeypatch.setenv("UV_PROJECT_ENVIRONMENT", str(caller_environment))
     assert (
         _cli.main(
             [
@@ -70,3 +76,4 @@ def test_replay_runs_saved_script_and_uses_saved_inputs(tmp_path: Path) -> None:
     assert store.read_record(child)["parents"] == [parent]
     assert store.materialize(child, "outputs/answer.txt").read_text() == "saved input!"
     assert not store.projection(parent)["holds"]
+    assert not caller_environment.exists()
