@@ -49,6 +49,34 @@ def _canonical_json(value: Any) -> bytes:
     ).encode()
 
 
+def _is_sha256_id(value: Any) -> bool:
+    """Return whether ``value`` is a complete lowercase SHA-256 asset ID."""
+    if not isinstance(value, str) or not value.startswith("sha256:"):
+        return False
+    digest = value.removeprefix("sha256:")
+    return len(digest) == 64 and all(char in "0123456789abcdef" for char in digest)
+
+
+def _is_receipt(value: Any) -> bool:
+    """Return whether a checkpoint or commit has all receipt digest proofs."""
+    return isinstance(value, Mapping) and all(
+        _is_sha256_id(value.get(field))
+        for field in ("record_digest", "manifest_digest", "root_digest")
+    )
+
+
+def _is_contained_id(value: Any) -> bool:
+    """Return whether ``value`` is safe to use as one metadata path component."""
+    return (
+        isinstance(value, str)
+        and bool(value)
+        and value not in {".", ".."}
+        and "/" not in value
+        and "\\" not in value
+        and Path(value).name == value
+    )
+
+
 def _as_local(remote: str | Path) -> Path | None:
     value = str(remote)
     if value.startswith("file://"):
@@ -394,17 +422,19 @@ class Remote:
         """Import committed payload records and payload-free checkpoints safely."""
         checkpoint_records: dict[str, Mapping[str, str]] = {}
         checkpoint_events: dict[Path, str] = {}
+        collection_missing = False
         try:
             collection = json.loads(
                 self._metadata_bytes(Path("metadata") / "collection.json")
             )
-        except json.JSONDecodeError as error:
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
             raise IntegrityError("remote collection metadata is invalid") from error
         except RemoteError:
+            collection_missing = True
             collection = None
-        if (
-            collection is not None
-            and collection.get("collection_id") != store.collection_id
+        if not collection_missing and (
+            not isinstance(collection, Mapping)
+            or collection.get("collection_id") != store.collection_id
         ):
             raise IntegrityError("remote metadata belongs to a different collection")
         # Selected imports still need a proof for a metadata-only record and
@@ -419,15 +449,27 @@ class Remote:
                 raise IntegrityError("metadata checkpoint name does not match bytes")
             try:
                 checkpoint = json.loads(raw)
-            except json.JSONDecodeError as error:
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
                 raise IntegrityError("metadata checkpoint is invalid") from error
+            checkpoint_format = (
+                checkpoint.get("format") if isinstance(checkpoint, Mapping) else None
+            )
             if (
-                _canonical_json(checkpoint) != raw
+                not isinstance(checkpoint, Mapping)
+                or _canonical_json(checkpoint) != raw
+                or not isinstance(checkpoint_format, int)
+                or isinstance(checkpoint_format, bool)
+                or checkpoint_format != 1
                 or checkpoint.get("kind") != "cherries-metadata-checkpoint"
                 or checkpoint.get("collection_id") != store.collection_id
             ):
                 raise IntegrityError("metadata checkpoint is invalid")
-            for identifier, proof in checkpoint.get("records", {}).items():
+            record_proofs = checkpoint.get("records")
+            if not isinstance(record_proofs, Mapping):
+                raise IntegrityError("metadata checkpoint records are invalid")
+            for identifier, proof in record_proofs.items():
+                if not _is_contained_id(identifier) or not _is_receipt(proof):
+                    raise IntegrityError("metadata checkpoint records are invalid")
                 if (
                     identifier in checkpoint_records
                     and checkpoint_records[identifier] != proof
@@ -486,24 +528,39 @@ class Remote:
                     json.loads(payloads[name])
                     for name in ("record.json", "manifest.json", "complete.json")
                 )
-            except json.JSONDecodeError as error:
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
                 raise IntegrityError("remote record metadata is invalid") from error
+            if not all(
+                isinstance(value, Mapping) for value in (record, manifest, complete)
+            ):
+                raise IntegrityError("remote record metadata is invalid")
             if record.get("collection_id") != store.collection_id:
                 raise IntegrityError("remote record belongs to a different collection")
+            parents = record.get("parents", [])
+            if not isinstance(parents, list) or any(
+                not _is_contained_id(parent) for parent in parents
+            ):
+                raise IntegrityError("remote record metadata is invalid")
             expected = checkpoint_records.get(candidate)
             commit_path = Path("records") / candidate / "commit.json"
+            commit_missing = False
             try:
                 commit = json.loads(self._metadata_bytes(commit_path))
             except RemoteError:
+                commit_missing = True
                 commit = None
-            except json.JSONDecodeError as error:
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
                 raise IntegrityError("remote commit marker is invalid") from error
-            if commit is not None:
+            if not commit_missing:
                 if (
-                    commit.get("schema") != "cherries-remote-commit-v1"
+                    not isinstance(commit, Mapping)
+                    or commit.get("schema") != "cherries-remote-commit-v1"
                     or commit.get("run_id") != candidate
+                    or not _is_receipt(commit)
+                    or not isinstance(commit.get("closure"), list)
                 ):
                     raise IntegrityError("remote commit marker is invalid")
+                self._closure_ids(commit["closure"])
                 expected = {
                     key: commit.get(key)
                     for key in ("record_digest", "manifest_digest", "root_digest")
@@ -525,7 +582,7 @@ class Remote:
             if run_id is not None:
                 todo.extend(
                     parent
-                    for parent in record.get("parents", [])
+                    for parent in parents
                     if parent not in pending and parent not in set(store.list_records())
                 )
         records = 0
@@ -627,6 +684,18 @@ class Remote:
             raise IntegrityError("remote commit has an invalid object digest")
         return asset_id
 
+    @classmethod
+    def _closure_ids(cls, closure: Any) -> set[str]:
+        """Validate a canonical commit closure before it gates metadata import."""
+        if (
+            not isinstance(closure, list)
+            or any(not isinstance(asset_id, str) for asset_id in closure)
+            or closure != sorted(closure)
+            or len(closure) != len(set(closure))
+        ):
+            raise IntegrityError("remote commit has an invalid object closure")
+        return {cls._validate_closure_asset(asset_id) for asset_id in closure}
+
     def _fetch_tree_to_store(self, store: Any, tree_id: str) -> Path:
         """Fetch and validate one tree descriptor without materializing its files."""
         digest = tree_id.removeprefix("sha256-tree:")
@@ -677,14 +746,21 @@ class Remote:
         run_id = str(run_id)
         if not run_id or Path(run_id).name != run_id or run_id in {".", ".."}:
             raise RemoteError("restore requires an exact contained run ID")
-        commit = json.loads(
-            self._metadata_bytes(Path("records") / run_id / "commit.json")
-        )
+        try:
+            commit = json.loads(
+                self._metadata_bytes(Path("records") / run_id / "commit.json")
+            )
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise IntegrityError("remote commit marker is invalid") from error
         if (
-            commit.get("schema") != "cherries-remote-commit-v1"
+            not isinstance(commit, Mapping)
+            or commit.get("schema") != "cherries-remote-commit-v1"
             or commit.get("run_id") != run_id
+            or not _is_receipt(commit)
+            or not isinstance(commit.get("closure"), list)
         ):
             raise IntegrityError("remote commit marker does not identify requested run")
+        closure_ids = self._closure_ids(commit["closure"])
         reader_reason = f"restore:{uuid.uuid4()}"
         # Metadata enters only through Store's locked immutable importer.
         # A child commit may be the only payload archived.  Import the
@@ -713,17 +789,6 @@ class Remote:
             for field, value in expected.items():
                 if complete.get(field) != value or commit.get(field) != value:
                     raise IntegrityError(f"remote commit does not bind native {field}")
-            closure = commit.get("closure")
-            if (
-                not isinstance(closure, list)
-                or any(not isinstance(asset_id, str) for asset_id in closure)
-                or closure != sorted(closure)
-                or len(closure) != len(set(closure))
-            ):
-                raise IntegrityError("remote commit has an invalid object closure")
-            closure_ids = {
-                self._validate_closure_asset(asset_id) for asset_id in closure
-            }
             declared_assets = {
                 *(item["asset_id"] for item in manifest.get("files", [])),
                 *self._record_assets(record.get("record", {})),

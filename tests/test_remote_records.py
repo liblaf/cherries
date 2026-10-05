@@ -478,6 +478,185 @@ def test_metadata_import_rejects_checkpointed_note_with_changed_bytes(
         Remote(remote_root).import_metadata(target)
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        (None, []),
+        ("format", True),
+        ("records", []),
+        ("records", {"run": []}),
+    ],
+)
+def test_metadata_import_rejects_malformed_checkpoint_records_before_install(
+    tmp_path: Path, field: str | None, value: Any
+) -> None:
+    """Checkpoint shape is validated before any control or event import."""
+    from liblaf.cherries.records import Store
+
+    source = Store(tmp_path / "source", machine_id="machine-a")
+    source.ensure_initialized("collection")
+    work = source.start_work("run")
+    (work / "result.txt").write_text("result")
+    source.seal("run", {}, work)
+    remote_root = tmp_path / "remote"
+    Remote(remote_root).sync_metadata(source.root)
+    checkpoint_path = next((remote_root / "metadata" / "checkpoints").glob("*.json"))
+    checkpoint = json.loads(checkpoint_path.read_text())
+    checkpoint_path.unlink()
+    if field is None:
+        checkpoint = value
+    else:
+        checkpoint[field] = value
+    checkpoint_bytes = canonical_json(checkpoint)
+    (
+        remote_root
+        / "metadata"
+        / "checkpoints"
+        / f"{hashlib.sha256(checkpoint_bytes).hexdigest()}.json"
+    ).write_bytes(checkpoint_bytes)
+
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+
+    with pytest.raises(IntegrityError, match="metadata checkpoint"):
+        Remote(remote_root).import_metadata(target)
+    assert target.list_records() == []
+    assert not list((target.root / "metadata" / "events").glob("*/*.json"))
+
+
+@pytest.mark.parametrize("commit_bytes", [b"{", b"[]", b"null", b"true"])
+def test_restore_rejects_malformed_commit_before_local_side_effects(
+    tmp_path: Path, commit_bytes: bytes
+) -> None:
+    """A malformed marker cannot start an import, hold, or payload download."""
+    from liblaf.cherries.records import Store
+
+    source = Store(tmp_path / "source", machine_id="machine-a")
+    source.ensure_initialized("collection")
+    work = source.start_work("run")
+    (work / "result.txt").write_text("result")
+    source.seal("run", {}, work)
+    remote_root = tmp_path / "remote"
+    Remote(remote_root).archive(source, "run")
+    (remote_root / "records" / "run" / "commit.json").write_bytes(commit_bytes)
+
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+
+    with pytest.raises(IntegrityError, match="remote commit marker"):
+        Remote(remote_root).restore(target, "run")
+    assert target.list_records() == []
+    assert not list((target.root / "metadata" / "events").glob("*/*.json"))
+    assert not list((target.root / "objects" / "sha256").glob("*/*"))
+    assert not list((target.root / "runs" / "run").rglob("*"))
+
+
+@pytest.mark.parametrize("collection_bytes", [b"null", b"true", b"\xff"])
+def test_metadata_import_rejects_present_nonobject_collection(
+    tmp_path: Path, collection_bytes: bytes
+) -> None:
+    """Only a missing collection marker is optional; JSON null is invalid."""
+    from liblaf.cherries.records import Store
+
+    source = Store(tmp_path / "source", machine_id="machine-a")
+    source.ensure_initialized("collection")
+    work = source.start_work("run")
+    (work / "result.txt").write_text("result")
+    source.seal("run", {}, work)
+    remote_root = tmp_path / "remote"
+    Remote(remote_root).sync_metadata(source.root)
+    (remote_root / "metadata" / "collection.json").write_bytes(collection_bytes)
+
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+
+    with pytest.raises(IntegrityError, match="metadata"):
+        Remote(remote_root).import_metadata(target)
+    assert target.list_records() == []
+    assert not list((target.root / "metadata" / "events").glob("*/*.json"))
+
+
+def test_restore_rejects_structurally_invalid_commit_closure_before_import(
+    tmp_path: Path,
+) -> None:
+    """A commit closure is validated before its marker can gate metadata import."""
+    from liblaf.cherries.records import Store
+
+    source = Store(tmp_path / "source", machine_id="machine-a")
+    source.ensure_initialized("collection")
+    work = source.start_work("run")
+    (work / "result.txt").write_text("result")
+    source.seal("run", {}, work)
+    remote_root = tmp_path / "remote"
+    Remote(remote_root).archive(source, "run")
+    commit_path = remote_root / "records" / "run" / "commit.json"
+    commit = json.loads(commit_path.read_text())
+    commit["closure"] = [True]
+    commit_path.write_text(json.dumps(commit))
+
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+
+    with pytest.raises(IntegrityError, match="object closure"):
+        Remote(remote_root).restore(target, "run")
+    assert target.list_records() == []
+    assert not list((target.root / "metadata" / "events").glob("*/*.json"))
+    assert not list((target.root / "objects" / "sha256").glob("*/*"))
+    assert not list((target.root / "runs" / "run").rglob("*"))
+
+
+def test_metadata_import_rejects_nonlist_record_parents_before_install(
+    tmp_path: Path,
+) -> None:
+    """Lineage traversal starts only after parent control shape is validated."""
+    from liblaf.cherries.records import Store
+
+    source = Store(tmp_path / "source", machine_id="machine-a")
+    source.ensure_initialized("collection")
+    work = source.start_work("run")
+    (work / "result.txt").write_text("result")
+    source.seal("run", {}, work)
+    remote_root = tmp_path / "remote"
+    Remote(remote_root).sync_metadata(source.root)
+    record_path = remote_root / "records" / "run" / "record.json"
+    record = json.loads(record_path.read_text())
+    record["parents"] = "parent"
+    record_path.write_bytes(canonical_json(record))
+
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+
+    with pytest.raises(IntegrityError, match="remote record metadata"):
+        Remote(remote_root).import_metadata(target)
+    assert target.list_records() == []
+    assert not list((target.root / "metadata" / "events").glob("*/*.json"))
+
+
+@pytest.mark.parametrize("name", ["record.json", "manifest.json", "complete.json"])
+def test_metadata_import_rejects_nonobject_record_control_before_install(
+    tmp_path: Path, name: str
+) -> None:
+    """Every receipt control document must decode to a JSON object."""
+    from liblaf.cherries.records import Store
+
+    source = Store(tmp_path / "source", machine_id="machine-a")
+    source.ensure_initialized("collection")
+    work = source.start_work("run")
+    (work / "result.txt").write_text("result")
+    source.seal("run", {}, work)
+    remote_root = tmp_path / "remote"
+    Remote(remote_root).sync_metadata(source.root)
+    (remote_root / "records" / "run" / name).write_bytes(b"[]")
+
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+
+    with pytest.raises(IntegrityError, match="remote record metadata"):
+        Remote(remote_root).import_metadata(target)
+    assert target.list_records() == []
+    assert not list((target.root / "metadata" / "events").glob("*/*.json"))
+
+
 def test_metadata_import_rejects_checkpointed_event_at_a_second_name(
     tmp_path: Path,
 ) -> None:

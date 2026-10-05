@@ -66,8 +66,8 @@ an explicitly configured `archive.main.path`.
 ## Python contract
 
 Run ordinary Python. Keep imports and definitions passive: import-time data I/O,
-solver/GPU setup, random initialization, and calls to `input`, `output`, or
-`temp` belong inside `main`.
+solver/GPU setup, random initialization, and calls to Cherries asset, metric,
+parameter, or step helpers belong inside `main`.
 
 ```python
 from liblaf import cherries
@@ -89,8 +89,9 @@ if __name__ == "__main__":
     cherries.main(main)
 ```
 
-`BaseConfig` parses normal kebab-case Python arguments. `main()` creates the
-work directory, captures source/runtime evidence, invokes the callable once,
+`BaseConfig` parses normal kebab-case Python arguments. `main()` creates a fresh
+local work directory at the collection's `work/<id>/`, captures source/runtime
+evidence, invokes the callable once,
 and seals the result only after declared outputs were written. It does not
 self-relaunch, sandbox, bootstrap, or automatically Git commit. `CHERRIES_COMET=1`
 enables Comet; it is disabled by default and its SDK is not loaded otherwise.
@@ -224,7 +225,9 @@ cherries note <id> --file exp/YYYY/mm/dd/study/docs/runs/<id>.md
 cherries --json show <id>
 ```
 
-Each note event retains the complete Markdown version. `show` returns current
+Each invocation of `note` appends the complete Markdown version, even when the
+text is unchanged. Codex compares it with the latest saved memory before
+invoking the command to avoid redundant revisions. `show` returns current
 `projection.notes`, reviews, and links alongside the frozen receipt and manifest.
 Codex reads the latest saved memory when resuming work and can recover a missing
 local document from the notes. Ordinary notes do not create dependent records,
@@ -254,10 +257,20 @@ cherries analysis close analysis/compare
 Review, label, mark, hold, and location changes are append-only metadata events
 that synchronize independently of sealed records; notes and Git links use the
 same event transport. A saved analysis becomes a
-lightweight dependent record and protects each source. Its workspace contains
-`analysis.json`; `analysis save` retains `RUN.md`, `analysis.json`, `src/`, and
-only selected `out/...` files. It is a record of interpretation, not a strict
-solver replay.
+lightweight dependent record and protects each source. `analysis save` uses the
+following mapping for workspace files:
+
+| Workspace path | Saved record path |
+| --- | --- |
+| `RUN.md` | `RUN.md` |
+| `analysis.json` | `analysis.json` |
+| `src/...` | `source/...` |
+| Selected `out/...` files | `outputs/...` |
+
+For example, retrieve `src/compare.py` from an existing or new saved analysis
+with `cherries read <analysis-id> source/compare.py`; retrieve selected
+`out/figure.png` with `cherries path <analysis-id> outputs/figure.png`.
+An analysis is a record of interpretation, not a strict solver replay.
 
 Repeated analysis saves retain the name, increment a revision number, and link
 the new record to the previous revision and source runs. The editable workspace

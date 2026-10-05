@@ -71,8 +71,8 @@ Configure `archive.main.path` before using archive or sync with `--remote main`.
 ## Run a sealed experiment
 
 Keep module scope passive: do not read experiment data, create outputs, initialize
-a solver, or call Cherries asset helpers until `main`. Config defaults are raw
-source strings or paths.
+a solver, or call Cherries asset, metric, parameter, or step helpers until
+`main`. Config defaults are raw source strings or paths.
 
 ```python
 from liblaf import cherries
@@ -186,9 +186,12 @@ cherries analysis close analysis/compare
 ```
 
 An analysis workspace holds its source records while it is open. Saving it creates
-a lightweight dependent record from `RUN.md`, `analysis.json`, `src/`, and only
-the explicitly selected `out/...` files. A record with dependents cannot be
-discarded. Local single-machine maintenance is explicit and receipt-bound:
+a lightweight dependent record. `RUN.md` and `analysis.json` retain their names;
+workspace `src/...` becomes `source/...`, and explicitly selected `out/...` files
+become `outputs/...` in the saved record. Read saved scripts and figures using
+those record-relative paths, including for existing saved analyses. A record
+with dependents cannot be discarded. Local single-machine maintenance is explicit
+and receipt-bound:
 
 ```bash
 cherries maintenance pause

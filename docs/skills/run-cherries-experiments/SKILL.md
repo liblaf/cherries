@@ -74,9 +74,10 @@ if __name__ == "__main__":
 ```
 
 Keep module scope passive. Do not read data, instantiate a solver/GPU context,
-create random experiment state, parse live inputs, or call Cherries asset helpers
-outside `main`. Config defaults must be raw strings or paths; helpers require an
-active run. Invoke it as ordinary Python, preserving original arguments:
+create random experiment state, parse live inputs, or call Cherries asset, metric,
+parameter, or step helpers outside `main`. Config defaults must be raw strings or
+paths; helpers require an active run. Invoke it as ordinary Python, preserving
+original arguments:
 
 ```bash
 uv run python exp/2026/10/05/mouthopen/src/10-run.py --steps 200
@@ -139,7 +140,9 @@ The full Markdown is retained as an append-only annotation. `show` includes
 is the saved memory, and earlier versions remain available. Recover a missing
 local document from it. If concurrent sessions left divergent versions, read
 both and consolidate their evidence and open questions into a new revision.
-Do not append a new annotation when the document is unchanged.
+Compare with the last saved memory before invoking `note` and skip unchanged
+documents. The CLI appends a revision on every invocation; it does not suppress
+duplicates.
 
 These ordinary memories create no dependent record or retention hold, so taking
 notes preserves manual discard eligibility. Keep the original sealed `RUN.md`
@@ -240,7 +243,12 @@ cherries analysis close analysis/compare
 Use a current development environment, ParaView, or another interactive tool for
 follow-up work. Add selected sources to the analysis; while open, its workspace
 holds them. Save `RUN.md`, `analysis.json`, `src/`, and only explicit `out/...`
-outputs. Save ParaView settings and displayed asset references when useful. A
+outputs. In the sealed record, `RUN.md` and `analysis.json` keep their names,
+workspace `src/...` is stored as `source/...`, and selected `out/...` files are
+stored as `outputs/...`. Use these saved paths for retrieval, including existing
+analysis records; for example, `cherries read <analysis-id> source/compare.py`
+and `cherries path <analysis-id> outputs/figure.png`.
+Save ParaView settings and displayed asset references when useful. A
 saved analysis is a lightweight dependent record and protects every source; it
 does not promise strict solver replay. Notes and Git links are append-only events
 and synchronize with the other metadata.
