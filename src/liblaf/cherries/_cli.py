@@ -209,12 +209,17 @@ def command_read(args: argparse.Namespace) -> str:
     if args.remote:
         _remote(args).import_metadata(store, args.run_id)
     run_id = store.resolve_id(args.run_id)
-    path = (
-        _remote(args).fetch_asset(store, run_id, args.path)
-        if args.remote
-        else store.materialize(run_id, args.path)
-    )
-    return Path(path).read_text()
+    reason = f"read:{uuid.uuid4()}"
+    store.hold(run_id, reason)
+    try:
+        path = (
+            _remote(args).fetch_asset(store, run_id, args.path)
+            if args.remote
+            else store.materialize(run_id, args.path)
+        )
+        return Path(path).read_text()
+    finally:
+        store.release_hold(run_id, reason)
 
 
 def _lease_path(store: Any, lease_id: str) -> Path:

@@ -523,6 +523,18 @@ def test_migrated_records_are_searchable_by_source_and_emit_json_arrays(
     assert records[0]["holds"] == []
 
 
+def test_read_releases_hold_after_missing_asset(tmp_path: Path) -> None:
+    from liblaf.cherries.records import Store
+
+    store = Store(tmp_path / "store")
+    work = store.start_work("run")
+    (work / "result").write_text("result")
+    store.seal("run", {}, work)
+    with pytest.raises(SystemExit):
+        _cli.main(["--storage", str(store.root), "read", "run", "missing.txt"])
+    assert not store.projection("run")["holds"]
+
+
 def test_local_maintenance_plan_and_apply_are_receipt_bound(
     tmp_path: Path, capsys
 ) -> None:
