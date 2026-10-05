@@ -37,7 +37,12 @@ def _collection_id(args: argparse.Namespace) -> str | None:
 
 
 def _json(value: Any) -> str:
-    return json.dumps(value, indent=2, sort_keys=True, default=str)
+    return json.dumps(
+        value,
+        indent=2,
+        sort_keys=True,
+        default=lambda item: sorted(item) if isinstance(item, set) else str(item),
+    )
 
 
 def _emit(value: Any, args: argparse.Namespace) -> None:
@@ -122,12 +127,15 @@ def _current_quality(store: Any, run_id: str) -> str:
 def _browse_summary(store: Any, run_id: str) -> dict[str, Any]:
     record = store.read_record(run_id).get("record", {})
     item = dict(store.projection(run_id))
+    legacy_notes = [note for note in item.get("notes", []) if note.get("legacy_source")]
+    legacy_note = legacy_notes[-1] if legacy_notes else {}
     item.update(
         {
             "quality": _current_quality(store, run_id),
             "kind": record.get("kind", record.get("mode", "record")),
-            "name": record.get("name"),
+            "name": record.get("name") or legacy_note.get("name"),
             "legacy_origin": record.get("legacy", {}).get("origin"),
+            "legacy_source": legacy_note.get("legacy_source"),
         }
     )
     return item
@@ -178,7 +186,8 @@ def command_browse(args: argparse.Namespace) -> Any:
             for item in records
             if term
             in " ".join(
-                str(item.get(key) or "") for key in ("name", "legacy_origin", "kind")
+                str(item.get(key) or "")
+                for key in ("name", "legacy_origin", "legacy_source", "kind")
             ).casefold()
         ]
     return {"records": records, "imported": imported} if imported else records

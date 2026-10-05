@@ -133,6 +133,8 @@ class Store:
         self._verified_trees: dict[Path, tuple[int, int, int, int, int]] = {}
         self._event_stamp: tuple[tuple[str, int], ...] = ()
         self._events_by_subject: dict[str, list[dict[str, Any]]] = {}
+        self._clock_stamp: tuple[tuple[str, int], ...] | None = None
+        self._observed_clock = 0
 
     @property
     def collection_id(self) -> str:
@@ -914,7 +916,7 @@ class Store:
         return event
 
     def list_attempts(self) -> list[dict[str, Any]]:
-        self.ensure_initialized()
+        self._ensure_readable()
         return [
             self._read_json(path)
             for path in sorted((self.root / "attempts").glob("*.json"))
@@ -928,14 +930,16 @@ class Store:
         _validate_id(subject, "subject")
         machine_path = self.root / "machine.json"
         machine = self._read_json(machine_path)
-        observed_clock = max(
-            (
-                int(self._read_json(path).get("clock", 0))
-                for path in (self.root / "metadata" / "events").glob("*/*.json")
-            ),
-            default=0,
-        )
-        clock = max(int(machine.get("clock", 0)), observed_clock) + 1
+        stamp = self._event_directory_stamp()
+        if stamp != self._clock_stamp:
+            self._observed_clock = max(
+                (
+                    int(self._read_control(path).get("clock", 0))
+                    for path in (self.root / "metadata" / "events").glob("*/*.json")
+                ),
+                default=0,
+            )
+        clock = max(int(machine.get("clock", 0)), self._observed_clock) + 1
         machine["clock"] = clock
         self._atomic_json(machine_path, machine)
         event = {
@@ -955,6 +959,8 @@ class Store:
             / f"{event['event_id']}.json"
         )
         self._atomic_json(path, event)
+        self._observed_clock = clock
+        self._clock_stamp = self._event_directory_stamp()
         return event
 
     def review(self, run_id: str, status: str, note: str = "") -> dict[str, Any]:
@@ -1026,6 +1032,8 @@ class Store:
             "important": False,
             "keep_local": False,
             "reviews": [],
+            "notes": [],
+            "links": [],
         }
         for event in self._events_for(run_id):
             value = event["value"]
@@ -1045,6 +1053,10 @@ class Store:
                 output["keep_local"] = value["value"]
             elif event["kind"] == "review":
                 output["reviews"].append(dict(value))
+            elif event["kind"] == "note":
+                output["notes"].append(dict(value))
+            elif event["kind"] == "link":
+                output["links"].append(dict(value))
         return output
 
     def rebuild_index(self) -> dict[str, Any]:
@@ -1482,13 +1494,7 @@ class Store:
 
     def _events_for(self, run_id: str) -> list[dict[str, Any]]:
         events_root = self.root / "metadata" / "events"
-        stamp = tuple(
-            sorted(
-                (path.name, path.stat().st_mtime_ns)
-                for path in events_root.iterdir()
-                if path.is_dir()
-            )
-        )
+        stamp = self._event_directory_stamp()
         if stamp != self._event_stamp:
             grouped: dict[str, list[dict[str, Any]]] = {}
             for path in events_root.glob("*/*.json"):
@@ -1507,6 +1513,15 @@ class Store:
             }
             self._event_stamp = stamp
         return self._events_by_subject.get(run_id, [])
+
+    def _event_directory_stamp(self) -> tuple[tuple[str, int], ...]:
+        return tuple(
+            sorted(
+                (path.name, path.stat().st_mtime_ns)
+                for path in (self.root / "metadata" / "events").iterdir()
+                if path.is_dir()
+            )
+        )
 
     def _is_locally_resident(self, run_id: str) -> bool:
         locations = [

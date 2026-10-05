@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -488,6 +489,38 @@ def test_global_flags_are_accepted_after_subcommand(
 
     assert _cli.main(["browse", "--json", "--storage", str(tmp_path)]) == 0
     assert '"run_id"' in capsys.readouterr().out
+    monkeypatch.setattr(
+        sys, "argv", ["cherries", "browse", "--json", "--storage", str(tmp_path)]
+    )
+    assert _cli.main() == 0
+    assert '"run_id"' in capsys.readouterr().out
+
+
+def test_migrated_records_are_searchable_by_source_and_emit_json_arrays(
+    tmp_path: Path, capsys
+) -> None:
+    from liblaf.cherries.records import Store
+
+    store = Store(tmp_path / "store")
+    source = tmp_path / "mouthopen"
+    source.mkdir()
+    (source / "result.txt").write_text("result")
+    store.import_legacy(source, "old-exp", run_id="legacy")
+    store.append_event(
+        "note", "legacy", {"legacy_source": str(source), "name": "mouthopen"}
+    )
+    assert (
+        _cli.main(
+            ["browse", "--storage", str(store.root), "--search", "mouthopen", "--json"]
+        )
+        == 0
+    )
+    records = json.loads(capsys.readouterr().out)
+    assert len(records) == 1
+    assert records[0]["name"] == "mouthopen"
+    assert records[0]["legacy_source"] == str(source)
+    assert records[0]["labels"] == []
+    assert records[0]["holds"] == []
 
 
 def test_local_maintenance_plan_and_apply_are_receipt_bound(
