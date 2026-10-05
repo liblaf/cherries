@@ -140,7 +140,7 @@ def capture_source(
                 continue
             path = Path(os.fsdecode(raw))
             source = repo / path
-            if any(
+            if not source.resolve().is_relative_to(repo.resolve()) or any(
                 part
                 in {
                     "data",

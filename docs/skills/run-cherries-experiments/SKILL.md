@@ -83,7 +83,8 @@ original arguments:
 uv run python exp/2026/10/05/mouthopen/src/10-run.py --steps 200
 ```
 
-`BaseConfig` accepts kebab-case flags. Set `CHERRIES_COMET=1` only for intended
+`BaseConfig` accepts kebab-case flags; help and invalid configuration exit before
+recording starts. Set `CHERRIES_COMET=1` only for intended
 Comet observability; it is disabled by default and its SDK is not loaded otherwise.
 
 `input()` accepts a local path, complete `sha256:` file ID, `sha256-tree:` bundle

@@ -506,6 +506,43 @@ class Remote:
                 ):
                     raise IntegrityError("metadata checkpoints disagree on an event")
                 checkpoint_events[relative] = proof
+        verified_events: list[tuple[Path, bytes]] = []
+        # Validate every checkpoint-bound event before installing any record
+        # metadata.  A checkpoint is a single publication boundary, so a bad
+        # event must not leave its otherwise-valid records partially imported.
+        for remote_path, proof in sorted(checkpoint_events.items()):
+            data = self._metadata_bytes(remote_path)
+            if hashlib.sha256(data).hexdigest() != proof.removeprefix("sha256:"):
+                raise IntegrityError("remote event does not match its checkpoint")
+            try:
+                event = json.loads(data)
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise IntegrityError("remote event is invalid") from error
+            if not isinstance(event, Mapping):
+                raise IntegrityError("remote event is invalid")
+            clock = event.get("clock")
+            kind = event.get("kind")
+            subject = event.get("subject")
+            if (
+                not isinstance(event.get("format"), int)
+                or isinstance(event.get("format"), bool)
+                or event["format"] != getattr(store, "format_version", 1)
+                or not isinstance(kind, str)
+                or kind not in _EVENT_KINDS
+                or isinstance(clock, bool)
+                or not isinstance(clock, int)
+                or clock < 0
+                or not isinstance(event.get("value"), Mapping)
+                or not isinstance(subject, str)
+                or not subject
+                or subject in {".", ".."}
+                or "/" in subject
+                or "\\" in subject
+                or event.get("event_id") != remote_path.stem
+                or event.get("machine_id") != remote_path.parts[2]
+            ):
+                raise IntegrityError("remote event is invalid")
+            verified_events.append((remote_path, data))
         candidates = (
             {run_id}
             if run_id
@@ -601,43 +638,9 @@ class Remote:
                     data["record"], data["manifest"], data["complete"]
                 )
                 known.add(identifier)
-        verified_events: list[tuple[Path, bytes]] = []
         # Marker-last checkpoints are the publication boundary for event
         # metadata too.  Files copied before a new checkpoint are ordinary
         # in-progress publication state and are deliberately ignored.
-        for remote_path, proof in sorted(checkpoint_events.items()):
-            data = self._metadata_bytes(remote_path)
-            if hashlib.sha256(data).hexdigest() != proof.removeprefix("sha256:"):
-                raise IntegrityError("remote event does not match its checkpoint")
-            try:
-                event = json.loads(data)
-            except json.JSONDecodeError as error:
-                raise IntegrityError("remote event is invalid") from error
-            if not isinstance(event, Mapping):
-                raise IntegrityError("remote event is invalid")
-            clock = event.get("clock")
-            kind = event.get("kind")
-            subject = event.get("subject")
-            if (
-                not isinstance(event.get("format"), int)
-                or isinstance(event.get("format"), bool)
-                or event["format"] != getattr(store, "format_version", 1)
-                or not isinstance(kind, str)
-                or kind not in _EVENT_KINDS
-                or isinstance(clock, bool)
-                or not isinstance(clock, int)
-                or clock < 0
-                or not isinstance(event.get("value"), Mapping)
-                or not isinstance(subject, str)
-                or not subject
-                or subject in {".", ".."}
-                or "/" in subject
-                or "\\" in subject
-                or event.get("event_id") != remote_path.stem
-                or event.get("machine_id") != remote_path.parts[2]
-            ):
-                raise IntegrityError("remote event is invalid")
-            verified_events.append((remote_path, data))
         events = 0
         for remote_path, data in verified_events:
             events += store.import_metadata_file(remote_path, data)

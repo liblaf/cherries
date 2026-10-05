@@ -68,10 +68,12 @@ def main[T](
         cherries.main(experiment, profile="debug")
         ```
     """
+    # CLI help and invalid configuration must exit before creating work or
+    # recording a successful SystemExit(0) as an experiment.
+    args, kwargs = _make_args(main)
     run: core.Run = start(profile=profile)
     try:
         with _capture_stdio(run):
-            args, kwargs = _make_args(main)
             configs: list[pydantic.BaseModel] = [
                 arg
                 for arg in (*args, *kwargs.values())

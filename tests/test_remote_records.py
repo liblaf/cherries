@@ -694,6 +694,7 @@ def test_metadata_import_rejects_checkpointed_event_at_a_second_name(
 
     with pytest.raises(IntegrityError, match="remote event is invalid"):
         Remote(remote_root).import_metadata(target)
+    assert target.list_records() == []
     assert not list((target.root / "metadata" / "events").glob("*/*.json"))
 
 
@@ -751,6 +752,7 @@ def test_metadata_import_rejects_malformed_checkpointed_event_before_install(
 
     with pytest.raises(IntegrityError, match="remote event is invalid"):
         Remote(remote_root).import_metadata(target)
+    assert target.list_records() == []
     assert not list((target.root / "metadata" / "events").glob("*/*.json"))
 
 

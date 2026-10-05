@@ -19,6 +19,40 @@ def _seal(store: Store, run_id: str) -> None:
     store.seal(run_id, {}, work)
 
 
+def _remote_receipt(
+    record_value: dict[str, object],
+    *,
+    record_format: object = 1,
+    manifest_format: object = 1,
+) -> tuple[dict[str, object], dict[str, object], dict[str, str]]:
+    manifest: dict[str, object] = {
+        "format": manifest_format,
+        "run_id": "run",
+        "files": [],
+    }
+    manifest_digest = hashlib.sha256(canonical_json(manifest)).hexdigest()
+    record: dict[str, object] = {
+        "format": record_format,
+        "run_id": "run",
+        "collection_id": "collection",
+        "machine_id": "machine-a",
+        "record": record_value,
+        "parents": [],
+        "manifest_digest": f"sha256:{manifest_digest}",
+    }
+    record_digest = hashlib.sha256(canonical_json(record)).hexdigest()
+    complete = {
+        "run_id": "run",
+        "record_digest": f"sha256:{record_digest}",
+        "manifest_digest": f"sha256:{manifest_digest}",
+        "root_digest": "sha256:"
+        + hashlib.sha256(
+            canonical_json({"record": record_digest, "manifest": manifest_digest})
+        ).hexdigest(),
+    }
+    return record, manifest, complete
+
+
 def test_start_work_recovers_only_a_missing_pending_intent(tmp_path: Path) -> None:
     store = Store(tmp_path / "store")
     work = store.start_work("run", {"pid": 1234, "purpose": "test"})
@@ -158,6 +192,94 @@ def test_import_metadata_event_rejects_poisoned_control_fields(
         store.import_metadata_file(relative, canonical_json(value))
 
     assert not (store.root / relative).exists()
+
+
+@pytest.mark.parametrize(
+    "descriptor",
+    [
+        [],
+        {"format": True, "kind": "cherries-tree", "entries": [], "directories": []},
+        {
+            "format": 1,
+            "kind": "cherries-tree",
+            "entries": [
+                {"path": "result.txt", "asset_id": "sha256:" + "a" * 64, "size": True}
+            ],
+            "directories": [],
+        },
+    ],
+)
+def test_import_tree_object_rejects_invalid_nested_schema_before_write(
+    tmp_path: Path, descriptor: object
+) -> None:
+    store = Store(tmp_path / "store")
+    data = canonical_json(descriptor)
+    asset_id = "sha256-tree:" + hashlib.sha256(b"cherries-tree-v1\0" + data).hexdigest()
+    source = tmp_path / "tree.json"
+    source.write_bytes(data)
+
+    with pytest.raises(IntegrityError):
+        store.import_tree_object(source, asset_id)
+
+    assert not (store.root / "objects" / "sha256-tree").exists()
+
+
+@pytest.mark.parametrize("data", [b"{not-json", b"\xff"])
+def test_import_tree_object_rejects_invalid_bytes_before_write(
+    tmp_path: Path, data: bytes
+) -> None:
+    store = Store(tmp_path / "store")
+    asset_id = "sha256-tree:" + hashlib.sha256(b"cherries-tree-v1\0" + data).hexdigest()
+    source = tmp_path / "tree.json"
+    source.write_bytes(data)
+
+    with pytest.raises(IntegrityError, match="not valid JSON"):
+        store.import_tree_object(source, asset_id)
+
+    assert not (store.root / "objects" / "sha256-tree").exists()
+
+
+def test_import_remote_record_rejects_scalar_binding_before_publish(
+    tmp_path: Path,
+) -> None:
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+    record, manifest, complete = _remote_receipt({"bundles": ["not-a-binding"]})
+
+    with pytest.raises(IntegrityError, match="binding must be an object"):
+        target.import_remote_record(record, manifest, complete)
+
+    assert not (target.root / "records" / "run").exists()
+
+
+@pytest.mark.parametrize("bindings", [None, {}])
+def test_import_remote_record_rejects_nonlist_bindings_before_publish(
+    tmp_path: Path, bindings: object
+) -> None:
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+    record, manifest, complete = _remote_receipt({"input_bindings": bindings})
+
+    with pytest.raises(IntegrityError, match="bindings must be lists"):
+        target.import_remote_record(record, manifest, complete)
+
+    assert not (target.root / "records" / "run").exists()
+
+
+@pytest.mark.parametrize(("record_format", "manifest_format"), [(True, 1), (1, True)])
+def test_import_remote_record_rejects_boolean_format_before_publish(
+    tmp_path: Path, record_format: object, manifest_format: object
+) -> None:
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+    record, manifest, complete = _remote_receipt(
+        {}, record_format=record_format, manifest_format=manifest_format
+    )
+
+    with pytest.raises(IntegrityError, match="invalid format"):
+        target.import_remote_record(record, manifest, complete)
+
+    assert not (target.root / "records" / "run").exists()
 
 
 def test_remote_record_must_bind_manifest_and_machine_identity(tmp_path: Path) -> None:
