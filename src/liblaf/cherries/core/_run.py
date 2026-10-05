@@ -86,7 +86,7 @@ class Run:
     _file_handler: logging.Handler | None = attrs.field(default=None, repr=False)
     _source_evidence: dict[str, Any] = attrs.field(factory=dict, repr=False)
     _settings: dict[str, Any] = attrs.field(factory=dict, repr=False)
-    _thread_ids: set[int | None] = attrs.field(factory=set, repr=False)
+    _threads: tuple[threading.Thread, ...] = attrs.field(factory=tuple, repr=False)
     _child_pids: set[int] = attrs.field(factory=set, repr=False)
 
     plugins: PluginManager = attrs.field(factory=PluginManager)
@@ -236,7 +236,7 @@ class Run:
         )
         capture_environment(self.project_dir, self.working_dir / "environment")
         self.plugins.delegate("start")
-        self._thread_ids = {thread.ident for thread in threading.enumerate()}
+        self._threads = tuple(threading.enumerate())
         self._child_pids = self._children()
         self.log_other("cherries/cmd", shlex.join(sys.orig_argv))
         self.log_other(
@@ -257,7 +257,13 @@ class Run:
     def _join_writers(self) -> None:
         deadline = time.monotonic() + 5
         for thread in threading.enumerate():
-            if thread.ident in self._thread_ids:
+            # Foreign native threads have unjoinable bookkeeping objects.
+            # The experiment must synchronize native work before returning;
+            # long-lived native housekeeping threads are not managed writers.
+            if isinstance(thread, threading._DummyThread):  # noqa: SLF001
+                continue
+            # OS identifiers can be reused after an existing thread exits.
+            if any(thread is existing for existing in self._threads):
                 continue
             thread.join(max(0, deadline - time.monotonic()))
             if thread.is_alive():
