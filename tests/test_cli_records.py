@@ -184,6 +184,46 @@ def test_browse_exposes_legacy_origin_and_searches_name_and_origin(
     assert found[0]["legacy_origin"] == "apple/2023-baseline"
 
 
+def test_run_notes_evolve_without_creating_analysis_dependencies(
+    tmp_path: Path, capsys
+) -> None:
+    """Run-scoped Markdown memories remain append-only metadata events."""
+    from liblaf.cherries.records import Store
+
+    root = tmp_path / "store"
+    store = Store(root, machine_id="machine")
+    store.ensure_initialized("collection")
+    _seal(store, "source", {"name": "experiment"})
+    controls = {
+        name: (root / "records" / "source" / name).read_bytes()
+        for name in ("record.json", "manifest.json", "complete.json")
+    }
+    note = tmp_path / "RUN.md"
+    note.write_text("# First discussion\n")
+    assert (
+        _cli.main(["--storage", str(root), "note", "source", "--file", str(note)]) == 0
+    )
+    note.write_text("# Revised discussion\n")
+    assert (
+        _cli.main(["--storage", str(root), "note", "source", "--file", str(note)]) == 0
+    )
+
+    capsys.readouterr()
+    assert _cli.main(["--storage", str(root), "--json", "show", "source"]) == 0
+    shown = json.loads(capsys.readouterr().out)
+    assert [item["value"] for item in shown["projection"]["notes"]] == [
+        "# First discussion\n",
+        "# Revised discussion\n",
+    ]
+    assert shown["projection"]["notes"][-1]["value"] == "# Revised discussion\n"
+    assert store.list_records() == ["source"]
+    assert store.read_record("source")["parents"] == []
+    assert store.projection("source")["holds"] == set()
+    assert {
+        name: (root / "records" / "source" / name).read_bytes() for name in controls
+    } == controls
+
+
 def test_analysis_save_registers_parents_and_only_selected_outputs(
     tmp_path: Path, monkeypatch
 ) -> None:
