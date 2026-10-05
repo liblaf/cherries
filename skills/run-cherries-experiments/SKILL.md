@@ -1,112 +1,221 @@
 ---
 name: run-cherries-experiments
-description: Create, modify, run, inspect, analyze, and report Python experiments that use liblaf.cherries. Use when Codex needs to work under exp/YYYY/mm/dd/group-name/, write or edit numbered scripts in src/, run them with CHERRIES_NAME and CHERRIES_TAGS, inspect Cherries/Comet logs and generated assets, or write Markdown reports in docs/.
+description: Create, run, inspect, archive, restore, and analyze Python experiments recorded by liblaf.cherries in a separate experiment repository with immutable local and remote CAS records.
 ---
 
 # Run Cherries Experiments
 
-## Workflow
+Use this skill for Cherries experiments and saved records. Read the Cherries
+checkout's `docs/README.md` before relying on a command; installed versions may
+not yet include every documented capability.
 
-Use Cherries as the experiment runner and the run evidence source.
+## Repository boundary
 
-1. Turn the user's request into an experiment group:
+Work in the separate experiment superproject, for example:
 
-   ```text
-   exp/<YYYY>/<mm>/<dd>/<group-name>/
-   ├── src/10-<script-name>.py
-   ├── data/
-   ├── logs/
-   ├── tmp/
-   └── docs/10-<report-name>.md
-   ```
+```text
+phace-exp/
+  cherries.toml  pyproject.toml  uv.lock
+  libs/apple/  libs/melon/       # Git submodules
+  exp/YYYY/mm/dd/study/
+    src/  configs/  fixtures/  docs/  analysis/
+```
 
-2. Use the current local date unless the user gives another date. Use `10-` for the first script/report in a group, or follow the next numbered local convention when extending an existing group.
-3. Create or modify the script under `src/` before running it. Keep outputs under Cherries-managed paths instead of ad hoc repo paths.
-4. Run the script with a human-readable `CHERRIES_NAME` and comma-separated `CHERRIES_TAGS`.
-5. Wait for the process and Cherries shutdown hooks to finish. Preserve the terminal output; if it is unavailable, inspect `logs/*.log` and `.cherries/runs/**/logs/*.log`.
-6. Read the generated `data/`, `tmp/`, `logs/`, and relevant `.cherries/runs/` snapshot files.
-7. Write the report under `docs/` with the command, Comet/Cherries summary, observed outputs, analysis, limitations, and reproducibility notes.
+Keep authored study source, configuration, reports, curated fixtures, and
+submodule gitlinks in Git. Use LFS only for selected curated/reviewable assets.
+Generated inputs, outputs, logs, meshes, and checkpoints belong in the Cherries
+store, never in Apple or Melon repositories and never in broad LFS patterns.
 
-## Script Pattern
+Use a configured local data volume, not `/tmp`:
 
-Prefer this shape:
+```toml
+# cherries.local.toml (normally Git ignored)
+[collection]
+storage = "/data/cherries/phace-exp"
+```
+
+Initialize a new collection explicitly:
+
+```bash
+cherries --project-dir . --storage /data/cherries/phace-exp init \
+  --collection-id "<collection-uuid>"
+```
+
+`phace-exp` currently has local storage at `/home/liblaf/Data/cherries/phace-exp`
+and no configured archive remote. Use `--storage` and do not invoke remote
+archive/sync through `--remote main` until `archive.main.path` is configured.
+
+## Sealed daily experiment
+
+Run normal Python or `uv run python`; no bootstrap, relaunch, daemon, manual
+save, or automatic Git commit is involved.
 
 ```python
-import logging
-from pathlib import Path
-
 from liblaf import cherries
-
-logger = logging.getLogger(__name__)
 
 
 class Config(cherries.BaseConfig):
-    output: Path = cherries.output("result.txt", mkdir=True)
-    steps: int = 10
+    mesh: str = "sha256:<full-digest>"  # raw source declaration
+    steps: int = 200
 
 
 def main(cfg: Config) -> None:
-    for step in range(cfg.steps):
-        cherries.set_step(step)
-        cherries.log_metrics({"train/loss": 1 / (step + 1)})
-
-    cfg.output.write_text("done\n")
-    logger.info("Wrote %s", cfg.output)
+    mesh = cherries.input(cfg.mesh, name="mesh.vtu")
+    result = cherries.output("solution.txt")
+    cherries.temp("solver-cache")
+    result.write_text(f"{mesh.name}: {cfg.steps}\n")
+    cherries.log_metric("steps", cfg.steps)
 
 
 if __name__ == "__main__":
     cherries.main(main)
 ```
 
-Use these Cherries conventions:
-
-- Use `cherries.BaseConfig` for typed settings; `cherries.main()` instantiates it and logs the model as parameters.
-- Pass config overrides as kebab-case CLI flags, for example `--learning-rate 0.01` for a `learning_rate` field.
-- Use normal `logging` for progress and notes; Cherries writes the run log under `logs/`.
-- Use `cherries.input()` for existing inputs under `data/`; it logs immediately.
-- Use `cherries.output()` for outputs under `data/` and `cherries.temp()` for temporary artifacts under `tmp/`; they queue paths and log existing files at run end.
-- Use `cherries.log_asset()`, `cherries.log_input()`, `cherries.log_output()`, or `cherries.log_temp()` only when logging an already-created path outside the helper defaults.
-- Use `cherries.set_step()`, `cherries.log_metric()`, and `cherries.log_metrics()` for scalar metrics. Nested metric mappings flatten with `/`, such as `train/loss`.
-- Do not hardcode `profile="debug"` in the script. Select debug/default behavior from the run command.
-
-## Run Commands
-
-Run from the experiment group so Cherries records a readable command and resolves paths below that group:
+Keep module scope passive. Do not read data, instantiate a solver/GPU context,
+create random experiment state, parse live inputs, or call Cherries asset helpers
+outside `main`. Config defaults must be raw strings or paths; helpers require an
+active run. Invoke it as ordinary Python, preserving original arguments:
 
 ```bash
-cd exp/<YYYY>/<mm>/<dd>/<group-name>
-CHERRIES_NAME="Human readable run name" CHERRIES_TAGS="tag-a,tag-b" uv run python src/10-<script-name>.py --example-config value
+uv run python exp/2026/10/05/mouthopen/src/10-run.py --steps 200
 ```
 
-For a quick local smoke run, add `DEBUG=1` to select the debug profile. Debug keeps local snapshots and logs, but disables remote Comet recording and Git commits. For the report-worthy run that should produce the normal Comet.ml summary, omit `DEBUG=1` unless the user asked for a local-only run.
+`BaseConfig` accepts kebab-case flags. Set `CHERRIES_COMET=1` only for intended
+Comet observability; it is disabled by default and its SDK is not loaded otherwise.
 
-If `uv run` is unsuitable in the target repo, use the active Python interpreter, but still run the script directly and keep the same environment variables.
+`input()` accepts a local path, complete `sha256:` file ID, `sha256-tree:` bundle
+ID, or `run:<record-id>/<logical-path>`. It verifies and stages an independent
+copy under `inputs/`, records the selected producer, and registers lineage before
+reading. Pass `source_run=<record-id>` to restrict a digest's provenance.
+`output()` declares a required path under `outputs/`; `log_output()` copies an
+existing external output there. `temp()` returns a disposable `scratch/` path.
 
-## Inspect Results
+Never modify staged inputs during `main`: detection leaves incomplete work and
+raises instead of sealing it. Non-finite scientific metric values are retained
+for review as `NaN`, `Infinity`, or `-Infinity` strings.
 
-After the run exits:
+Cherries captures entry source, HEADs, binary diffs, selected untracked source,
+runtime evidence, parameters, input bindings, logs, metrics, and declared
+outputs. It captures after ordinary imports at the `main` boundary, so record
+source stability but never claim `replay_verified`. Keep referenced Git bases
+available. A successful run seals canonical SHA-256 objects and a small immutable
+record. A missing declared output or recording error retains the work stage. An
+execution failure records diagnostics and may discard only an unsealed local
+payload with no dependency or hold.
 
-- Confirm expected outputs exist under `data/` and temporary artifacts under `tmp/`.
-- Read `logs/10-<script-name>.log`; also inspect `.cherries/runs/` when local snapshots contain copied source, logs, or assets needed for the report.
-- Use actual generated files as evidence. Do not rely only on terminal summaries when artifacts are available.
-- If the process appears idle near Comet shutdown, verify whether files and logs have already been written before deciding the run failed.
+## Inspect records and archive
 
-## Report
+Put global options before the command. Use `--json` when output becomes input to
+a script.
 
-Write the report at:
-
-```text
-exp/<YYYY>/<mm>/<dd>/<group-name>/docs/10-<report-name>.md
+```bash
+cherries --storage /data/cherries/phace-exp --json browse --quality unreviewed
+cherries --storage /data/cherries/phace-exp browse --failed
+cherries --storage /data/cherries/phace-exp browse --label mouthopen
+cherries --storage /data/cherries/phace-exp browse --asset sha256:<digest>
+cherries --storage /data/cherries/phace-exp browse --search mouthopen
+cherries --storage /data/cherries/phace-exp browse --used-in weekly/2026-10-05
+cherries --storage /data/cherries/phace-exp show <record-id>
+cherries --storage /data/cherries/phace-exp read <record-id> RUN.md
+cherries --storage /data/cherries/phace-exp path <record-id> outputs/solution.txt
+cherries --storage /data/cherries/phace-exp path --release <lease-id>
+cherries --storage /data/cherries/phace-exp archive <record-id> --remote /archive/cherries --evict
+cherries --storage /data/cherries/phace-exp restore <record-id> --remote /archive/cherries
 ```
 
-Include these sections when applicable:
+`browse` uses the latest review quality; `--used-in` includes the named analysis
+and its direct source parents. `--search` matches name, kind, and legacy origin.
+`path` materializes a declared file or directory plus required `.series`
+companions, and creates a durable read lease. A `sha256-tree` must be declared by
+the selected record; it restores its full topology, including declared empty
+directories. `restore` verifies the full record under a temporary restore hold,
+then creates a locally restored resident view.
 
-- Purpose: what the experiment tested and why.
-- Command: exact working directory, environment variables, script command, and important CLI overrides.
-- Summary: the `Comet.ml Experiment Summary` block from terminal output or logs when present; include any Cherries metadata such as name, tags, entrypoint, experiment directory, Git SHA, and Comet URL.
-- Outputs and assets: generated files, tables, plots, model artifacts, logs, and where they live.
-- Results: metrics, qualitative observations, and comparisons with baselines or expectations.
-- Analysis: interpretation, anomalies, failure modes, limitations, and what evidence supports the conclusion.
-- Reproducibility: current git state when relevant, dependency/runtime notes, random seeds, and follow-up experiments.
+For Python follow-up work, use a closeable reader hold:
 
-Write the report after reading the assets and logs, not from the intended design alone.
+```python
+with cherries.open_run("<record-id>") as saved:
+    result = saved.path("outputs/solution.txt")
+```
+
+Pass `workspace=Path("analysis/compare")` to attach the source to an existing
+analysis workspace hold; otherwise close the accessor or use a context manager.
+
+`cherries rerun <id> --prepare-only --workspace replay/<id>` reconstructs a
+fresh workspace from saved Git HEADs, binary diffs, selected untracked source,
+captured entrypoint, and input mapping. It requires local captured Git bases and
+a source-stable experiment receipt. Without `--prepare-only`, it executes that
+workspace through `uv run` (with `--locked` when `uv.lock` exists). It makes a
+new attempt; `replay_verified` stays false until scientific checks establish it.
+Close a prepared workspace with `cherries rerun --close <workspace>`.
+
+Archive is foreground only. It verifies each local object, publishes the complete
+closure, read-back verifies bytes, and publishes remote `commit.json` last. A
+local-directory remote has an atomic filesystem boundary. Generic rclone remotes
+require `--coordinated`, which asserts real external serialization of collection
+publishers; do not use a marker-file lock or stale-owner takeover. Use
+`cherries sync --remote REMOTE [--coordinated]` to transfer append-only metadata.
+Sync writes SHA-bound control metadata, events, and a payload-free checkpoint
+marker last. Checkpoint import merges selected receipt metadata with its required
+ancestor graph only; it does not prove remote payload availability. Failed attempts
+in `browse --failed` are local diagnostics and are never published or imported.
+
+`--evict` releases only an eligible materialized local view after verification.
+Other resident records, active work, reader/analysis holds, and `--keep-local`
+block it. `--important` protects logical retention rather than a local view. A
+shared tree object keeps its full member closure while any resident local record
+needs that tree.
+
+## Review and lightweight analysis
+
+A successful run starts `unreviewed`. Review is subjective and separate from
+execution or scientific validation. Labels and reviews append metadata events;
+they do not change immutable receipts or CAS objects, and `bad` never auto-
+discards a successful run.
+
+```bash
+cherries review <id> --quality good --note "Useful comparison"
+cherries label add <id> mouthopen promising
+cherries label remove <id> promising
+cherries mark <id> --important
+cherries mark <id> --keep-local
+cherries note <id> --file findings.md
+cherries link <id> --git <commit>
+cherries analysis new analysis/compare --source <id>
+cherries analysis save analysis/compare --output out/figure.png --used-in weekly/2026-10-05
+cherries analysis close analysis/compare
+```
+
+Use a current development environment, ParaView, or another interactive tool for
+follow-up work. Add selected sources to the analysis; while open, its workspace
+holds them. Save `RUN.md`, `analysis.json`, `src/`, and only explicit `out/...`
+outputs. Save ParaView settings and displayed asset references when useful. A
+saved analysis is a lightweight dependent record and protects every source; it
+does not promise strict solver replay. Notes and Git links are append-only events
+and synchronize with the other metadata.
+
+Local single-machine maintenance requires a pause receipt and saved plan:
+
+```bash
+cherries maintenance pause
+cherries discard <id> --plan
+cherries discard --apply <plan-path>
+cherries prune --plan
+cherries prune --apply <plan-path>
+cherries maintenance resume <pause-token>
+```
+
+Pause freezes reference creation and fails closed with active/pending work,
+legacy provenance, or foreign participants. Plans bind to the local pause receipt
+and inventory. This does not authorize remote or distributed deletion; never
+replace it with rclone cleanup or remove a record with dependents. A retired child
+still blocks its parent. Shared tree-object eviction protects its full closure
+while any resident local record still needs it.
+
+## Evidence and reporting
+
+Report actual record IDs, commands, record/manifest evidence, generated asset
+paths, and observed metrics. Distinguish an execution receipt, validation result,
+subjective review, and replay claim. Do not call a work folder a saved record
+until sealing succeeds, and do not describe a migration as complete without its
+verified receipt and the migration owner’s confirmation.

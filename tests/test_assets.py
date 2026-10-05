@@ -1,6 +1,6 @@
+# Copyright (c) 2026 liblaf
 from __future__ import annotations
 
-import logging
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -13,7 +13,7 @@ from liblaf.cherries.core.assets.bundle import BundleRegistry
 
 class RecordingAssetPlugin:
     def __init__(self) -> None:
-        self.calls: list[tuple[Path, dict[str, Any] | None, bool]] = []
+        self.calls: list[tuple[Path, Any, bool]] = []
 
     def log_asset(
         self,
@@ -22,86 +22,82 @@ class RecordingAssetPlugin:
         metadata: Mapping[str, Any] | None = None,
         report: bool = True,
     ) -> None:
-        self.calls.append(
-            (path, dict(metadata) if metadata is not None else None, report)
-        )
+        self.calls.append((path, metadata, report))
 
 
-def manager_for(tmp_path: Path, plugin: RecordingAssetPlugin) -> AssetsManager:
+def manager_for(tmp_path: Path) -> AssetsManager:
     return AssetsManager(
-        working_dir=tmp_path,
-        plugins=plugin,
+        working_dir=tmp_path / "work",
+        plugins=RecordingAssetPlugin(),
+        active=True,
         bundles=BundleRegistry(registry=[]),
     )
 
 
-def test_input_logs_existing_data_path_immediately(tmp_path: Path) -> None:
-    plugin = RecordingAssetPlugin()
-    manager = manager_for(tmp_path, plugin)
-    raw = tmp_path / "data" / "raw.csv"
-    raw.parent.mkdir()
-    raw.write_text("x,y\n1,2\n")
-
-    result = manager.input("raw.csv", metadata={"split": "train"})
-
-    assert result == raw
-    assert manager.summary.inputs == [raw]
-    assert plugin.calls == [(raw, {"type": "input", "split": "train"}, True)]
+def test_input_is_an_independent_verified_copy(tmp_path: Path) -> None:
+    manager = manager_for(tmp_path)
+    source = tmp_path / "source.csv"
+    source.write_text("x,y\n1,2\n")
+    staged = manager.input(source, name="nested/mesh.csv")
+    assert staged == tmp_path / "work/inputs/nested/mesh.csv"
+    assert staged.read_bytes() == source.read_bytes()
+    assert not staged.samefile(source)
+    staged.write_text("different")
+    assert source.read_text() == "x,y\n1,2\n"
 
 
-def test_output_and_temp_paths_are_queued_until_end(tmp_path: Path) -> None:
-    plugin = RecordingAssetPlugin()
-    manager = manager_for(tmp_path, plugin)
-
-    output = manager.output("nested/result.txt", metadata={"format": "text"})
-    temp = manager.temp("scratch/cache.bin", mkdir=False)
-
-    assert output.parent.is_dir()
-    assert plugin.calls == []
-
-    output.write_text("ok\n")
-    temp.parent.mkdir(parents=True)
-    temp.write_bytes(b"ok")
-    manager.end()
-
-    assert manager.summary.outputs == [output]
-    assert manager.summary.temps == [temp]
-    assert plugin.calls == [
-        (output, {"type": "output", "format": "text"}, True),
-        (temp, {"type": "temp"}, True),
-    ]
-
-
-def test_missing_queued_artifact_warns_without_reporting(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture
+def test_required_missing_output_fails_and_scratch_is_disposable(
+    tmp_path: Path,
 ) -> None:
-    plugin = RecordingAssetPlugin()
-    manager = manager_for(tmp_path, plugin)
-    missing = manager.output("missing.txt", mkdir=False)
-
-    with caplog.at_level(
-        logging.WARNING, logger="liblaf.cherries.core.assets._manager"
-    ):
+    manager = manager_for(tmp_path)
+    output = manager.output("result.txt")
+    scratch = manager.temp("unused-cache.bin")
+    with pytest.raises(FileNotFoundError, match="Required output"):
         manager.end()
+    output.write_text("ok")
+    manager.end()
+    assert manager.summary.outputs == [output]
+    assert not scratch.exists()
+    assert manager.summary.temps == []
 
-    assert missing.exists() is False
-    assert manager.summary.outputs == []
-    assert plugin.calls == []
-    assert f"No such file or directory: {missing}" in caplog.text
+
+def test_helpers_outside_main_fail(tmp_path: Path) -> None:
+    manager = manager_for(tmp_path)
+    manager.active = False
+    with pytest.raises(RuntimeError, match="inside main"):
+        manager.output("result.txt")
 
 
-def test_log_asset_reports_primary_and_silent_bundle_companions(tmp_path: Path) -> None:
-    plugin = RecordingAssetPlugin()
-    manager = AssetsManager(working_dir=tmp_path, plugins=plugin)
-    mesh = tmp_path / "mesh.vtu"
-    landmarks = tmp_path / "mesh.landmarks.json"
-    mesh.write_text("<VTKFile />\n")
-    landmarks.write_text("{}\n")
+def test_input_rejects_unhydrated_lfs_pointer(tmp_path: Path) -> None:
+    pointer = tmp_path / "mesh.vtu"
+    pointer.write_text(
+        "version https://git-lfs.github.com/spec/v1\noid sha256:"
+        + "0" * 64
+        + "\nsize 1000\n"
+    )
+    with pytest.raises(ValueError, match="unhydrated Git LFS"):
+        manager_for(tmp_path).input(pointer)
 
-    manager.log_output(mesh, metadata={"kind": "mesh"})
 
-    assert manager.summary.outputs == [mesh]
-    assert plugin.calls == [
-        (mesh, {"type": "output", "kind": "mesh"}, True),
-        (landmarks, {"type": "output", "kind": "mesh"}, False),
-    ]
+@pytest.mark.parametrize("name", ["../outside", "/absolute"])
+def test_output_rejects_escaping_paths(tmp_path: Path, name: str) -> None:
+    with pytest.raises(ValueError, match="contained relative"):
+        manager_for(tmp_path).output(name)
+
+
+def test_required_series_companions_are_copied_and_missing_fails(
+    tmp_path: Path,
+) -> None:
+    manager = manager_for(tmp_path)
+    manager.bundles = BundleRegistry()
+    series = tmp_path / "mesh.series"
+    series.write_text(
+        '{"file-series-version":"1.0","files":[{"name":"mesh-0.vtu","time":0}]}'
+    )
+    with pytest.raises(FileNotFoundError, match="companion"):
+        manager.input(series)
+    (tmp_path / "mesh-0.vtu").write_text("mesh")
+    manager = manager_for(tmp_path / "second")
+    manager.bundles = BundleRegistry()
+    staged = manager.input(series)
+    assert (staged.parent / "mesh-0.vtu").read_text() == "mesh"

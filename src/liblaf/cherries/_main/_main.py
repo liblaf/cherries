@@ -1,7 +1,11 @@
+# Copyright (c) 2026 liblaf
 import asyncio
+import contextlib
 import inspect
-from collections.abc import Awaitable, Callable, Mapping, Sequence
+import sys
+from collections.abc import Awaitable, Callable, Iterator, Mapping, Sequence
 from inspect import Parameter
+from pathlib import Path
 from typing import Any, overload
 
 import pydantic
@@ -53,11 +57,11 @@ def main[T](
 
         class Config(cherries.BaseConfig):
             name: str = "world"
-            output: Path = cherries.output("hello.txt", mkdir=True)
 
 
         def experiment(cfg: Config) -> None:
-            cfg.output.write_text(f"Hello, {cfg.name}!\\n")
+            output = cherries.output("hello.txt")
+            output.write_text(f"Hello, {cfg.name}!\\n")
             cherries.log_metric("message_length", len(cfg.name))
 
 
@@ -65,22 +69,62 @@ def main[T](
         ```
     """
     run: core.Run = start(profile=profile)
-    args, kwargs = _make_args(main)
-    configs: list[pydantic.BaseModel] = [
-        arg for arg in (*args, *kwargs.values()) if isinstance(arg, pydantic.BaseModel)
-    ]
-    for config in configs:
-        run.log_params(config.model_dump(mode="json"))
     try:
-        result: Any = main(*args, **kwargs)
-        if asyncio.iscoroutine(result):
-            result: Any = asyncio.run(result)
+        with _capture_stdio(run):
+            args, kwargs = _make_args(main)
+            configs: list[pydantic.BaseModel] = [
+                arg
+                for arg in (*args, *kwargs.values())
+                if isinstance(arg, pydantic.BaseModel)
+            ]
+            original_configs = [config.model_dump(mode="json") for config in configs]
+            for value in original_configs:
+                run.log_params(value)
+            result: Any = main(*args, **kwargs)
+            if asyncio.iscoroutine(result):
+                result = asyncio.run(result)
+            for config, original in zip(configs, original_configs, strict=True):
+                resolved = config.model_dump(mode="json")
+                if resolved != original:
+                    run.log_params(resolved)
     except BaseException as exc:
         run.end(exc=exc)
         raise
     else:
         run.end()
         return result
+
+
+class _Tee:
+    def __init__(self, original: Any, stream: Any) -> None:
+        self.original = original
+        self.stream = stream
+
+    def write(self, text: str) -> int:
+        self.original.write(text)
+        return self.stream.write(text)
+
+    def flush(self) -> None:
+        self.original.flush()
+        self.stream.flush()
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.original, name)
+
+
+@contextlib.contextmanager
+def _capture_stdio(run: core.Run) -> Iterator[None]:
+    if not getattr(run, "active", False):
+        yield
+        return
+    logs = Path(run.working_dir) / "logs"
+    with (
+        (logs / "stdout.log").open("w") as stdout,
+        (logs / "stderr.log").open("w") as stderr,
+        contextlib.redirect_stdout(_Tee(sys.stdout, stdout)),
+        contextlib.redirect_stderr(_Tee(sys.stderr, stderr)),
+    ):
+        yield
 
 
 def _make_args(func: Callable) -> tuple[Sequence[Any], Mapping[str, Any]]:

@@ -1,11 +1,17 @@
+# Copyright (c) 2026 liblaf
 from __future__ import annotations
 
 import functools
+import json
 import logging
+import math
 import os
 import shlex
 import sys
+import threading
+import time
 import traceback
+import uuid
 from collections.abc import Iterator, Mapping
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +24,9 @@ import polars as pl
 from environs import env
 from slugify import slugify
 
+from liblaf.cherries._capture import capture_environment, capture_source
+from liblaf.cherries._settings import load_settings, storage_root
+from liblaf.cherries.records import Store
 from liblaf.cherries.utils import GitUrlParsed, giturlparse, relative_or_absolute
 
 from .assets import AssetPluginProtocol, AssetsManager
@@ -32,6 +41,16 @@ if TYPE_CHECKING:
 logger: logging.Logger = logging.getLogger(__name__)
 
 _PATH_SKIP_NAMES: set[str] = {"exp", "src"}
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, float) and not math.isfinite(value):
+        return "NaN" if math.isnan(value) else "Infinity" if value > 0 else "-Infinity"
+    if isinstance(value, Mapping):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    return value
 
 
 @attrs.define
@@ -58,6 +77,17 @@ class Run:
 
     def _default_params(self) -> ParamsManager:
         return ParamsManager(plugins=cast("ParamPluginProtocol", self.plugins))
+
+    store_root: Path | None = None
+    run_id: str = attrs.field(factory=lambda: str(uuid.uuid4()))
+    store: Store | None = attrs.field(default=None, repr=False)
+    active: bool = False
+    record_result: dict[str, Any] | None = None
+    _file_handler: logging.Handler | None = attrs.field(default=None, repr=False)
+    _source_evidence: dict[str, Any] = attrs.field(factory=dict, repr=False)
+    _settings: dict[str, Any] = attrs.field(factory=dict, repr=False)
+    _thread_ids: set[int | None] = attrs.field(factory=set, repr=False)
+    _child_pids: set[int] = attrs.field(factory=set, repr=False)
 
     plugins: PluginManager = attrs.field(factory=PluginManager)
     _assets: AssetsManager = attrs.field(
@@ -117,7 +147,7 @@ class Run:
 
     @functools.cached_property
     def run_key(self) -> Path:
-        run_key: Path = self.entrypoint.relative_to(self.project_dir)
+        run_key: Path = relative_or_absolute(self.entrypoint, self.project_dir)
         run_key: Path = _strip_path(run_key)
         run_key: Path = run_key.with_suffix("")
         name: str = self.start_time.strftime("%Y-%m-%dT%H%M%S")
@@ -132,7 +162,7 @@ class Run:
         """Run name from `CHERRIES_NAME` or the entrypoint path."""
         if name := env.str("CHERRIES_NAME", ""):
             return name
-        run_path: Path = self.entrypoint.relative_to(self.project_dir)
+        run_path: Path = relative_or_absolute(self.entrypoint, self.project_dir)
         run_path: Path = _strip_path(run_path)
         run_path: Path = run_path.with_suffix("")
         return run_path.as_posix()
@@ -158,28 +188,226 @@ class Run:
     # region Lifecycle
 
     def start(self) -> None:
-        """Start plugins and record Cherries run metadata."""
+        """Allocate local work and capture evidence before calling user code."""
+        if self.active:
+            msg = "a Cherries run is already active"
+            raise RuntimeError(msg)
+        self.run_id = str(uuid.uuid4())
+        self.start_time = datetime.now().astimezone()
+        self._settings = load_settings(self.project_dir)
+        self.store = Store(self.store_root or storage_root(self.project_dir))
+        self.store.ensure_initialized(self._settings.get("collection", {}).get("id"))
+        self.working_dir = self.store.start_work(
+            self.run_id,
+            {
+                "pid": os.getpid(),
+                "name": self.run_name,
+                "machine_id": self.store.machine_id,
+            },
+        )
+        parent = os.environ.get("CHERRIES_PARENT_RUN")
+        if parent:
+            self.store.register_parent(self.run_id, self.store.resolve_id(parent))
+        self._assets = AssetsManager(
+            working_dir=self.working_dir,
+            plugins=cast("AssetPluginProtocol", self.plugins),
+            active=True,
+            store=self.store,
+            run_id=self.run_id,
+        )
+        self._metrics = self._default_metrics()
+        self._params = self._default_params()
+        self._others = self._default_others()
+        self.record_result = None
+        self.active = True
+        logs = self.working_dir / "logs"
+        logs.mkdir(parents=True)
+        handler = logging.FileHandler(logs / "run.log", encoding="utf-8")
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+        )
+        logging.getLogger().addHandler(handler)
+        self._file_handler = handler
+        self._source_evidence = capture_source(
+            self.project_dir,
+            self.entrypoint,
+            self.working_dir / "source",
+            self._settings,
+        )
+        capture_environment(self.project_dir, self.working_dir / "environment")
         self.plugins.delegate("start")
-        entrypoint: Path = relative_or_absolute(self.entrypoint, self.project_dir)
-        exp_dir: Path = relative_or_absolute(self.working_dir, self.project_dir)
+        self._thread_ids = {thread.ident for thread in threading.enumerate()}
+        self._child_pids = self._children()
         self.log_other("cherries/cmd", shlex.join(sys.orig_argv))
-        self.log_other("cherries/entrypoint", entrypoint)
-        self.log_other("cherries/exp_dir", exp_dir)
+        self.log_other(
+            "cherries/entrypoint",
+            relative_or_absolute(self.entrypoint, self.project_dir),
+        )
+        self.log_other("cherries/exp_dir", self.working_dir)
         self.log_other("cherries/start_time", self.start_time)
+        self.log_other("cherries/run_id", self.run_id)
+
+    def _close_logging(self) -> None:
+        if self._file_handler is not None:
+            self._file_handler.flush()
+            logging.getLogger().removeHandler(self._file_handler)
+            self._file_handler.close()
+            self._file_handler = None
+
+    def _join_writers(self) -> None:
+        deadline = time.monotonic() + 5
+        for thread in threading.enumerate():
+            if thread.ident in self._thread_ids:
+                continue
+            thread.join(max(0, deadline - time.monotonic()))
+            if thread.is_alive():
+                msg = "an experiment thread is still running; work retained"
+                raise RuntimeError(msg)
+        for pid in self._children() - self._child_pids:
+            status = Path(f"/proc/{pid}/status")
+            if status.exists() and "State:\tZ" not in status.read_text():
+                msg = "an experiment child process is still running; work retained"
+                raise RuntimeError(msg)
+
+    @staticmethod
+    def _children() -> set[int]:
+        path = Path(f"/proc/{os.getpid()}/task/{os.getpid()}/children")
+        return (
+            {int(value) for value in path.read_text().split()}
+            if path.exists()
+            else set()
+        )
+
+    def abort_start(self, error: BaseException) -> None:
+        """Retain an incomplete stage when source or startup recording fails."""
+        self._close_logging()
+        if (
+            self.store is not None
+            and (self.store.root / "pending" / f"{self.run_id}.json").exists()
+        ):
+            self.store.append_event(
+                "recording-incomplete", self.run_id, {"reason": str(error)}
+            )
+        self._assets.active = False
+        self.active = False
 
     def end(self, exc: BaseException | None = None) -> None:
-        """Flush artifacts, record shutdown metadata, and end plugins.
-
-        Args:
-            exc: Exception raised by the experiment, if any.
-        """
+        """Persist required local evidence; recording failures propagate."""
+        if not self.active or self.store is None:
+            msg = "no active Cherries run"
+            raise RuntimeError(msg)
         self.log_other("cherries/end_time", datetime.now().astimezone())
-        if exc is not None:
-            self.log_other(
-                "cherries/exception", "\n".join(traceback.format_exception_only(exc))
+        try:
+            self._join_writers()
+            if exc is not None:
+                diagnostic = "".join(traceback.format_exception(exc))[-65536:]
+                self.log_other("cherries/exception", diagnostic)
+                self.plugins.delegate("end", exc=exc)
+                self._close_logging()
+                if isinstance(exc, SystemExit) and exc.code in (None, 0):
+                    self.store.append_event(
+                        "recording-incomplete",
+                        self.run_id,
+                        {"reason": "early exit before experiment return"},
+                    )
+                    return
+                failure = {
+                    "exception": diagnostic,
+                    "execution": "failed",
+                    "name": self.run_name,
+                    "source": self._source_evidence,
+                }
+                if (
+                    self._settings.get("execution", {}).get(
+                        "failure_payload", "discard"
+                    )
+                    == "discard"
+                ):
+                    self.store.cancel_failed_work(self.run_id, failure)
+                else:
+                    self.store.append_event("execution-failed", self.run_id, failure)
+                return
+            self._assets.end()
+            end_source = capture_source(
+                self.project_dir,
+                self.entrypoint,
+                self.working_dir / "source-end",
+                self._settings,
             )
-        self._assets.end()
-        self.plugins.delegate("end", exc=exc)
+            stable = self._source_evidence.get("fingerprint") == end_source.get(
+                "fingerprint"
+            )
+            config = self.working_dir / "config"
+            config.mkdir(parents=True, exist_ok=True)
+            (config / "resolved.json").write_text(
+                json.dumps(
+                    _json_safe(self.get_params()),
+                    default=str,
+                    sort_keys=True,
+                    indent=2,
+                    allow_nan=False,
+                )
+                + "\n"
+            )
+            (config / "bindings.json").write_text(
+                json.dumps(self._assets.bindings, default=str, sort_keys=True, indent=2)
+                + "\n"
+            )
+            metrics = self.get_metrics().to_dicts() if self._metrics.metrics else []
+            (self.working_dir / "logs/metrics.json").write_text(
+                json.dumps(
+                    _json_safe(metrics),
+                    default=str,
+                    sort_keys=True,
+                    indent=2,
+                    allow_nan=False,
+                )
+                + "\n"
+            )
+            (self.working_dir / "RUN.md").write_text(
+                f"# {self.run_name}\n\nRun: `{self.run_id}`\n\nExecution: succeeded. Review: unreviewed.\n\nSource stable across execution: {stable}. Replay has not been verified.\n"
+            )
+            self.plugins.delegate("end", exc=None)
+            self._close_logging()
+            self.record_result = self.store.seal(
+                self.run_id,
+                {
+                    "kind": "experiment",
+                    "name": self.run_name,
+                    "tags": self.tags,
+                    "command": shlex.join(sys.orig_argv),
+                    "argv": sys.argv[1:],
+                    "entrypoint": str(
+                        relative_or_absolute(self.entrypoint, self.project_dir)
+                    ),
+                    "execution": {"status": "succeeded", "exit_code": 0},
+                    "validation": {"status": "not_evaluated"},
+                    "params": _json_safe(self.get_params()),
+                    "others": json.loads(
+                        json.dumps(
+                            _json_safe(self.get_others()), default=str, allow_nan=False
+                        )
+                    ),
+                    "input_bindings": self._assets.bindings,
+                    "bundles": self._assets.retained_bundles,
+                    "source": self._source_evidence,
+                    "source_stability": stable,
+                    "replay_verified": False,
+                },
+                self.working_dir,
+            )
+            logger.info("Saved Cherries run %s", self.run_id)
+        except BaseException as failure:
+            self.store.append_event(
+                "recording-incomplete",
+                self.run_id,
+                {"reason": str(failure), "work": str(self.working_dir)},
+            )
+            raise
+        finally:
+            self._close_logging()
+            self._assets.active = False
+            self.active = False
 
     # endregion Lifecycle
 
@@ -236,10 +464,17 @@ class Run:
     # region Assets
 
     def input(
-        self, path: StrPath, *, metadata: Mapping[str, Any] | None = None
+        self,
+        path: StrPath,
+        *,
+        name: StrPath | None = None,
+        source_run: str | None = None,
+        metadata: Mapping[str, Any] | None = None,
     ) -> Path:
-        """Resolve and immediately log an input below `data/`."""
-        return self._assets.input(path, metadata=metadata)
+        """Copy verified input bytes into the active run and record their origin."""
+        return self._assets.input(
+            path, name=name, source_run=source_run, metadata=metadata
+        )
 
     def output(
         self,
@@ -248,7 +483,7 @@ class Run:
         metadata: Mapping[str, Any] | None = None,
         mkdir: bool = True,
     ) -> Path:
-        """Resolve an output below `data/` and queue it until run end."""
+        """Declare a required output in the active run; missing outputs fail saving."""
         return self._assets.output(path, metadata=metadata, mkdir=mkdir)
 
     def temp(
@@ -258,32 +493,48 @@ class Run:
         metadata: Mapping[str, Any] | None = None,
         mkdir: bool = True,
     ) -> Path:
-        """Resolve a temporary artifact below `tmp/` and queue it until run end."""
+        """Return a disposable scratch path in the active run."""
         return self._assets.temp(path, metadata=metadata, mkdir=mkdir)
 
     def log_asset(
-        self, path: StrPath, metadata: Mapping[str, Any] | None = None
-    ) -> None:
-        """Log an existing generic artifact immediately."""
-        self._assets.log_asset(path, metadata=metadata)
+        self,
+        path: StrPath,
+        metadata: Mapping[str, Any] | None = None,
+        *,
+        name: StrPath | None = None,
+    ) -> Path:
+        """Retain an explicit artifact as an independent file inside the active run."""
+        return self._assets.log_asset(path, metadata=metadata, name=name)
 
     def log_input(
-        self, path: StrPath, metadata: Mapping[str, Any] | None = None
-    ) -> None:
-        """Log an existing input artifact immediately."""
-        self._assets.log_input(path, metadata=metadata)
+        self,
+        path: StrPath,
+        metadata: Mapping[str, Any] | None = None,
+        *,
+        name: StrPath | None = None,
+    ) -> Path:
+        """Copy and retain an existing input in the active run."""
+        return self._assets.log_input(path, metadata=metadata, name=name)
 
     def log_output(
-        self, path: StrPath, metadata: Mapping[str, Any] | None = None
-    ) -> None:
-        """Log an existing output artifact immediately."""
-        self._assets.log_output(path, metadata=metadata)
+        self,
+        path: StrPath,
+        metadata: Mapping[str, Any] | None = None,
+        *,
+        name: StrPath | None = None,
+    ) -> Path:
+        """Copy or register an existing output inside the active run."""
+        return self._assets.log_output(path, metadata=metadata, name=name)
 
     def log_temp(
-        self, path: StrPath, metadata: Mapping[str, Any] | None = None
-    ) -> None:
-        """Log an existing temporary artifact immediately."""
-        self._assets.log_temp(path, metadata=metadata)
+        self,
+        path: StrPath,
+        metadata: Mapping[str, Any] | None = None,
+        *,
+        name: StrPath | None = None,
+    ) -> Path:
+        """Promote a temporary file into retained run artifacts."""
+        return self._assets.log_temp(path, metadata=metadata, name=name)
 
     # endregion Assets
 

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 liblaf
 from collections.abc import Iterator, Mapping
 from datetime import datetime
 from pathlib import Path
@@ -39,7 +40,13 @@ def log_metrics(
 
 # region Assets
 
-def input(path: StrPath, *, metadata: Mapping[str, Any] | None = None) -> Path: ...  # noqa: A001
+def input(  # noqa: A001
+    path: StrPath,
+    *,
+    name: StrPath | None = None,
+    source_run: str | None = None,
+    metadata: Mapping[str, Any] | None = None,
+) -> Path: ...
 def output(
     path: StrPath, *, metadata: Mapping[str, Any] | None = None, mkdir: bool = True
 ) -> Path: ...
@@ -49,10 +56,30 @@ def temp(
     metadata: Mapping[str, Any] | None = None,
     mkdir: bool = True,
 ) -> Path: ...
-def log_asset(path: StrPath, metadata: Mapping[str, Any] | None = None) -> None: ...
-def log_input(path: StrPath, metadata: Mapping[str, Any] | None = None) -> None: ...
-def log_output(path: StrPath, metadata: Mapping[str, Any] | None = None) -> None: ...
-def log_temp(path: StrPath, metadata: Mapping[str, Any] | None = None) -> None: ...
+def log_asset(
+    path: StrPath,
+    *,
+    metadata: Mapping[str, Any] | None = None,
+    name: StrPath | None = None,
+) -> Path: ...
+def log_input(
+    path: StrPath,
+    *,
+    metadata: Mapping[str, Any] | None = None,
+    name: StrPath | None = None,
+) -> Path: ...
+def log_output(
+    path: StrPath,
+    *,
+    metadata: Mapping[str, Any] | None = None,
+    name: StrPath | None = None,
+) -> Path: ...
+def log_temp(
+    path: StrPath,
+    *,
+    metadata: Mapping[str, Any] | None = None,
+    name: StrPath | None = None,
+) -> Path: ...
 
 # endregion Assets
 

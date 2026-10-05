@@ -1,3 +1,4 @@
+# Copyright (c) 2026 liblaf
 from __future__ import annotations
 
 import sys
@@ -28,7 +29,7 @@ def make_run(
     script.write_text("from liblaf import cherries\n")
     monkeypatch.setattr(sys, "argv", [str(script)])
 
-    run = Run()
+    run = Run(store_root=tmp_path / "store")
     run.repo = None
     run.start_time = datetime(2026, 6, 1, 12, 30, 45, tzinfo=UTC)
     return run, script
@@ -56,6 +57,7 @@ def test_run_summary_omits_empty_tags_and_serializes_logged_artifacts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     run, _ = make_run(tmp_path, monkeypatch)
+    run.start()
     run.log_other("cherries/cmd", "python 10-main.py")
     run.log_other("cherries/entrypoint", Path("exp/2026/06/01/demo/src/10-main.py"))
     run.log_other("cherries/exp_dir", Path("exp/2026/06/01/demo"))
@@ -70,7 +72,7 @@ def test_run_summary_omits_empty_tags_and_serializes_logged_artifacts(
     assert "tags" not in summary
     assert summary["name"] == "2026/06/01/demo/10-main"
     assert summary["params"] == {"optimizer": {"lr": 0.01}}
-    assert summary["outputs"] == ["data/metrics.json"]
+    assert summary["outputs"] == ["outputs/metrics.json"]
     assert summary["cmd"] == "python 10-main.py"
 
 
@@ -78,6 +80,7 @@ def test_run_summary_includes_environment_tags(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     run, _ = make_run(tmp_path, monkeypatch, tags="debug,smoke")
+    run.start()
     run.log_other("cherries/cmd", "python 10-main.py")
 
     summary = run.summary()

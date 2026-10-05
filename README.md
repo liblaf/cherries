@@ -6,111 +6,210 @@
 **[Explore the docs »](https://liblaf.github.io/cherries/)**
 
 [![Test](https://github.com/liblaf/cherries/actions/workflows/python-test.yaml/badge.svg)](https://github.com/liblaf/cherries/actions/workflows/python-test.yaml)
-[![codecov](https://codecov.io/gh/liblaf/cherries/graph/badge.svg)](https://codecov.io/gh/liblaf/cherries)
 [![PyPI - Version](https://img.shields.io/pypi/v/liblaf-cherries?logo=PyPI&label=PyPI)](https://pypi.org/project/liblaf-cherries)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/liblaf-cherries?logo=Python&label=Python)](https://pypi.org/project/liblaf-cherries)
-[![PyPI - Types](https://img.shields.io/pypi/types/liblaf-cherries?logo=PyPI&label=Types)](https://pypi.org/project/liblaf-cherries)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/liblaf/cherries/main.svg)](https://results.pre-commit.ci/latest/github/liblaf/cherries/main)
-
-[Changelog](https://github.com/liblaf/cherries/blob/main/CHANGELOG.md) · [Report Bug](https://github.com/liblaf/cherries/issues) · [Request Feature](https://github.com/liblaf/cherries/issues)
-
-![Rule](https://cdn.jsdelivr.net/gh/andreasbm/readme/assets/lines/rainbow.png)
+[![Python](https://img.shields.io/pypi/pyversions/liblaf-cherries?logo=Python)](https://pypi.org/project/liblaf-cherries)
 
 </div>
 
-## ✨ What Cherries Does
+## What Cherries does
 
-Cherries is a lightweight experiment runner for Python scripts that need just
-enough structure to be repeatable. It builds typed config objects, resolves
-stable data and temporary paths, stores scalar metrics as Polars dataframes, and
-fans run events out to local files, Git, Comet, and custom plugins.
+Cherries records ordinary Python experiments in a local, content-addressed store.
+A successful `cherries.main(main)` run stages inputs and declared outputs in a
+fresh work directory, captures source and runtime evidence, seals a small record
+and manifest, and stores retained bytes once by SHA-256. It does not require a
+background service or create Git commits. Comet is opt-in with `CHERRIES_COMET=1`;
+its SDK is not loaded otherwise.
 
-- **Typed configs**: pass `pydantic-settings` models into experiments and log
-  them as parameters automatically.
-- **Reproducible paths**: resolve inputs, outputs, and temporary artifacts below
-  the entrypoint-derived run directory.
-- **Metric history**: log one scalar or nested metric mappings such as
-  `{"train": {"loss": 0.4}}`, then read them back as tables.
-- **Artifact bundles**: log VTK `.series` frames and optional mesh
-  `.landmarks.json` companions with their primary artifacts.
-- **Plugin hooks**: compose ordered hooks for local snapshots, logging, Git,
-  Comet, or your own integrations.
-- **Run profiles**: use `debug` for local work without remote or commit side
-  effects, and `default` for the full logging pipeline.
+Use a separate experiment Git repository for authored studies. Keep Apple and
+Melon there as submodules; keep generated run payloads in the configured Cherries
+store. Git LFS is for curated fixtures and selected reviewable assets, not every
+output, checkpoint, or log.
 
-## 📦 Installation
+## Install and configure
 
 ```bash
 uv add liblaf-cherries
 ```
 
-## 🚀 Quick Start
+Place settings at the experiment repository root. `cherries.local.toml` is useful
+for a machine-specific data volume and can stay Git ignored.
+
+```toml
+# cherries.toml
+[collection]
+id = "<collection-uuid>"
+
+[capture]
+roots = ["libs/apple", "libs/melon", "tools"]
+
+[execution]
+failure_payload = "discard"
+
+[archive.main]
+path = "/archive/cherries/phace-exp"
+```
+
+```toml
+# cherries.local.toml
+[collection]
+storage = "/data/cherries/phace-exp"
+```
+
+`CHERRIES_STORAGE` overrides `collection.storage`. Initialize a collection
+explicitly before sharing it with other machines:
+
+```bash
+cherries --project-dir . --storage /data/cherries/phace-exp init \
+  --collection-id "<collection-uuid>"
+```
+
+The current `phace-exp` collection is local at
+`/home/liblaf/Data/cherries/phace-exp`; it has no configured archive remote.
+Use `--storage` for it and do not run archive or sync with `--remote main` until
+an `archive.main.path` is deliberately configured.
+
+## Run a sealed experiment
+
+Keep module scope passive: do not read experiment data, create outputs, initialize
+a solver, or call Cherries asset helpers until `main`. Config defaults are raw
+source strings or paths.
 
 ```python
-from pathlib import Path
-
 from liblaf import cherries
 
 
 class Config(cherries.BaseConfig):
-    name: str = "world"
-    output: Path = cherries.output("hello.txt", mkdir=True)
+    mesh: str = "sha256:<full-digest>"
+    steps: int = 200
 
 
-def experiment(cfg: Config) -> None:
-    message = f"Hello, {cfg.name}!"
-    cfg.output.write_text(f"{message}\n")
-    cherries.log_params({"name": cfg.name})
-    cherries.log_metric("message_length", len(message))
+def main(cfg: Config) -> None:
+    mesh = cherries.input(cfg.mesh, name="mesh.vtu")
+    output = cherries.output("solution.txt")
+    cherries.temp("solver-cache")
+    output.write_text(f"{mesh.name}: {cfg.steps}\n")
+    cherries.log_metric("steps", cfg.steps)
 
 
 if __name__ == "__main__":
-    cherries.main(experiment, profile="debug")
+    cherries.main(main)
 ```
 
-`profile="debug"` keeps Comet disabled and Git commits off while still copying
-the entrypoint, logs, and logged artifacts into `.cherries/runs/`. The default
-profile enables Comet, commits dirty changes when needed, and records the final
-Git SHA.
-
-## 🧭 Core Concepts
-
-- `cherries.input()` logs existing inputs immediately.
-- `cherries.output()` and `cherries.temp()` return paths immediately, then log
-  existing files when the run ends.
-- `cherries.log_metric()` records one scalar; `cherries.log_metrics()` flattens
-  nested mappings with `/`.
-- `CHERRIES_NAME` sets the human-readable run name; `CHERRIES_TAGS` attaches a
-  comma-separated tag list to summaries and Comet.
-- Plugins subclass `liblaf.cherries.core.Plugin`, decorate hooks with
-  `liblaf.cherries.core.impl()`, and use `before` or `after` constraints for
-  deterministic order.
-
-## ⌨️ Local Development
-
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/liblaf/cherries)
+Run the script normally; `BaseConfig` accepts kebab-case flags.
 
 ```bash
-gh repo clone liblaf/cherries
-cd cherries
-mise run install
+uv run python exp/2026/10/05/mouthopen/src/10-run.py --steps 200
+```
+
+`input()` accepts a local path, a full `sha256:` asset ID, a `sha256-tree:`
+bundle ID, or `run:<record-id>/<logical-path>`. It copies verified bytes into
+`work/<id>/inputs` and registers lineage before use. `output()` returns a path
+under `work/<id>/outputs`; every declared output must exist at completion.
+`log_output()` imports an already-created external file. `temp()` uses disposable
+`work/<id>/scratch` and is not retained by default.
+
+Cherries captures the entry script, Git HEAD, binary working-tree diff, selected
+untracked source, runtime facts, resolved parameters, inputs, logs, metrics, and
+outputs. Capture begins after normal module imports, so it records source at the
+`main` boundary and does not claim replay verification. An execution exception
+keeps a diagnostic event and may discard only the unsealed work payload. A missing
+output or recording failure leaves the work stage for recovery and raises an error.
+
+## Inspect, archive, and restore
+
+All commands are foreground operations. Add `--json` before the subcommand for
+machine-readable output.
+
+```bash
+cherries --storage /data/cherries/phace-exp browse --quality unreviewed
+cherries --storage /data/cherries/phace-exp browse --failed
+cherries --storage /data/cherries/phace-exp show <record-id>
+cherries --storage /data/cherries/phace-exp read <record-id> RUN.md
+cherries --storage /data/cherries/phace-exp path <record-id> outputs/solution.txt
+cherries --storage /data/cherries/phace-exp path --release <lease-id>
+cherries --storage /data/cherries/phace-exp archive <record-id> --remote /archive/cherries --evict
+cherries --storage /data/cherries/phace-exp restore <record-id> --remote /archive/cherries
+```
+
+`path` materializes the selected record file only and creates a durable read lease;
+release it when finished. `restore` verifies and materializes a complete record
+view. `archive` verifies object bytes, uploads the complete closure, and writes
+the remote commit marker last. `--evict` only releases an eligible local view
+after remote verification; it never removes canonical bytes merely because one
+logical record was archived.
+
+A local-directory remote has an atomic filesystem boundary. A generic rclone
+remote requires `--coordinated`, which is an explicit assertion that an external
+publisher serializes the collection; Cherries does not invent a marker-file lock
+or stale-owner takeover. Metadata-only synchronization is available through
+`cherries sync --remote ... [--coordinated]`.
+
+`sync` publishes SHA-bound collection control, sealed receipts, events, and a
+payload-free checkpoint marker last. Checkpoint import can merge receipt metadata
+and lineage; it does not establish that payload objects are remotely available.
+Failed attempts appear only in local `browse --failed`; they are not remotely
+published or imported.
+
+For Python follow-up work, use a closeable reader hold:
+
+```python
+with cherries.open_run("<record-id>") as saved:
+    path = saved.path("outputs/solution.txt")
+```
+
+Pass `workspace=Path("analysis/compare")` to attach the source to an existing
+analysis workspace instead of creating a standalone read hold.
+
+`cherries rerun <record-id> --prepare-only --workspace replay/<record-id>`
+reconstructs a workspace from the saved project/submodule HEADs, binary patches,
+selected untracked source, and recorded input mapping. It requires the captured
+local Git bases and a source-stable experiment receipt. Omit `--prepare-only` to
+execute with `uv run` (using `--locked` when `uv.lock` is saved). It creates a
+new attempt and leaves `replay_verified` false until scientific checks establish
+replay. Close a retained prepared workspace with `cherries rerun --close <path>`.
+
+## Review and follow-up analysis
+
+Successful records start `unreviewed`. Review, labels, and retention flags are
+append-only metadata rather than changes to the sealed receipt.
+
+```bash
+cherries review <record-id> --quality good --note "Useful comparison"
+cherries label add <record-id> mouthopen promising
+cherries mark <record-id> --important
+cherries mark <record-id> --keep-local
+cherries analysis new analysis/compare --source <record-id>
+cherries analysis save analysis/compare --output out/figure.png --used-in weekly/2026-10-05
+cherries analysis close analysis/compare
+```
+
+An analysis workspace holds its source records while it is open. Saving it creates
+a lightweight dependent record from `RUN.md`, `analysis.json`, `src/`, and only
+the explicitly selected `out/...` files. A record with dependents cannot be
+discarded. Local single-machine maintenance is explicit and receipt-bound:
+
+```bash
+cherries maintenance pause
+cherries discard <record-id> --plan
+cherries discard --apply <plan-path>
+cherries prune --plan
+cherries prune --apply <plan-path>
+cherries maintenance resume <pause-token>
+```
+
+Pause freezes reference creation. It fails closed with active or pending work,
+legacy provenance, or foreign participants. Plans bind to the pause receipt and
+local inventory; an inventory change requires a new plan. This does not implement
+remote or distributed deletion.
+
+## Development
+
+```bash
 uv run pytest
 mise run lint
 mise run docs:build
 ```
 
-## 🔗 Links
-
-- [Documentation](https://liblaf.github.io/cherries/)
-- [Source Code](https://github.com/liblaf/cherries)
-- [Issue Tracker](https://github.com/liblaf/cherries/issues)
-- [PyPI Package](https://pypi.org/project/liblaf-cherries/)
-
----
-
-#### 📝 License
-
-Copyright © 2026 [liblaf](https://github.com/liblaf). <br />
-This project is [MIT](https://github.com/liblaf/cherries/blob/main/LICENSE) licensed.
+See [docs/README.md](docs/README.md) for the detailed runtime and CLI contract,
+and [docs/design/run-records.md](docs/design/run-records.md) for the remaining
+distributed-maintenance and replay design.

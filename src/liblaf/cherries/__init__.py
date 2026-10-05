@@ -1,3 +1,4 @@
+# Copyright (c) 2026 liblaf
 """Run Python experiments with typed config, path helpers, and plugins.
 
 Cherries exposes a compact facade around a process-global
@@ -8,6 +9,7 @@ queue artifacts for logging at shutdown.
 """
 
 from . import config, core, plugins, utils
+from ._access import RunAccessor, open_run
 from ._main import end, main, start
 from ._version import __commit_id__, __version__, __version_tuple__
 from .config import BaseConfig
@@ -40,6 +42,7 @@ from .core import (
 __all__ = [
     "BaseConfig",
     "Run",
+    "RunAccessor",
     "__commit_id__",
     "__version__",
     "__version_tuple__",
@@ -65,6 +68,7 @@ __all__ = [
     "log_params",
     "log_temp",
     "main",
+    "open_run",
     "output",
     "plugins",
     "run",

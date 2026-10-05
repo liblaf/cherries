@@ -1,3 +1,4 @@
+# Copyright (c) 2026 liblaf
 from typing import override
 
 from liblaf.cherries import core, plugins
@@ -10,10 +11,7 @@ class ProfileDebug(Profile):
 
     @override
     def init(self) -> core.Run:
-        """Register disabled Comet, non-committing Git, local, and logging plugins."""
+        """Register local logging on the process-global run."""
         run: core.Run = core.run
-        run.plugins.register(plugins.Comet(run=run, disabled=True))
-        run.plugins.register(plugins.Git(run=run, commit=False))
-        run.plugins.register(plugins.Local(run=run))
         run.plugins.register(plugins.Logging(run=run))
         return run
