@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -399,6 +400,88 @@ def test_checkpoint_imports_two_machine_lineage_and_events_without_payload_claim
     assert not list((tmp_path / "target" / "objects" / "sha256").glob("*/*"))
 
 
+def test_checkpointed_note_history_imports_exact_append_only_versions(
+    tmp_path: Path,
+) -> None:
+    from liblaf.cherries.records import Store
+
+    source = Store(tmp_path / "source", machine_id="machine-a")
+    source.ensure_initialized("collection")
+    work = source.start_work("run")
+    (work / "result.txt").write_text("result")
+    source.seal("run", {}, work)
+    source.append_event("note", "run", {"value": "# First discussion\n"})
+    source.append_event("note", "run", {"value": "# Revised discussion\n"})
+    remote = Remote(tmp_path / "remote")
+    remote.sync_metadata(source.root)
+
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+    merged = remote.import_metadata(target)
+
+    assert merged["events"] == 3
+    assert [item["value"] for item in target.projection("run")["notes"]] == [
+        "# First discussion\n",
+        "# Revised discussion\n",
+    ]
+
+
+def test_metadata_import_rejects_checkpointed_note_with_changed_bytes(
+    tmp_path: Path,
+) -> None:
+    from liblaf.cherries.records import Store
+
+    source = Store(tmp_path / "source", machine_id="machine-a")
+    source.ensure_initialized("collection")
+    work = source.start_work("run")
+    (work / "result.txt").write_text("result")
+    source.seal("run", {}, work)
+    event = source.append_event("note", "run", {"value": "trusted note"})
+    remote_root = tmp_path / "remote"
+    Remote(remote_root).sync_metadata(source.root)
+    remote_note = (
+        remote_root / "metadata" / "events" / "machine-a" / f"{event['event_id']}.json"
+    )
+    remote_note.write_text(json.dumps({"value": "changed note"}))
+
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+    with pytest.raises(IntegrityError, match=r"event.*checkpoint"):
+        Remote(remote_root).import_metadata(target)
+
+
+def test_metadata_import_ignores_uncheckpointed_valid_note_during_publication(
+    tmp_path: Path,
+) -> None:
+    from liblaf.cherries.records import Store
+
+    source = Store(tmp_path / "source", machine_id="machine-a")
+    source.ensure_initialized("collection")
+    work = source.start_work("run")
+    (work / "result.txt").write_text("result")
+    source.seal("run", {}, work)
+    remote_root = tmp_path / "remote"
+    remote = Remote(remote_root)
+    remote.sync_metadata(source.root)
+    event = source.append_event("note", "run", {"value": "not checkpointed yet"})
+    pending = (
+        source.root / "metadata" / "events" / "machine-a" / f"{event['event_id']}.json"
+    )
+    remote_pending = remote_root / "metadata" / "events" / "machine-a" / pending.name
+    remote_pending.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(pending, remote_pending)
+
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+    merged = remote.import_metadata(target)
+
+    assert merged == {"records": 1, "events": 1}
+    assert target.projection("run")["notes"] == []
+    assert not (
+        target.root / "metadata" / "events" / "machine-a" / pending.name
+    ).exists()
+
+
 def test_selected_metadata_import_uses_checkpoint_and_imports_ancestors(
     tmp_path: Path,
 ) -> None:
@@ -448,5 +531,7 @@ def test_checkpoint_and_event_tampering_fail_closed(tmp_path: Path) -> None:
     bad = clean_remote / "metadata" / "events" / "machine-a" / "bad.json"
     bad.parent.mkdir(parents=True, exist_ok=True)
     bad.write_text('{"machine_id":"other"}')
-    with pytest.raises(RuntimeError, match=r"event|machine"):
-        Remote(clean_remote).import_metadata(target)
+    # A copied but uncheckpointed event is normal marker-last publication
+    # state.  It is ignored until a later checkpoint binds its exact bytes.
+    assert Remote(clean_remote).import_metadata(target) == {"records": 1, "events": 1}
+    assert not (target.root / "metadata" / "events" / "machine-a" / "bad.json").exists()

@@ -372,6 +372,7 @@ class Remote:
     def import_metadata(self, store: Any, run_id: str | None = None) -> dict[str, int]:
         """Import committed payload records and payload-free checkpoints safely."""
         checkpoint_records: dict[str, Mapping[str, str]] = {}
+        checkpoint_events: dict[Path, str] = {}
         try:
             collection = json.loads(
                 self._metadata_bytes(Path("metadata") / "collection.json")
@@ -409,6 +410,34 @@ class Remote:
                         "metadata checkpoints disagree on a record receipt"
                     )
                 checkpoint_records[identifier] = proof
+            event_proofs = checkpoint.get("events", {})
+            if not isinstance(event_proofs, Mapping):
+                raise IntegrityError("metadata checkpoint events are invalid")
+            for name, proof in event_proofs.items():
+                relative = Path(name) if isinstance(name, str) else Path()
+                parts = relative.parts
+                valid_path = (
+                    not relative.is_absolute()
+                    and ".." not in parts
+                    and len(parts) == 4
+                    and parts[:2] == ("metadata", "events")
+                    and relative.name.endswith(".json")
+                    and relative.as_posix() == name
+                )
+                digest = proof.removeprefix("sha256:") if isinstance(proof, str) else ""
+                if not valid_path or (
+                    not isinstance(proof, str)
+                    or not proof.startswith("sha256:")
+                    or len(digest) != 64
+                    or any(character not in "0123456789abcdef" for character in digest)
+                ):
+                    raise IntegrityError("metadata checkpoint event proof is invalid")
+                if (
+                    relative in checkpoint_events
+                    and checkpoint_events[relative] != proof
+                ):
+                    raise IntegrityError("metadata checkpoints disagree on an event")
+                checkpoint_events[relative] = proof
         candidates = (
             {run_id}
             if run_id
@@ -485,10 +514,14 @@ class Remote:
                 )
                 known.add(identifier)
         events = 0
-        for remote_path in self._remote_files(Path("metadata") / "events"):
-            events += store.import_metadata_file(
-                remote_path, self._metadata_bytes(remote_path)
-            )
+        # Marker-last checkpoints are the publication boundary for event
+        # metadata too.  Files copied before a new checkpoint are ordinary
+        # in-progress publication state and are deliberately ignored.
+        for remote_path, proof in sorted(checkpoint_events.items()):
+            data = self._metadata_bytes(remote_path)
+            if hashlib.sha256(data).hexdigest() != proof.removeprefix("sha256:"):
+                raise IntegrityError("remote event does not match its checkpoint")
+            events += store.import_metadata_file(remote_path, data)
         return {"records": records, "events": events}
 
     def _fetch_raw_to_store(self, store: Any, asset_id: str) -> Path:
