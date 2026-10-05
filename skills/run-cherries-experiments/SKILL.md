@@ -44,6 +44,8 @@ cherries --project-dir . --storage /data/cherries/phace-exp init \
 `phace-exp` currently has local storage at `/home/liblaf/Data/cherries/phace-exp`
 and no configured archive remote. Use `--storage` and do not invoke remote
 archive/sync through `--remote main` until `archive.main.path` is configured.
+Apple and Melon are pinned local migration submodule commits; phace-exp has no
+published Git ref or configured Git remote.
 
 ## Sealed daily experiment
 
@@ -118,18 +120,23 @@ cherries --storage /data/cherries/phace-exp browse --used-in weekly/2026-10-05
 cherries --storage /data/cherries/phace-exp show <record-id>
 cherries --storage /data/cherries/phace-exp read <record-id> RUN.md
 cherries --storage /data/cherries/phace-exp path <record-id> outputs/solution.txt
+cherries --storage /data/cherries/phace-exp --json path <record-id> legacy/data/example.vtu
 cherries --storage /data/cherries/phace-exp path --release <lease-id>
 cherries --storage /data/cherries/phace-exp archive <record-id> --remote /archive/cherries --evict
 cherries --storage /data/cherries/phace-exp restore <record-id> --remote /archive/cherries
 ```
 
 `browse` uses the latest review quality; `--used-in` includes the named analysis
-and its direct source parents. `--search` matches name, kind, and legacy origin.
+and its direct source parents. `--search` matches name, kind, legacy origin, and
+migrated legacy source.
 `path` materializes a declared file or directory plus required `.series`
 companions, and creates a durable read lease. A `sha256-tree` must be declared by
 the selected record; it restores its full topology, including declared empty
 directories. `restore` verifies the full record under a temporary restore hold,
 then creates a locally restored resident view.
+
+The JSON `path` result contains a lease ID; release that exact ID when inspection
+ends. This applies equally to a migrated raw path such as `legacy/data/example.vtu`.
 
 For Python follow-up work, use a closeable reader hold:
 
@@ -193,6 +200,10 @@ outputs. Save ParaView settings and displayed asset references when useful. A
 saved analysis is a lightweight dependent record and protects every source; it
 does not promise strict solver replay. Notes and Git links are append-only events
 and synchronize with the other metadata.
+
+Legacy imports are additive immutable records with incomplete provenance. Their
+legacy source/name is searchable, but they are not source-stable experiments,
+replayable records, or authorization for maintenance.
 
 Local single-machine maintenance requires a pause receipt and saved plan:
 

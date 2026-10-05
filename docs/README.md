@@ -62,7 +62,9 @@ storage = "/data/cherries/phace-exp"
 The current `phace-exp` collection is local at
 `/home/liblaf/Data/cherries/phace-exp` and has no configured archive remote. Use
 `--storage` there; `--remote main` deliberately fails until an
-`archive.main.path` is configured.
+`archive.main.path` is configured. Its Apple and Melon submodules are pinned
+local migration commits; this experiment repository has no published ref or
+configured Git remote.
 
 ## Python contract
 
@@ -143,6 +145,7 @@ cherries --storage /data/cherries/phace-exp browse --search mouthopen
 cherries --storage /data/cherries/phace-exp show <id>
 cherries --storage /data/cherries/phace-exp read <id> RUN.md
 cherries --storage /data/cherries/phace-exp path <id> outputs/result.txt
+cherries --storage /data/cherries/phace-exp --json path <id> legacy/data/example.vtu
 cherries --storage /data/cherries/phace-exp path --release <lease-id>
 cherries --storage /data/cherries/phace-exp restore <id> --remote /archive/cherries
 cherries --storage /data/cherries/phace-exp archive <id> --remote /archive/cherries --evict
@@ -152,13 +155,18 @@ cherries --storage /data/cherries/phace-exp index rebuild --remote /archive/cher
 
 `browse` reports each record's latest review quality. `--used-in` returns the
 named meeting/weekly analyses and their direct source parents; `--search` matches
-record name, kind, and legacy origin. `path` creates a durable read hold unless
+record name, kind, legacy origin, and migrated legacy source. `path` creates a durable read hold unless
 it is associated with an analysis workspace. It materializes a declared file or
 directory plus required `.series` companions, or a whole `sha256-tree` bundle
 only when that tree is declared by the selected record. Tree descriptors preserve
 declared empty directories. `restore` verifies and materializes the complete
 record under a temporary restore hold, then marks it as a locally restored
 resident view.
+
+The JSON result of `path` contains its lease ID. Keep the selected raw path only
+while needed, then pass that exact ID to `path --release`; a lease holds the run
+against eviction. Use the same form for a migrated path such as
+`legacy/data/example.vtu`.
 
 Python follow-up code can use the same closeable access boundary:
 
@@ -231,6 +239,11 @@ lightweight dependent record and protects each source. Its workspace contains
 `analysis.json`; `analysis save` retains `RUN.md`, `analysis.json`, `src/`, and
 only selected `out/...` files. It is a record of interpretation, not a strict
 solver replay.
+
+Imported legacy folders are additive immutable records with deliberately
+incomplete provenance. Their legacy source/name metadata is searchable, but they
+do not become source-stable experiments, replayable records, or authorization for
+maintenance merely by being imported.
 
 Local single-machine maintenance uses an explicit pause receipt and saved plan:
 
