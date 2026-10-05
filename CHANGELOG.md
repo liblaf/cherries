@@ -7,6 +7,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v4.0.1](https://github.com/liblaf/cherries/releases/tag/v4.0.1) - 2026-10-05
+
+### 🐛 Bug Fixes
+
+- protect run retention and verify record recovery and sync (#174) - [aa26c27](https://github.com/liblaf/cherries/commit/aa26c2701496a30f4598b5b125ee0c547667ae22) by [@liblaf](https://github.com/liblaf)
+
+### ⚙️ Continuous Integrations
+
+- update release validation and retry published tags - [9bd915d](https://github.com/liblaf/cherries/commit/9bd915d2c376f7b2c5ea50b00f4846bfbb0bcdc4) by [@liblaf](https://github.com/liblaf)
+- support metadata 2.5 during PyPI publication (#173) - [39d00ec](https://github.com/liblaf/cherries/commit/39d00ecc67b20e4d58e370ac8b24064f70184b68) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf)
+
 ## [v4.0.0](https://github.com/liblaf/cherries/releases/tag/v4.0.0) - 2026-10-05
 
 ### 💥 BREAKING CHANGES
@@ -19,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
+- [@liblaf-release-please[bot]](https://github.com/apps/liblaf-release-please)
 - [@liblaf](https://github.com/liblaf)
 - [@renovate[bot]](https://github.com/apps/renovate)
 - [@liblaf-copier[bot]](https://github.com/apps/liblaf-copier) made their first contribution in [#156](https://github.com/liblaf/cherries/pull/156)
