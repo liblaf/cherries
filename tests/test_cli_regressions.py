@@ -176,6 +176,52 @@ def test_failed_analysis_save_cleans_unsealed_work(
     assert "latest_record" not in json.loads((workspace / "analysis.json").read_text())
 
 
+def test_saved_analysis_paths_preserve_source_and_selected_output_mapping(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from liblaf.cherries import _access
+
+    monkeypatch.setattr(_access, "configured_remote", lambda _project: None)
+    store = make_store(tmp_path)
+    workspace = tmp_path / "analysis"
+    cli(store, "analysis", "new", str(workspace), "--source", "source-a")
+    (workspace / "src").mkdir()
+    (workspace / "src/compare.py").write_text("print('comparison')\n")
+    (workspace / "out/figures").mkdir(parents=True)
+    (workspace / "out/figures/comparison.svg").write_text("<svg>comparison</svg>")
+    (workspace / "out/unselected.txt").write_text("scratch")
+    (workspace / "RUN.md").write_text("# Findings\n")
+
+    assert (
+        cli(
+            store,
+            "analysis",
+            "save",
+            str(workspace),
+            "--output",
+            "out/figures/comparison.svg",
+        )
+        == 0
+    )
+    config = json.loads((workspace / "analysis.json").read_text())
+    saved_id = config["latest_record"]
+    assert {entry["path"] for entry in store.read_manifest(saved_id)["files"]} == {
+        "RUN.md",
+        "analysis.json",
+        "source/compare.py",
+        "outputs/figures/comparison.svg",
+    }
+    with _access.open_run(saved_id, store=store) as reader:
+        assert reader.path("source/compare.py").read_text() == "print('comparison')\n"
+        assert (
+            reader.path("outputs/figures/comparison.svg").read_text()
+            == "<svg>comparison</svg>"
+        )
+        assert reader.path("RUN.md").read_text() == "# Findings\n"
+        with pytest.raises(FileNotFoundError):
+            reader.path("outputs/unselected.txt")
+
+
 def test_rerun_receipt_write_failure_releases_reader_hold(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
