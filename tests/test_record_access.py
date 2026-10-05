@@ -68,3 +68,74 @@ def test_accessor_opens_empty_directory_bundle(
     store.seal("run", {"bundles": [{"path": "outputs/tree", "asset_id": tree}]}, work)
     with _access.open_run("run", store=store) as reader:
         assert (reader.path("outputs/tree") / "empty").is_dir()
+
+
+def test_failed_workspace_binding_does_not_leave_a_hold(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_access, "configured_remote", lambda _project: None)
+    store = series_record(tmp_path)
+    workspace = tmp_path / "analysis"
+    workspace.mkdir()
+    config = workspace / "analysis.json"
+    config.write_text(json.dumps({"workspace_id": "meeting", "sources": []}))
+    original = config.read_bytes()
+    original_replace = Path.replace
+
+    def fail_replace(source: Path, target: Path) -> Path:
+        if target == config:
+            message = "disk full"
+            raise OSError(message)
+        return original_replace(source, target)
+
+    monkeypatch.setattr(Path, "replace", fail_replace)
+    with pytest.raises(OSError, match="disk full"):
+        _access.open_run("series-record", store=store, workspace=workspace)
+    assert config.read_bytes() == original
+    assert not store.projection("series-record")["holds"]
+
+
+def test_workspace_close_preserves_an_active_accessor_reader_hold(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from liblaf.cherries import _cli
+
+    monkeypatch.setattr(_access, "configured_remote", lambda _project: None)
+    store = series_record(tmp_path)
+    workspace = tmp_path / "analysis"
+    workspace.mkdir()
+    (workspace / "analysis.json").write_text(
+        json.dumps({"workspace_id": "meeting", "sources": []})
+    )
+    with _access.open_run("series-record", store=store, workspace=workspace) as reader:
+        _cli.main(["--storage", str(store.root), "analysis", "close", str(workspace)])
+        assert store.projection("series-record")["holds"]
+        assert reader.path("outputs/mesh.series").is_file()
+    assert not store.projection("series-record")["holds"]
+
+
+def test_workspace_close_during_accessor_open_preserves_reader(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_access, "configured_remote", lambda _project: None)
+    store = series_record(tmp_path)
+    workspace = tmp_path / "analysis"
+    workspace.mkdir()
+    (workspace / "analysis.json").write_text(
+        json.dumps({"workspace_id": "meeting", "sources": []})
+    )
+    original_bind = _access.RunAccessor._bind_workspace  # noqa: SLF001
+    eviction_attempts: list[dict[str, object]] = []
+
+    def close_after_binding(reader: _access.RunAccessor, folder: Path) -> None:
+        original_bind(reader, folder)
+        store.release_hold("series-record", "analysis:meeting")
+        eviction_attempts.append(
+            store.evict_local("series-record", remote_verified=True)
+        )
+
+    monkeypatch.setattr(_access.RunAccessor, "_bind_workspace", close_after_binding)
+    with _access.open_run("series-record", store=store, workspace=workspace) as reader:
+        assert not eviction_attempts[0]["allowed"]
+        assert reader.path("outputs/mesh.series").is_file()
+    assert not store.projection("series-record")["holds"]

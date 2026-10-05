@@ -1,8 +1,11 @@
 # Copyright (c) 2026 liblaf
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
+import os
+import signal
 import subprocess
 import sys
 import time
@@ -75,6 +78,25 @@ def test_capture_records_staged_and_unstaged_binary_changes(
     assert root["patch_sha256"]
     assert b"M  state.bin" in (tmp_path / "capture/git/project/status").read_bytes()
     assert b" M run.py" in (tmp_path / "capture/git/project/status").read_bytes()
+
+
+def test_capture_preserves_an_unborn_repository_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = git_repo(tmp_path)
+    entrypoint = project / "run.py"
+    entrypoint.write_text("print('staged')\n")
+    git(project, "add", "run.py")
+    entrypoint.write_text("print('unstaged')\n")
+
+    evidence = capture(project, entrypoint, tmp_path / "capture", monkeypatch)
+
+    root = next(item for item in evidence["repositories"] if item["path"] == ".")
+    patch = (tmp_path / "capture/git/project/working-tree.patch").read_bytes()
+    assert root["head"] is None
+    assert b"new file mode 100644" in patch
+    assert b"print('staged')" in patch
+    assert b"print('unstaged')" in patch
 
 
 def test_capture_records_dirty_submodule_separately(
@@ -288,3 +310,62 @@ def test_live_child_writer_prevents_sealing_and_failure_payload_discard(
         '"recording-incomplete"' in event.read_text()
         for event in (run.store.root / "metadata" / "events").rglob("*.json")
     )
+
+
+@pytest.mark.skipif(
+    not Path("/proc").is_dir(), reason="requires Linux child-process inspection"
+)
+def test_reparented_writer_prevents_sealing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    run, _ = run_for(tmp_path, monkeypatch)
+    writer_pid: int | None = None
+
+    def experiment() -> None:
+        nonlocal writer_pid
+        output = run.output("result.bin")
+        launched = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import subprocess, sys; "
+                    "child = subprocess.Popen([sys.executable, '-c', "
+                    '"import pathlib, sys, time; handle = open(sys.argv[1], '
+                    "'ab'); handle.write(b'writing'); handle.flush(); "
+                    'time.sleep(30)", sys.argv[1]], '
+                    "stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL); "
+                    "print(child.pid)"
+                ),
+                str(output),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        writer_pid = int(launched.stdout)
+        for _ in range(50):
+            if output.exists():
+                break
+            time.sleep(0.01)
+        else:
+            pytest.fail("writer did not create the declared output")
+
+    try:
+        with pytest.raises(RuntimeError, match="writable work files open"):
+            cherries.main(experiment, profile=ProfileSourceCapture(run))
+    finally:
+        if writer_pid is not None:
+            with contextlib.suppress(ProcessLookupError):
+                os.kill(writer_pid, signal.SIGTERM)
+            status = Path(f"/proc/{writer_pid}/status")
+            for _ in range(50):
+                if not status.exists() or "State:\tZ" in status.read_text():
+                    break
+                time.sleep(0.01)
+            else:
+                pytest.fail("reparented writer did not stop")
+
+    assert run.store is not None
+    assert run.store.list_records() == []
+    assert run.working_dir.is_dir()

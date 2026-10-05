@@ -80,6 +80,32 @@ def _repositories(project: Path, roots: list[str]) -> list[Path]:
     return sorted(result, key=str)
 
 
+def _working_tree_patch(repo: Path, head: str | None) -> bytes:
+    """Capture changes needed to reproduce the current worktree.
+
+    A normal checkout has a ``HEAD``, so diffing against it combines staged and
+    unstaged changes into one patch.  An unborn repository has no such base:
+    its staged files would otherwise vanish from source evidence.  Preserve its
+    index patch followed by its worktree patch instead.  This is inspection
+    evidence only; replay still correctly requires a recorded Git base.
+    """
+    options = (
+        "diff",
+        "--binary",
+        "--full-index",
+        "--no-ext-diff",
+        "--no-textconv",
+        "--ignore-submodules=dirty",
+    )
+    if head:
+        return _git(repo, *options, "HEAD")
+    staged = _git(repo, *options, "--cached")
+    unstaged = _git(repo, *options)
+    if staged and unstaged and not staged.endswith(b"\n"):
+        staged += b"\n"
+    return staged + unstaged
+
+
 def capture_source(
     project: Path, entrypoint: Path, target: Path, settings: dict[str, Any]
 ) -> dict[str, Any]:
@@ -102,21 +128,7 @@ def capture_source(
         folder = target / "git" / (relative if relative != "." else "project")
         folder.mkdir(parents=True, exist_ok=True)
         head = _git(repo, "rev-parse", "HEAD", required=False).decode().strip() or None
-        patch = (
-            _git(
-                repo,
-                "diff",
-                "--binary",
-                "--full-index",
-                "--no-ext-diff",
-                "--no-textconv",
-                "--ignore-submodules=dirty",
-                "HEAD",
-                required=True,
-            )
-            if head
-            else b""
-        )
+        patch = _working_tree_patch(repo, head)
         status = _git(repo, "status", "--porcelain=v1", "-z")
         (folder / "working-tree.patch").write_bytes(patch)
         (folder / "status").write_bytes(status)

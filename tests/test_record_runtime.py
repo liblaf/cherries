@@ -103,6 +103,24 @@ def test_execution_failure_keeps_diagnostics_but_discards_unsealed_payload(
     assert any("execution-failed" in path.read_text() for path in events)
 
 
+def test_zero_exit_seals_the_successful_run(runtime: core.Run) -> None:
+    def experiment() -> None:
+        cherries.output("result.txt").write_text("saved before exit")
+        raise SystemExit(0)
+
+    with pytest.raises(SystemExit) as result:
+        cherries.main(experiment, profile=ProfileBare())
+
+    assert result.value.code == 0
+    assert runtime.store is not None
+    record = runtime.store.read_record(runtime.run_id)["record"]
+    assert record["execution"] == {"status": "succeeded", "exit_code": 0}
+    assert (
+        runtime.store.materialize(runtime.run_id, "outputs/result.txt").read_text()
+        == "saved before exit"
+    )
+
+
 def test_hash_input_records_parent_and_copies_into_new_run(runtime: core.Run) -> None:
     def first() -> None:
         cherries.output("mesh.txt").write_text("mesh")

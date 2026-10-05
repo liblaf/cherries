@@ -268,6 +268,13 @@ class Run:
             if status.exists() and "State:\tZ" not in status.read_text():
                 msg = "an experiment child process is still running; work retained"
                 raise RuntimeError(msg)
+        writers = self._external_work_writers()
+        if writers:
+            msg = (
+                "an experiment process still has writable work files open; "
+                "work retained: " + ", ".join(map(str, sorted(writers)))
+            )
+            raise RuntimeError(msg)
 
     @staticmethod
     def _children() -> set[int]:
@@ -277,6 +284,55 @@ class Run:
             if path.exists()
             else set()
         )
+
+    def _external_work_writers(self) -> set[int]:
+        """Return non-run processes with a writable descriptor inside work.
+
+        A process can deliberately or accidentally fork a writer and exit, so
+        checking only direct children is insufficient on Linux: the writer is
+        reparented before the run reaches its sealing boundary.  ``/proc`` fd
+        flags let us conservatively catch writable handles that are open now.
+        It cannot prove a process will not open a file later, and it cannot see
+        another host or process descriptors the current user may not inspect.
+        """
+        work = self.working_dir.resolve()
+        writers: set[int] = set()
+        try:
+            processes = tuple(Path("/proc").iterdir())
+        except OSError:
+            return writers
+        for process in processes:
+            if not process.name.isdecimal():
+                continue
+            pid = int(process.name)
+            if pid == os.getpid():
+                continue
+            try:
+                if "State:\tZ" in (process / "status").read_text():
+                    continue
+                descriptors = tuple((process / "fd").iterdir())
+            except OSError:
+                continue
+            for descriptor in descriptors:
+                try:
+                    target = descriptor.resolve()
+                    flags_line = next(
+                        line
+                        for line in (process / "fdinfo" / descriptor.name)
+                        .read_text()
+                        .splitlines()
+                        if line.startswith("flags:")
+                    )
+                    flags = int(flags_line.removeprefix("flags:").strip(), 8)
+                except (OSError, StopIteration, ValueError):
+                    continue
+                if target.is_relative_to(work) and flags & os.O_ACCMODE in {
+                    os.O_WRONLY,
+                    os.O_RDWR,
+                }:
+                    writers.add(pid)
+                    break
+        return writers
 
     def abort_start(self, error: BaseException) -> None:
         """Retain an incomplete stage when source or startup recording fails."""
@@ -296,6 +352,11 @@ class Run:
         if not self.active or self.store is None:
             msg = "no active Cherries run"
             raise RuntimeError(msg)
+        if isinstance(exc, SystemExit) and exc.code in (None, 0):
+            # ``sys.exit(0)`` has the same process outcome as returning from a
+            # normal Python experiment.  Seal it before main() re-raises the
+            # exception so the interpreter can still exit successfully.
+            exc = None
         self.log_other("cherries/end_time", datetime.now().astimezone())
         try:
             self._join_writers()
@@ -304,13 +365,6 @@ class Run:
                 self.log_other("cherries/exception", diagnostic)
                 self.plugins.delegate("end", exc=exc)
                 self._close_logging()
-                if isinstance(exc, SystemExit) and exc.code in (None, 0):
-                    self.store.append_event(
-                        "recording-incomplete",
-                        self.run_id,
-                        {"reason": "early exit before experiment return"},
-                    )
-                    return
                 failure = {
                     "exception": diagnostic,
                     "execution": "failed",
