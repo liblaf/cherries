@@ -87,6 +87,11 @@ uv run python exp/2026/10/05/mouthopen/src/10-run.py --steps 200
 recording starts. Set `CHERRIES_COMET=1` only for intended
 Comet observability; it is disabled by default and its SDK is not loaded otherwise.
 
+Complete asynchronous native operations and all work-folder writes before
+`main` returns. Cherries waits for new Python-managed threads, including daemon
+threads, but cannot join or track foreign native threads. Native housekeeping
+threads do not block sealing; explicitly synchronize native library or GPU work.
+
 `input()` accepts a local path, complete `sha256:` file ID, `sha256-tree:` bundle
 ID, or `run:<record-id>/<logical-path>`. It verifies and stages an independent
 copy under `inputs/`, records the selected producer, and registers lineage before

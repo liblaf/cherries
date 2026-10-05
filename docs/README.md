@@ -98,6 +98,12 @@ and seals the result only after declared outputs were written. It does not
 self-relaunch, sandbox, bootstrap, or automatically Git commit. `CHERRIES_COMET=1`
 enables Comet; it is disabled by default and its SDK is not loaded otherwise.
 
+Complete asynchronous native operations and all work-folder writes before
+`main` returns. Cherries waits for new Python-managed threads, including daemon
+threads, but cannot join or track foreign native threads. Native housekeeping
+threads do not block sealing; synchronizing native library or GPU work remains
+the experiment's responsibility.
+
 Asset helpers require an active run:
 
 - `input(source, name=..., source_run=...)` accepts a local file/directory, full
