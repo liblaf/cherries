@@ -1,3 +1,4 @@
+# Copyright (c) 2026 liblaf
 import logging
 import time
 from pathlib import Path
@@ -11,10 +12,11 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 class Config(cherries.BaseConfig):
     name: str = "world"
-    output: Path = cherries.output("hello.txt")
+    output: Path = Path("hello.txt")
 
 
 def main(cfg: Config) -> None:
+    cfg.output = cherries.output(cfg.output)
     for x in rich.progress.track(range(10), description="Progress"):
         y: float = x**2
         cherries.log_metrics({"x": x, "y": y})

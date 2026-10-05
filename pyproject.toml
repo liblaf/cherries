@@ -3,7 +3,7 @@
 
 [project]
 name = "liblaf-cherries"
-description = "A lightweight Python experiment runner for typed configs, reproducible artifact paths, scalar metrics, and Comet/Git/local logging."
+description = "A local Python experiment recorder with content-addressed assets, Git provenance, post-hoc review, and on-demand rclone archival."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -23,7 +23,7 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "License :: OSI Approved",
   "License :: OSI Approved :: MIT License",
-  "Operating System :: OS Independent",
+  "Operating System :: POSIX :: Linux",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
@@ -56,6 +56,9 @@ dependencies = [
   "toolz>=1.1"
 ]
 dynamic = ["version"]
+
+[project.scripts]
+cherries = "liblaf.cherries._cli:main"
 
 [project.urls]
 "Changelog" = "https://github.com/liblaf/cherries/blob/main/CHANGELOG.md"

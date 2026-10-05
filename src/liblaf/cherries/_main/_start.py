@@ -1,3 +1,4 @@
+# Copyright (c) 2026 liblaf
 from liblaf.cherries import core, profiles
 from liblaf.cherries.profiles import Profile, ProfileLike
 
@@ -14,5 +15,10 @@ def start(profile: ProfileLike | None = None) -> core.Run:
     """
     profile: Profile = profiles.factory(profile)
     run: core.Run = profile.init()
-    run.start()
+    try:
+        run.start()
+    except BaseException as exc:
+        if isinstance(run, core.Run):
+            run.abort_start(exc)
+        raise
     return run

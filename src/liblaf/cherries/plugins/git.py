@@ -1,8 +1,9 @@
+# Copyright (c) 2026 liblaf
 import functools
 import logging
 import subprocess
 from pathlib import Path
-from typing import Any, override
+from typing import Any
 
 import attrs
 import git
@@ -14,7 +15,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 @attrs.define
-class Git(core.Plugin, core.PluginProtocol):
+class Git(core.Plugin):
     """Record Git metadata and optionally commit dirty experiment outputs.
 
     Attributes:
@@ -27,10 +28,10 @@ class Git(core.Plugin, core.PluginProtocol):
     commit: bool = attrs.field(default=False, kw_only=True)
     verify: bool = attrs.field(default=False, kw_only=True)
 
-    @override
     @core.impl(before=("Comet",))
     def end(self, exc: BaseException | None = None) -> None:
         """Commit dirty changes if configured and log the final Git SHA."""
+        del exc
         if self.repo is None:
             return
         if self.commit and self.repo.is_dirty(untracked_files=True):

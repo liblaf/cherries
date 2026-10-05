@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Cherries Experiments"
+  short_description: "Historical sealed-record workflow design"
+  default_prompt: "Consult the current run-cherries-experiments skill and record guide before planning an experiment record workflow."
