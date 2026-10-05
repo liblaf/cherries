@@ -214,6 +214,28 @@ published or imported through remote metadata sync.
 
 ## Review, lineage, and analysis
 
+### Living run documentation
+
+The [current experiment skill](skills/run-cherries-experiments/SKILL.md) tells
+Codex to maintain study notes and per-run memories during substantive discussion,
+including evidence, decisions, changing interpretations, and open questions.
+Editable Markdown lives in the experiment repository at
+`exp/YYYY/mm/dd/study/docs/runs/<run-id>.md`.
+
+```bash
+cherries note <id> --file exp/YYYY/mm/dd/study/docs/runs/<id>.md
+cherries --json show <id>
+```
+
+Each note event retains the complete Markdown version. `show` returns current
+`projection.notes`, reviews, and links alongside the frozen receipt and manifest.
+Codex reads the latest saved memory when resuming work and can recover a missing
+local document from the notes. Ordinary notes do not create dependent records,
+holds, or a new retention rule. Sealed experiment files stay unchanged; explicit
+comparisons and promoted outputs use saved analyses.
+
+### Review and saved analysis
+
 Every successful record starts with subjective quality `unreviewed`; execution,
 validation, and review are different fields.
 
@@ -239,6 +261,12 @@ lightweight dependent record and protects each source. Its workspace contains
 `analysis.json`; `analysis save` retains `RUN.md`, `analysis.json`, `src/`, and
 only selected `out/...` files. It is a record of interpretation, not a strict
 solver replay.
+
+Repeated analysis saves retain the name, increment a revision number, and link
+the new record to the previous revision and source runs. The editable workspace
+tracks `latest_record`; source projections expose the saved analysis links.
+Closing releases workspace holds while keeping the Markdown editable for a later
+save. Use this retention workflow for outputs that depend on their sources.
 
 Imported legacy folders are additive immutable records with deliberately
 incomplete provenance. Their legacy source/name metadata is searchable, but they
