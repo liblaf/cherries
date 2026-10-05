@@ -10,6 +10,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import uuid
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -804,9 +805,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _normalize_global_flags(argv: Sequence[str] | None) -> list[str] | None:
-    if argv is None:
-        return None
-    values = list(argv)
+    values = list(sys.argv[1:] if argv is None else argv)
     prefix: list[str] = []
     index = 0
     flags_with_value = {"--storage", "--project-dir", "--machine-id"}

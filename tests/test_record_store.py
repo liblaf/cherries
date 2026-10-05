@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -333,3 +335,36 @@ def test_restored_resident_bundle_protects_shared_tree_members(tmp_path: Path) -
     store.append_event("location-restored", "two", {})
     assert store.evict_local("one", remote_verified=True)["allowed"]
     assert store.object_path(member).is_file()
+
+
+def test_reader_can_browse_during_another_process_payload_write(tmp_path: Path) -> None:
+    store = Store(tmp_path / "store")
+    seal(store, "saved", "payload")
+    locker = subprocess.Popen(
+        [
+            sys.executable,
+            "-c",
+            "import fcntl,sys; f=open(sys.argv[1],'a+b'); fcntl.flock(f,fcntl.LOCK_EX); print('locked',flush=True); sys.stdin.read()",
+            str(store.root / ".store.lock"),
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        assert locker.stdout is not None
+        assert locker.stdout.readline().strip() == "locked"
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import sys; from pathlib import Path; from liblaf.cherries.records import Store; s=Store(Path(sys.argv[1])); assert s.list_records()==['saved']; assert s.read_record('saved')['run_id']=='saved'; assert s.machine_id",
+                str(store.root),
+            ],
+            check=True,
+            capture_output=True,
+            timeout=5,
+        )
+        assert result.returncode == 0
+    finally:
+        locker.communicate(input="", timeout=5)

@@ -136,16 +136,32 @@ class Store:
 
     @property
     def collection_id(self) -> str:
-        if self._collection_id is None:
-            self.ensure_initialized()
+        self._ensure_readable()
         assert self._collection_id is not None
         return self._collection_id
 
     @property
     def machine_id(self) -> str:
-        self.ensure_initialized()
+        self._ensure_readable()
         assert self._machine_id is not None
         return self._machine_id
+
+    def _ensure_readable(self) -> None:
+        """Load existing identities without waiting for a long payload writer."""
+        if self._collection_id is not None:
+            return
+        collection_path = self.root / "collection.json"
+        machine_path = self.root / "machine.json"
+        if not collection_path.is_file() or not machine_path.is_file():
+            self.ensure_initialized()
+            return
+        collection = self._read_json(collection_path)
+        machine = self._read_json(machine_path)["machine_id"]
+        if self._machine_id is not None and self._machine_id != machine:
+            msg = "machine ID does not match existing local store"
+            raise IntegrityError(msg)
+        self._machine_id = machine
+        self._collection_id = collection["collection_id"]
 
     @_mutation
     def ensure_initialized(self, collection_id: str | None = None) -> dict[str, Any]:
@@ -414,7 +430,7 @@ class Store:
         return self._verified_control(directory / "manifest.json", expected)
 
     def list_records(self) -> list[str]:
-        self.ensure_initialized()
+        self._ensure_readable()
         return sorted(
             path.name
             for path in (self.root / "records").iterdir()
