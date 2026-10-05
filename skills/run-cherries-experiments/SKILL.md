@@ -1,6 +1,6 @@
 ---
 name: run-cherries-experiments
-description: Create, run, inspect, archive, restore, and analyze Python experiments recorded by liblaf.cherries in a separate experiment repository with immutable local and remote CAS records.
+description: Run and analyze liblaf.cherries experiments, maintain evolving per-run documentation during discussions, and manage immutable local or remote CAS records.
 ---
 
 # Run Cherries Experiments
@@ -41,11 +41,11 @@ cherries --project-dir . --storage /data/cherries/phace-exp init \
   --collection-id "<collection-uuid>"
 ```
 
-`phace-exp` currently has local storage at `/home/liblaf/Data/cherries/phace-exp`
-and no configured archive remote. Use `--storage` and do not invoke remote
-archive/sync through `--remote main` until `archive.main.path` is configured.
-Apple and Melon are pinned local migration submodule commits; phace-exp has no
-published Git ref or configured Git remote.
+Read the project's settings to resolve its local storage and archive targets;
+do not assume a machine-specific path or a published experiment Git ref.
+Use `--storage` to override local storage. Remote archive/sync through
+`--remote main` requires an explicitly configured `archive.main.path`.
+The local recorder currently supports Linux with Python 3.12 or newer.
 
 ## Sealed daily experiment
 
@@ -104,6 +104,48 @@ available. A successful run seals canonical SHA-256 objects and a small immutabl
 record. A missing declared output or recording error retains the work stage. An
 execution failure records diagnostics and may discard only an unsealed local
 payload with no dependency or hold.
+
+## Living experiment documentation
+
+Automatically maintain experiment notes during experiment sessions. This is a
+standing workflow request; do not wait for a separate "write docs" instruction.
+At the start of a session, read the study's `RUN.md` and relevant run memories
+before proposing work. Carry forward decisions, unsuccessful approaches,
+uncertainties, and the reasons behind the current plan.
+
+Before a run is sealed, keep its question, protocol, and discussion in the
+study's `RUN.md`. For a saved run, maintain one editable Markdown document at
+`exp/YYYY/mm/dd/study/docs/runs/<RUN-ID>.md`. In phace-exp, seed it from
+`templates/run-memory.md`; replace template prompts with actual evidence.
+Include the exact run ID, command/configuration, input and output references,
+observations, current interpretation, decisions, open questions, next steps,
+and a short dated history of meaningful changes. Use only relevant sections.
+
+Update notes after substantive discussion, new results, decisions, corrections,
+or changes of direction, and before the final response or session handoff.
+Preserve measured facts; explain and mark superseded interpretations when
+conclusions change. Summarize useful reasoning rather than copying the chat.
+For a failed execution with no saved run, record diagnostics in study notes.
+
+Attach each changed document version to the saved run locally:
+
+```bash
+uv run cherries note <RUN-ID> --file exp/YYYY/mm/dd/study/docs/runs/<RUN-ID>.md
+uv run cherries --json show <RUN-ID>
+```
+
+The full Markdown is retained as an append-only annotation. `show` includes
+`projection.notes`; the latest entry whose `value` starts with `# Run memory:`
+is the saved memory, and earlier versions remain available. Recover a missing
+local document from it. If concurrent sessions left divergent versions, read
+both and consolidate their evidence and open questions into a new revision.
+Do not append a new annotation when the document is unchanged.
+
+These ordinary memories create no dependent record or retention hold, so taking
+notes preserves manual discard eligibility. Keep the original sealed `RUN.md`
+and receipt intact. Explicit comparisons, figures, or meeting outputs use the
+analysis workflow below and protect their source runs. Do not infer automatic
+Git commits or remote publication from permission to maintain documentation.
 
 ## Inspect records and archive
 

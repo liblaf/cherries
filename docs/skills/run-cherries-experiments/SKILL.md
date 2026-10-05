@@ -41,11 +41,11 @@ cherries --project-dir . --storage /data/cherries/phace-exp init \
   --collection-id "<collection-uuid>"
 ```
 
-`phace-exp` currently has local storage at `/home/liblaf/Data/cherries/phace-exp`
-and no configured archive remote. Use `--storage` and do not invoke remote
-archive/sync through `--remote main` until `archive.main.path` is configured.
-Apple and Melon are pinned local migration submodule commits; phace-exp has no
-published Git ref or configured Git remote.
+Read the project's settings to resolve its local storage and archive targets;
+do not assume a machine-specific path or a published experiment Git ref.
+Use `--storage` to override local storage. Remote archive/sync through
+`--remote main` requires an explicitly configured `archive.main.path`.
+The local recorder currently supports Linux with Python 3.12 or newer.
 
 ## Sealed daily experiment
 

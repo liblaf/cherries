@@ -84,7 +84,7 @@ compatible runtime. [uv path dependencies](https://docs.astral.sh/uv/concepts/pr
 
 ## Local and remote stores
 
-`cherries init --storage /home/liblaf/Data/cherries/research` creates or enrolls
+`cherries init --storage /data/cherries/research` creates or enrolls
 a collection and registers its local volume. This path is an example, not a
 directory created by the proposal. Default: `~/.local/share/cherries/collections/<id>/`.
 Work, local object publication, and record publication use appropriate
@@ -141,7 +141,7 @@ publication = "serialized"
 ```toml
 # cherries.local.toml, Git ignored
 [collection]
-storage = "/home/liblaf/Data/cherries/research"
+storage = "/data/cherries/research"
 ```
 
 Canonical objects are shared storage. Active work and materialized views are

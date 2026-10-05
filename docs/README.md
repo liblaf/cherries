@@ -59,12 +59,9 @@ path = "/archive/cherries/phace-exp"
 storage = "/data/cherries/phace-exp"
 ```
 
-The current `phace-exp` collection is local at
-`/home/liblaf/Data/cherries/phace-exp` and has no configured archive remote. Use
-`--storage` there; `--remote main` deliberately fails until an
-`archive.main.path` is configured. Its Apple and Melon submodules are pinned
-local migration commits; this experiment repository has no published ref or
-configured Git remote.
+The local recorder currently supports Linux with Python 3.12 or newer. Choose a
+data volume through `collection.storage` or `--storage`; `--remote main` requires
+an explicitly configured `archive.main.path`.
 
 ## Python contract
 

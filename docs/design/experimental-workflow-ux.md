@@ -58,7 +58,7 @@ content-addressed `sha256-tree` inventories of child file hashes.
 Initialize the local storage volume once, then execute the script normally:
 
 ```bash
-cherries init --storage /home/liblaf/Data/cherries/research
+cherries init --storage /data/cherries/research
 python exp/2026/10/05/mouthopen/src/10-run.py --steps 200
 # Or use the project's uv environment:
 uv run python exp/2026/10/05/mouthopen/src/10-run.py --steps 200

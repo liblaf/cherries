@@ -27,6 +27,8 @@ output, checkpoint, or log.
 
 ## Install and configure
 
+The local recorder currently supports Linux with Python 3.12 or newer.
+
 ```bash
 uv add liblaf-cherries
 ```
@@ -63,10 +65,8 @@ cherries --project-dir . --storage /data/cherries/phace-exp init \
   --collection-id "<collection-uuid>"
 ```
 
-The current `phace-exp` collection is local at
-`/home/liblaf/Data/cherries/phace-exp`; it has no configured archive remote.
-Use `--storage` for it and do not run archive or sync with `--remote main` until
-an `archive.main.path` is deliberately configured.
+Choose a local data volume through `collection.storage` or `--storage`.
+Configure `archive.main.path` before using archive or sync with `--remote main`.
 
 ## Run a sealed experiment
 
