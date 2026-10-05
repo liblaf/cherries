@@ -83,8 +83,14 @@ def canonical_json(value: Any) -> bytes:
     return _canonical_bytes(value)
 
 
-def _validate_id(value: str, name: str = "id") -> str:
-    if not value or "/" in value or "\\" in value or value in {".", ".."}:
+def _validate_id(value: Any, name: str = "id") -> str:
+    if (
+        not isinstance(value, str)
+        or not value
+        or "/" in value
+        or "\\" in value
+        or value in {".", ".."}
+    ):
         msg = f"invalid {name}: {value!r}"
         raise ValueError(msg)
     return value
@@ -208,6 +214,7 @@ class Store:
             msg = "collection ID must be a string"
             raise IntegrityError(msg)
         self._collection_id = collection_value
+        self._recover_sealed_work()
         return data
 
     @_mutation
@@ -221,17 +228,39 @@ class Store:
             msg = f"run already sealed: {run_id}"
             raise IntegrityError(msg)
         path = self.root / "work" / run_id
+        pending_path = self.root / "pending" / f"{run_id}.json"
         if path.exists():
-            msg = f"work directory already exists: {run_id}"
+            if pending_path.exists():
+                msg = f"work directory already exists: {run_id}"
+                raise IntegrityError(msg)
+            receipt = self._read_json(path / ".cherries-work.json")
+            if receipt.get("run_id") != run_id:
+                msg = f"work directory is not owned by run: {run_id}"
+                raise IntegrityError(msg)
+            recovered_metadata = receipt.get("metadata")
+            if not isinstance(recovered_metadata, dict):
+                msg = f"work receipt metadata is invalid: {run_id}"
+                raise IntegrityError(msg)
+            # A process can die after writing the durable work receipt but
+            # before publishing its pending intent.  Recreate only that
+            # missing intent; never discard or replace an existing one.
+            self._atomic_json(
+                pending_path,
+                {"run_id": run_id, "roots": [], "metadata": recovered_metadata},
+            )
+            return path
+        if pending_path.exists():
+            msg = f"pending intent exists without work directory: {run_id}"
             raise IntegrityError(msg)
         path.mkdir(parents=True)
+        work_metadata = dict(metadata or {})
         self._atomic_json(
             path / ".cherries-work.json",
-            {"run_id": run_id, "metadata": dict(metadata or {})},
+            {"run_id": run_id, "metadata": work_metadata},
         )
         self._atomic_json(
-            self.root / "pending" / f"{run_id}.json",
-            {"run_id": run_id, "roots": [], "metadata": dict(metadata or {})},
+            pending_path,
+            {"run_id": run_id, "roots": [], "metadata": work_metadata},
         )
         return path
 
@@ -354,8 +383,8 @@ class Store:
             shutil.rmtree(staging, ignore_errors=True)
             raise
         (self.root / "pending" / f"{run_id}.json").unlink(missing_ok=True)
-        self.append_event("sealed", run_id, {"root_digest": f"sha256:{root_digest}"})
         shutil.rmtree(work)
+        self.append_event("sealed", run_id, {"root_digest": f"sha256:{root_digest}"})
         return {
             "run_id": run_id,
             "record_digest": f"sha256:{record_digest}",
@@ -631,7 +660,11 @@ class Store:
             msg = f"unsupported immutable metadata path: {relative}"
             raise IntegrityError(msg)
         if valid_event:
-            event = json.loads(data)
+            try:
+                event = json.loads(data)
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                msg = "remote metadata event is not valid JSON"
+                raise IntegrityError(msg) from error
             allowed = {
                 "note",
                 "link",
@@ -650,16 +683,34 @@ class Store:
                 "maintenance-complete",
             }
             if (
-                event.get("format") != self.format_version
-                or event.get("kind") not in allowed
-                or not event.get("event_id")
-                or not event.get("machine_id")
-                or not event.get("subject")
+                not isinstance(event, dict)
+                or not isinstance(event.get("format"), int)
+                or isinstance(event.get("format"), bool)
+                or event["format"] != self.format_version
+                or not isinstance(event.get("kind"), str)
+                or event["kind"] not in allowed
+                or not isinstance(event.get("event_id"), str)
+                or not isinstance(event.get("machine_id"), str)
+                or not isinstance(event.get("subject"), str)
+                or not isinstance(event.get("clock"), int)
+                or isinstance(event.get("clock"), bool)
+                or event["clock"] < 0
+                or not isinstance(event.get("value"), Mapping)
             ):
                 msg = "invalid remote metadata event"
                 raise IntegrityError(msg)
+            try:
+                _validate_id(event["event_id"], "event ID")
+                _validate_id(event["machine_id"], "machine ID")
+                _validate_id(event["subject"], "event subject")
+            except ValueError as error:
+                msg = "invalid remote metadata event"
+                raise IntegrityError(msg) from error
             if Path(relative).parts[2] != event["machine_id"]:
                 msg = "event machine does not match metadata path"
+                raise IntegrityError(msg)
+            if Path(relative).stem != event["event_id"]:
+                msg = "event ID does not match metadata path"
                 raise IntegrityError(msg)
         target = self.root / relative
         if target.exists():
@@ -671,7 +722,7 @@ class Store:
         return True
 
     @_mutation
-    def import_remote_record(
+    def import_remote_record(  # noqa: C901 - remote receipt checks are one gate
         self,
         record: Mapping[str, Any],
         manifest: Mapping[str, Any],
@@ -683,7 +734,26 @@ class Store:
         availability.  Parent receipts must already be present.
         """
         self.ensure_initialized()
-        run_id = _validate_id(str(record.get("run_id", "")), "run ID")
+        run_id = _validate_id(record.get("run_id", ""), "run ID")
+        legacy = (
+            isinstance(record.get("record"), Mapping) and "legacy" in record["record"]
+        )
+        if (
+            record.get("format") != self.format_version
+            or manifest.get("format") != self.format_version
+            or not isinstance(record.get("record"), Mapping)
+            or not isinstance(record.get("parents"), list)
+            or any(not isinstance(parent, str) for parent in record["parents"])
+            or (
+                not legacy
+                and (
+                    not isinstance(record.get("machine_id"), str)
+                    or not record["machine_id"]
+                )
+            )
+        ):
+            msg = "remote record has invalid format or machine identity"
+            raise IntegrityError(msg)
         if manifest.get("run_id") != run_id or complete.get("run_id") != run_id:
             msg = "remote record identifiers disagree"
             raise IntegrityError(msg)
@@ -694,6 +764,9 @@ class Store:
         self._validate_bindings(record.get("record", {}))
         record_digest = f"sha256:{_digest_bytes(_canonical_bytes(dict(record)))}"
         manifest_digest = f"sha256:{_digest_bytes(_canonical_bytes(dict(manifest)))}"
+        if record.get("manifest_digest") != manifest_digest:
+            msg = "remote record does not bind its manifest"
+            raise IntegrityError(msg)
         root_digest = f"sha256:{_digest_bytes(_canonical_bytes({'record': record_digest.removeprefix('sha256:'), 'manifest': manifest_digest.removeprefix('sha256:')}))}"
         if (
             complete.get("record_digest") != record_digest
@@ -702,7 +775,7 @@ class Store:
         ):
             msg = "remote completion digests do not verify"
             raise IntegrityError(msg)
-        for parent in record.get("parents", []):
+        for parent in record["parents"]:
             _validate_id(parent, "parent ID")
             if (
                 parent == run_id
@@ -963,11 +1036,13 @@ class Store:
         self._clock_stamp = self._event_directory_stamp()
         return event
 
+    @_mutation
     def review(self, run_id: str, status: str, note: str = "") -> dict[str, Any]:
         return self.append_event(
             "review", self.resolve_id(run_id), {"status": status, "note": note}
         )
 
+    @_mutation
     def label(self, run_id: str, label: str, *, present: bool = True) -> dict[str, Any]:
         run_id = self.resolve_id(run_id)
         value: dict[str, Any] = {"label": label}
@@ -979,6 +1054,7 @@ class Store:
             )
         return self.append_event("label", run_id, value)
 
+    @_mutation
     def mark(
         self,
         run_id: str,
@@ -1001,6 +1077,7 @@ class Store:
             )
         return events
 
+    @_mutation
     def hold(self, run_id: str, reason: str) -> dict[str, Any]:
         return self.append_event(
             "hold",
@@ -1008,6 +1085,7 @@ class Store:
             {"reason": reason, "operation_id": str(uuid.uuid4())},
         )
 
+    @_mutation
     def release_hold(self, run_id: str, reason: str) -> dict[str, Any]:
         run_id = self.resolve_id(run_id)
         return self.append_event(
@@ -1339,6 +1417,121 @@ class Store:
 
     def _record_dir(self, run_id: str) -> Path:
         return self.root / "records" / run_id
+
+    def _recover_sealed_work(self) -> None:
+        """Remove only owned work left behind after a published seal crashed."""
+        candidates = {
+            path.name.removesuffix(".json")
+            for path in (self.root / "pending").glob("*.json")
+        }
+        candidates.update(
+            path.name
+            for path in (self.root / "work").iterdir()
+            if path.is_dir() and not path.is_symlink()
+        )
+        for run_id in candidates:
+            try:
+                _validate_id(run_id, "run ID")
+            except ValueError:
+                continue
+            if not (self._record_dir(run_id) / "complete.json").is_file():
+                continue
+            work = self.root / "work" / run_id
+            if not self._owned_dead_work(work, run_id):
+                continue
+            # Verify the published receipt before treating its abandoned
+            # staging directory as disposable.  Unreadable, malformed, or
+            # unavailable payload remains visible for recovery.
+            try:
+                self._verify_published_payload(run_id)
+            except (
+                FileNotFoundError,
+                IntegrityError,
+                KeyError,
+                NotFoundError,
+                ValueError,
+                json.JSONDecodeError,
+            ):
+                continue
+            (self.root / "pending" / f"{run_id}.json").unlink(missing_ok=True)
+            if work.exists():
+                shutil.rmtree(work)
+
+    def _owned_dead_work(self, work: Path, run_id: str) -> bool:
+        if not work.exists():
+            return True
+        if not work.is_dir() or work.is_symlink():
+            return False
+        try:
+            receipt = self._read_json(work / ".cherries-work.json")
+        except (json.JSONDecodeError, NotFoundError):
+            return False
+        return receipt.get("run_id") == run_id and not self._work_process_is_alive(
+            receipt
+        )
+
+    @staticmethod
+    def _work_process_is_alive(receipt: Mapping[str, Any]) -> bool:
+        metadata = receipt.get("metadata", {})
+        if not isinstance(metadata, Mapping):
+            return False
+        pid = metadata.get("pid")
+        if not isinstance(pid, int):
+            return False
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
+
+    def _verify_published_payload(self, run_id: str) -> None:
+        """Verify a sealed control root and every locally retained payload byte."""
+        directory = self._record_dir(run_id)
+        complete = self._read_control(directory / "complete.json")
+        record = self.read_record(run_id)
+        manifest = self.read_manifest(run_id)
+        record_digest = complete.get("record_digest")
+        manifest_digest = complete.get("manifest_digest")
+        if (
+            complete.get("run_id") != run_id
+            or not isinstance(record_digest, str)
+            or not isinstance(manifest_digest, str)
+            or record.get("manifest_digest") != manifest_digest
+        ):
+            msg = f"published record is structurally invalid: {run_id}"
+            raise IntegrityError(msg)
+        record_hash = self._asset_digest(record_digest)
+        manifest_hash = self._asset_digest(manifest_digest)
+        root_digest = f"sha256:{_digest_bytes(_canonical_bytes({'record': record_hash, 'manifest': manifest_hash}))}"
+        if complete.get("root_digest") != root_digest:
+            msg = f"published root digest does not verify: {run_id}"
+            raise IntegrityError(msg)
+        for entry in manifest["files"]:
+            self._verify_object(entry["asset_id"], entry["size"])
+        for asset_id in self._asset_ids(record["record"]):
+            if asset_id.startswith("sha256-tree:"):
+                digest = self._tree_digest(asset_id)
+                descriptor = self._read_tree(
+                    self.root / "objects" / "sha256-tree" / digest[:2] / digest,
+                    asset_id,
+                )
+                for entry in descriptor["entries"]:
+                    self._verify_object(entry["asset_id"], entry["size"])
+            else:
+                self._verify_object(asset_id)
+
+    def _verify_object(self, asset_id: str, size: int | None = None) -> None:
+        digest = self._asset_digest(asset_id)
+        path = self._object_path(digest)
+        if not path.is_file():
+            msg = f"object unavailable: {asset_id}"
+            raise NotFoundError(msg)
+        actual_digest, actual_size = _file_digest(path)
+        if actual_digest != digest or (size is not None and actual_size != size):
+            msg = f"CAS object bytes do not match asset ID: {asset_id}"
+            raise IntegrityError(msg)
 
     @contextmanager
     def _mutation_lock(self) -> Any:

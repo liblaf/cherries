@@ -55,6 +55,8 @@ class StoreForRemote:
         manifest: dict[str, Any],
         complete: dict[str, Any],
     ) -> bool:
+        self._record = record
+        self._manifest = manifest
         directory = self.root / "records" / self.run_id
         directory.mkdir(parents=True, exist_ok=True)
         for name, value in (
@@ -194,6 +196,32 @@ def test_local_remote_restore_fetches_verified_object_closure(tmp_path: Path) ->
 
     assert path == tmp_path / "restored" / "runs" / "run-1"
     assert object_path(tmp_path / "restored", digest).read_bytes() == data
+
+
+def test_restore_rejects_commit_with_an_incomplete_object_closure(
+    tmp_path: Path,
+) -> None:
+    """A commit must bind every asset before restore mutates a local view."""
+    from liblaf.cherries.records import Store
+
+    source = Store(tmp_path / "source", machine_id="machine-a")
+    source.ensure_initialized("collection")
+    work = source.start_work("run")
+    (work / "result.txt").write_text("result")
+    source.seal("run", {}, work)
+    remote_root = tmp_path / "remote"
+    Remote(remote_root).archive(source, "run")
+    commit_path = remote_root / "records" / "run" / "commit.json"
+    commit = json.loads(commit_path.read_text())
+    commit["closure"] = []
+    commit_path.write_text(json.dumps(commit))
+
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+
+    with pytest.raises(IntegrityError, match="object closure"):
+        Remote(remote_root).restore(target, "run")
+    assert not list((target.root / "runs" / "run").rglob("*"))
 
 
 def test_restore_into_fresh_actual_store(tmp_path: Path) -> None:
@@ -448,6 +476,103 @@ def test_metadata_import_rejects_checkpointed_note_with_changed_bytes(
     target.ensure_initialized("collection")
     with pytest.raises(IntegrityError, match=r"event.*checkpoint"):
         Remote(remote_root).import_metadata(target)
+
+
+def test_metadata_import_rejects_checkpointed_event_at_a_second_name(
+    tmp_path: Path,
+) -> None:
+    """A checkpoint must not replay one immutable event under a new path."""
+    from liblaf.cherries.records import Store
+
+    source = Store(tmp_path / "source", machine_id="machine-a")
+    source.ensure_initialized("collection")
+    work = source.start_work("run")
+    (work / "result.txt").write_text("result")
+    source.seal("run", {}, work)
+    event = source.append_event("note", "run", {"value": "one discussion"})
+    remote_root = tmp_path / "remote"
+    Remote(remote_root).sync_metadata(source.root)
+    original = (
+        remote_root / "metadata" / "events" / "machine-a" / f"{event['event_id']}.json"
+    )
+    duplicate = original.with_name("same-event-under-another-name.json")
+    shutil.copy2(original, duplicate)
+    checkpoint_path = next((remote_root / "metadata" / "checkpoints").glob("*.json"))
+    checkpoint = json.loads(checkpoint_path.read_text())
+    checkpoint["events"][duplicate.relative_to(remote_root).as_posix()] = (
+        f"sha256:{hashlib.sha256(duplicate.read_bytes()).hexdigest()}"
+    )
+    checkpoint_bytes = canonical_json(checkpoint)
+    (
+        remote_root
+        / "metadata"
+        / "checkpoints"
+        / f"{hashlib.sha256(checkpoint_bytes).hexdigest()}.json"
+    ).write_bytes(checkpoint_bytes)
+
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+
+    with pytest.raises(IntegrityError, match="remote event is invalid"):
+        Remote(remote_root).import_metadata(target)
+    assert not list((target.root / "metadata" / "events").glob("*/*.json"))
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("format", True),
+        ("clock", True),
+        ("value", []),
+        ("subject", "../outside"),
+        ("kind", "unknown-kind"),
+        ("kind", []),
+        (None, []),
+    ],
+)
+def test_metadata_import_rejects_malformed_checkpointed_event_before_install(
+    tmp_path: Path, field: str | None, value: Any
+) -> None:
+    """Checkpoint hashes bind bytes; they do not make malformed events valid."""
+    from liblaf.cherries.records import Store
+
+    source = Store(tmp_path / "source", machine_id="machine-a")
+    source.ensure_initialized("collection")
+    work = source.start_work("run")
+    (work / "result.txt").write_text("result")
+    source.seal("run", {}, work)
+    event = source.append_event("note", "run", {"value": "trusted note"})
+    remote_root = tmp_path / "remote"
+    Remote(remote_root).sync_metadata(source.root)
+    event_path = (
+        remote_root / "metadata" / "events" / "machine-a" / f"{event['event_id']}.json"
+    )
+    malformed = json.loads(event_path.read_text())
+    if field is None:
+        malformed = value
+    else:
+        malformed[field] = value
+    event_path.write_bytes(canonical_json(malformed))
+    checkpoint_path = next((remote_root / "metadata" / "checkpoints").glob("*.json"))
+    checkpoint = json.loads(checkpoint_path.read_text())
+    checkpoint_path.unlink()
+    checkpoint["events"][event_path.relative_to(remote_root).as_posix()] = (
+        f"sha256:{hashlib.sha256(event_path.read_bytes()).hexdigest()}"
+    )
+    checkpoint_bytes = canonical_json(checkpoint)
+    (
+        remote_root
+        / "metadata"
+        / "checkpoints"
+        / f"{hashlib.sha256(checkpoint_bytes).hexdigest()}.json"
+    ).write_bytes(checkpoint_bytes)
+
+    target = Store(tmp_path / "target", machine_id="machine-b")
+    target.ensure_initialized("collection")
+
+    with pytest.raises(IntegrityError, match="remote event is invalid"):
+        Remote(remote_root).import_metadata(target)
+    assert not list((target.root / "metadata" / "events").glob("*/*.json"))
 
 
 def test_metadata_import_ignores_uncheckpointed_valid_note_during_publication(

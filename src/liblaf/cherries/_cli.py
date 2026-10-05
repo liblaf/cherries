@@ -1,5 +1,5 @@
 # Copyright (c) 2026 liblaf
-# ruff: noqa: C901, EM101, EM102, PLR0912, PLR0915, TRY003, TRY301
+# ruff: noqa: C901, EM101, EM102, PLR0915, TRY003, TRY301
 """The small foreground command interface for Cherries records."""
 
 from __future__ import annotations
@@ -123,6 +123,24 @@ def _analysis_locked(folder: Path) -> Any:
         yield
 
 
+def _bind_analysis_source(store: Any, folder: Path, run_id: str) -> dict[str, Any]:
+    """Bind a source while the caller holds the workspace lock."""
+    config = _read_analysis(folder)
+    reason = f"analysis:{config['workspace_id']}"
+    acquired = reason not in store.projection(run_id).get("holds", set())
+    if acquired:
+        store.hold(run_id, reason)
+    if run_id not in config["sources"]:
+        config["sources"].append(run_id)
+        try:
+            _write_analysis(folder, config)
+        except BaseException:
+            if acquired:
+                store.release_hold(run_id, reason)
+            raise
+    return config
+
+
 def command_init(args: argparse.Namespace) -> dict[str, Any]:
     store = _store(_storage(args), args.machine_id)
     return dict(store.ensure_initialized(collection_id=_collection_id(args)))
@@ -168,6 +186,19 @@ def command_browse(args: argparse.Namespace) -> Any:
     if args.failed:
         return {"attempts": store.list_attempts(), "imported": imported}
     records = [_browse_summary(store, run_id) for run_id in store.list_records()]
+    if args.used_in:
+        analyses = {
+            item["run_id"]
+            for item in records
+            if store.read_record(item["run_id"])["record"].get("used_in")
+            == args.used_in
+        }
+        sources = {
+            parent
+            for run_id in analyses
+            for parent in store.read_record(run_id).get("parents", [])
+        }
+        records = [item for item in records if item["run_id"] in analyses | sources]
     if args.quality:
         records = [item for item in records if item["quality"] == args.quality]
     if args.label:
@@ -183,19 +214,6 @@ def command_browse(args: argparse.Namespace) -> Any:
             }
             or args.asset in _asset_ids(store.read_record(item["run_id"])["record"])
         ]
-    if args.used_in:
-        analyses = {
-            item["run_id"]
-            for item in records
-            if store.read_record(item["run_id"])["record"].get("used_in")
-            == args.used_in
-        }
-        sources = {
-            parent
-            for run_id in analyses
-            for parent in store.read_record(run_id).get("parents", [])
-        }
-        records = [item for item in records if item["run_id"] in analyses | sources]
     if args.search:
         term = args.search.casefold()
         records = [
@@ -321,25 +339,13 @@ def command_path(args: argparse.Namespace) -> Any:
     if args.remote:
         _remote(args).import_metadata(store, args.run_id)
     run_id = store.resolve_id(args.run_id)
-    workspace_hold: str | None = None
-    if args.workspace:
-        config = _read_analysis(args.workspace)
-        sources = list(config["sources"])
-        if run_id not in sources:
-            workspace_hold = f"analysis:{config['workspace_id']}"
-            store.hold(run_id, workspace_hold)
-            sources.append(run_id)
-            config["sources"] = sources
-            try:
-                _write_analysis(args.workspace, config)
-            except BaseException:
-                store.release_hold(run_id, workspace_hold)
-                raise
     lease_id = str(uuid.uuid4())
     lease_reason = f"read:{lease_id}"
-    if not args.workspace:
-        store.hold(run_id, lease_reason)
+    store.hold(run_id, lease_reason)
     try:
+        if args.workspace:
+            with _analysis_locked(args.workspace):
+                _bind_analysis_source(store, args.workspace, run_id)
         if args.path.startswith("sha256-tree:"):
             if args.path not in _asset_ids(store.read_record(run_id)["record"]):
                 raise RuntimeError("tree asset is not declared by the selected record")
@@ -360,10 +366,10 @@ def command_path(args: argparse.Namespace) -> Any:
                 store, _remote(args) if args.remote else None, run_id, args.path
             )
     except BaseException:
-        if not args.workspace:
-            store.release_hold(run_id, lease_reason)
+        store.release_hold(run_id, lease_reason)
         raise
     if args.workspace:
+        store.release_hold(run_id, lease_reason)
         return {
             "run_id": run_id,
             "path": str(result),
@@ -587,7 +593,11 @@ def command_rerun(args: argparse.Namespace) -> dict[str, Any]:
     )
     prepared = dict(prepare_replay(store, args.run_id, workspace))
     prepared["owner"] = store.machine_id
-    Path(workspace, "replay.json").write_text(_json(prepared) + "\n")
+    try:
+        Path(workspace, "replay.json").write_text(_json(prepared) + "\n")
+    except BaseException:
+        store.release_hold(prepared["run_id"], prepared["reader_hold"])
+        raise
     if args.prepare_only:
         return {**prepared, "prepared": True}
     environment = {
@@ -627,20 +637,31 @@ def command_rerun(args: argparse.Namespace) -> dict[str, Any]:
 def command_analysis_new(args: argparse.Namespace) -> Any:
     store = _store(_storage(args), args.machine_id)
     folder = args.folder.resolve()
-    folder.mkdir(parents=True, exist_ok=False)
     sources = [str(store.resolve_id(item)) for item in args.source]
+    folder.mkdir(parents=True, exist_ok=False)
     workspace = str(uuid.uuid4())
-    for source in sources:
-        store.hold(source, f"analysis:{workspace}")
-    _write_analysis(
-        folder,
-        {
-            "workspace_id": workspace,
-            "name": args.name,
-            "sources": sources,
-            "outputs": [],
-        },
-    )
+    acquired: list[str] = []
+    try:
+        with _analysis_locked(folder):
+            for source in sources:
+                store.hold(source, f"analysis:{workspace}")
+                acquired.append(source)
+            _write_analysis(
+                folder,
+                {
+                    "workspace_id": workspace,
+                    "name": args.name,
+                    "sources": sources,
+                    "outputs": [],
+                },
+            )
+    except BaseException:
+        for source in acquired:
+            store.release_hold(source, f"analysis:{workspace}")
+        (folder / ".analysis.lock").unlink(missing_ok=True)
+        with contextlib.suppress(OSError):
+            folder.rmdir()
+        raise
     return {
         "workspace_id": workspace,
         "name": args.name,
@@ -651,18 +672,15 @@ def command_analysis_new(args: argparse.Namespace) -> Any:
 
 def command_analysis_source(args: argparse.Namespace) -> Any:
     store = _store(_storage(args), args.machine_id)
-    config = _read_analysis(args.folder)
     source = str(store.resolve_id(args.run_id))
-    sources = list(config["sources"])
-    if args.action == "add" and source not in sources:
-        store.hold(source, f"analysis:{config['workspace_id']}")
-        sources.append(source)
-    elif args.action == "remove" and source in sources:
+    with _analysis_locked(args.folder):
+        if args.action == "add":
+            return _bind_analysis_source(store, args.folder, source)
+        config = _read_analysis(args.folder)
+        config["sources"] = [item for item in config["sources"] if item != source]
+        _write_analysis(args.folder, config)
         store.release_hold(source, f"analysis:{config['workspace_id']}")
-        sources.remove(source)
-    config["sources"] = sources
-    _write_analysis(args.folder, config)
-    return config
+        return config
 
 
 def command_analysis_save(args: argparse.Namespace) -> Any:
@@ -709,19 +727,6 @@ def command_analysis_save(args: argparse.Namespace) -> Any:
                 },
             )
         )
-        for source, relative in validated:
-            destination = work / "outputs" / relative
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, destination)
-        for name in ("RUN.md", "analysis.json"):
-            source = folder / name
-            if source.is_file():
-                shutil.copy2(source, work / name)
-        source_tree = folder / "src"
-        if source_tree.is_dir():
-            shutil.copytree(source_tree, work / "source", dirs_exist_ok=True)
-        for source in parents:
-            store.register_parent(run_id, source)
         record = {
             "mode": "analysis",
             "reproducibility": "lightweight",
@@ -732,7 +737,27 @@ def command_analysis_save(args: argparse.Namespace) -> Any:
             "previous_revision": previous_revision,
             "used_in": args.used_in,
         }
-        sealed = dict(store.seal(run_id, record, work))
+        try:
+            for source in parents:
+                store.register_parent(run_id, source)
+            for source, relative in validated:
+                destination = work / "outputs" / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, destination)
+            for name in ("RUN.md", "analysis.json"):
+                source = folder / name
+                if source.is_file():
+                    shutil.copy2(source, work / name)
+            source_tree = folder / "src"
+            if source_tree.is_dir():
+                shutil.copytree(source_tree, work / "source", dirs_exist_ok=True)
+            sealed = dict(store.seal(run_id, record, work))
+        except BaseException as error:
+            try:
+                store.cancel_failed_work(run_id, {"error": str(error)})
+            except (RuntimeError, OSError) as cleanup_error:
+                error.add_note(f"failed to clean analysis work: {cleanup_error}")
+            raise
 
         # A failed seal must never advance the editable workspace's latest pointer.
         config["latest_record"] = run_id
@@ -753,10 +778,11 @@ def command_analysis_save(args: argparse.Namespace) -> Any:
 
 def command_analysis_close(args: argparse.Namespace) -> Any:
     store = _store(_storage(args), args.machine_id)
-    config = _read_analysis(args.folder)
-    for source in config["sources"]:
-        store.release_hold(source, f"analysis:{config['workspace_id']}")
-    return {"workspace_id": config["workspace_id"], "closed": True}
+    with _analysis_locked(args.folder):
+        config = _read_analysis(args.folder)
+        for source in config["sources"]:
+            store.release_hold(source, f"analysis:{config['workspace_id']}")
+        return {"workspace_id": config["workspace_id"], "closed": True}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -839,7 +865,7 @@ def build_parser() -> argparse.ArgumentParser:
     mark.set_defaults(func=command_mark)
     for name in ("note", "link"):
         item = sub.add_parser(name)
-        item.add_argument("run_id", nargs="?")
+        item.add_argument("run_id")
         if name == "note":
             item.add_argument("--file", required=True)
         else:
@@ -912,6 +938,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(_normalize_global_flags(argv))
     try:
         _emit(args.func(args), args)
-    except (RemoteError, RuntimeError, OSError) as error:
+    except (RemoteError, RuntimeError, OSError, ValueError) as error:
         parser.error(str(error))
     return 0

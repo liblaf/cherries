@@ -188,7 +188,9 @@ with cherries.open_run("<record-id>") as saved:
 ```
 
 Pass `workspace=Path("analysis/compare")` to attach the source to an existing
-analysis workspace hold; otherwise close the accessor or use a context manager.
+analysis workspace hold. In either mode, close the accessor or use a context
+manager: its temporary reader hold protects active reads even if the workspace
+is closed. The workspace's own hold remains until `cherries analysis close`.
 
 `cherries rerun <id> --prepare-only --workspace replay/<id>` reconstructs a
 fresh workspace from saved Git HEADs, binary diffs, selected untracked source,

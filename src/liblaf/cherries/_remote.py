@@ -98,6 +98,27 @@ class IntegrityError(RemoteError):
     """Bytes at a content-addressed destination did not match their digest."""
 
 
+_EVENT_KINDS = frozenset(
+    {
+        "note",
+        "link",
+        "recording-incomplete",
+        "location-verified",
+        "review",
+        "label",
+        "important",
+        "keep-local",
+        "hold",
+        "tombstone",
+        "sealed",
+        "execution-failed",
+        "local-evicted",
+        "location-restored",
+        "maintenance-complete",
+    }
+)
+
+
 @dataclass(frozen=True)
 class RemoteLocation:
     remote: str
@@ -377,6 +398,8 @@ class Remote:
             collection = json.loads(
                 self._metadata_bytes(Path("metadata") / "collection.json")
             )
+        except json.JSONDecodeError as error:
+            raise IntegrityError("remote collection metadata is invalid") from error
         except RemoteError:
             collection = None
         if (
@@ -394,7 +417,10 @@ class Remote:
             digest = path.stem
             if hashlib.sha256(raw).hexdigest() != digest:
                 raise IntegrityError("metadata checkpoint name does not match bytes")
-            checkpoint = json.loads(raw)
+            try:
+                checkpoint = json.loads(raw)
+            except json.JSONDecodeError as error:
+                raise IntegrityError("metadata checkpoint is invalid") from error
             if (
                 _canonical_json(checkpoint) != raw
                 or checkpoint.get("kind") != "cherries-metadata-checkpoint"
@@ -455,10 +481,13 @@ class Remote:
                 name: self._metadata_bytes(Path("records") / candidate / name)
                 for name in ("record.json", "manifest.json", "complete.json")
             }
-            record, manifest, complete = (
-                json.loads(payloads[name])
-                for name in ("record.json", "manifest.json", "complete.json")
-            )
+            try:
+                record, manifest, complete = (
+                    json.loads(payloads[name])
+                    for name in ("record.json", "manifest.json", "complete.json")
+                )
+            except json.JSONDecodeError as error:
+                raise IntegrityError("remote record metadata is invalid") from error
             if record.get("collection_id") != store.collection_id:
                 raise IntegrityError("remote record belongs to a different collection")
             expected = checkpoint_records.get(candidate)
@@ -467,6 +496,8 @@ class Remote:
                 commit = json.loads(self._metadata_bytes(commit_path))
             except RemoteError:
                 commit = None
+            except json.JSONDecodeError as error:
+                raise IntegrityError("remote commit marker is invalid") from error
             if commit is not None:
                 if (
                     commit.get("schema") != "cherries-remote-commit-v1"
@@ -513,7 +544,7 @@ class Remote:
                     data["record"], data["manifest"], data["complete"]
                 )
                 known.add(identifier)
-        events = 0
+        verified_events: list[tuple[Path, bytes]] = []
         # Marker-last checkpoints are the publication boundary for event
         # metadata too.  Files copied before a new checkpoint are ordinary
         # in-progress publication state and are deliberately ignored.
@@ -521,6 +552,37 @@ class Remote:
             data = self._metadata_bytes(remote_path)
             if hashlib.sha256(data).hexdigest() != proof.removeprefix("sha256:"):
                 raise IntegrityError("remote event does not match its checkpoint")
+            try:
+                event = json.loads(data)
+            except json.JSONDecodeError as error:
+                raise IntegrityError("remote event is invalid") from error
+            if not isinstance(event, Mapping):
+                raise IntegrityError("remote event is invalid")
+            clock = event.get("clock")
+            kind = event.get("kind")
+            subject = event.get("subject")
+            if (
+                not isinstance(event.get("format"), int)
+                or isinstance(event.get("format"), bool)
+                or event["format"] != getattr(store, "format_version", 1)
+                or not isinstance(kind, str)
+                or kind not in _EVENT_KINDS
+                or isinstance(clock, bool)
+                or not isinstance(clock, int)
+                or clock < 0
+                or not isinstance(event.get("value"), Mapping)
+                or not isinstance(subject, str)
+                or not subject
+                or subject in {".", ".."}
+                or "/" in subject
+                or "\\" in subject
+                or event.get("event_id") != remote_path.stem
+                or event.get("machine_id") != remote_path.parts[2]
+            ):
+                raise IntegrityError("remote event is invalid")
+            verified_events.append((remote_path, data))
+        events = 0
+        for remote_path, data in verified_events:
             events += store.import_metadata_file(remote_path, data)
         return {"records": records, "events": events}
 
@@ -534,6 +596,49 @@ class Remote:
                 Path("objects") / "sha256" / digest[:2] / digest, temporary, digest
             )
             return Path(store.import_object(temporary, asset_id))
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    @staticmethod
+    def _record_assets(value: Any) -> set[str]:
+        """Return the asset IDs declared anywhere in immutable record metadata."""
+        if isinstance(value, str) and value.startswith(("sha256:", "sha256-tree:")):
+            return {value}
+        if isinstance(value, Mapping):
+            return set().union(
+                *(Remote._record_assets(item) for item in value.values())
+            )
+        if isinstance(value, list):
+            return set().union(*(Remote._record_assets(item) for item in value))
+        return set()
+
+    @staticmethod
+    def _validate_closure_asset(asset_id: Any) -> str:
+        """Reject a malformed asset before using it as a remote object path."""
+        if not isinstance(asset_id, str):
+            raise IntegrityError("remote commit has an invalid object closure")
+        if asset_id.startswith("sha256-tree:"):
+            digest = asset_id.removeprefix("sha256-tree:")
+        elif asset_id.startswith("sha256:"):
+            digest = asset_id.removeprefix("sha256:")
+        else:
+            raise IntegrityError("remote commit has an unknown asset type")
+        if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
+            raise IntegrityError("remote commit has an invalid object digest")
+        return asset_id
+
+    def _fetch_tree_to_store(self, store: Any, tree_id: str) -> Path:
+        """Fetch and validate one tree descriptor without materializing its files."""
+        digest = tree_id.removeprefix("sha256-tree:")
+        data = self._metadata_bytes(
+            Path("objects") / "sha256-tree" / digest[:2] / digest
+        )
+        with tempfile.NamedTemporaryFile(dir=Path(store.root), delete=False) as file:
+            temporary = Path(file.name)
+            file.write(data)
+            file.flush()
+        try:
+            return Path(store.import_tree_object(temporary, tree_id))
         finally:
             temporary.unlink(missing_ok=True)
 
@@ -561,17 +666,7 @@ class Remote:
         digest = tree_id.removeprefix("sha256-tree:")
         if not tree_id.startswith("sha256-tree:") or len(digest) != 64:
             raise RemoteError("tree ID must be a complete sha256-tree ID")
-        data = self._metadata_bytes(
-            Path("objects") / "sha256-tree" / digest[:2] / digest
-        )
-        with tempfile.NamedTemporaryFile(dir=Path(store.root), delete=False) as file:
-            temporary = Path(file.name)
-            file.write(data)
-            file.flush()
-        try:
-            store.import_tree_object(temporary, tree_id)
-        finally:
-            temporary.unlink(missing_ok=True)
+        self._fetch_tree_to_store(store, tree_id)
         descriptor = store.resolve_asset(tree_id)["tree"]
         for entry in descriptor["entries"]:
             self._fetch_raw_to_store(store, entry["asset_id"])
@@ -619,35 +714,36 @@ class Remote:
                 if complete.get(field) != value or commit.get(field) != value:
                     raise IntegrityError(f"remote commit does not bind native {field}")
             closure = commit.get("closure")
-            if not isinstance(closure, list):
+            if (
+                not isinstance(closure, list)
+                or any(not isinstance(asset_id, str) for asset_id in closure)
+                or closure != sorted(closure)
+                or len(closure) != len(set(closure))
+            ):
                 raise IntegrityError("remote commit has an invalid object closure")
-            for asset_id in sorted(set(closure)):
-                if not isinstance(asset_id, str):
-                    raise IntegrityError("remote commit has an invalid object closure")
+            closure_ids = {
+                self._validate_closure_asset(asset_id) for asset_id in closure
+            }
+            declared_assets = {
+                *(item["asset_id"] for item in manifest.get("files", [])),
+                *self._record_assets(record.get("record", {})),
+            }
+            if not declared_assets <= closure_ids:
+                raise IntegrityError("remote commit has an incomplete object closure")
+            # A descriptor has to be present before Store can expand the full
+            # tree closure.  Check the exact expansion before fetching any raw
+            # bytes, so a forged marker cannot materialize a partial run or
+            # induce downloads of unrelated remote objects.
+            for asset_id in sorted(
+                asset for asset in declared_assets if asset.startswith("sha256-tree:")
+            ):
+                self._fetch_tree_to_store(store, asset_id)
+            expected_closure = set(store.asset_closure(run_id))
+            if closure_ids != expected_closure:
+                raise IntegrityError("remote commit has an incomplete object closure")
+            for asset_id in sorted(expected_closure):
                 if asset_id.startswith("sha256:"):
-                    digest = asset_id.removeprefix("sha256:")
-                    if len(digest) != 64 or any(
-                        char not in "0123456789abcdef" for char in digest
-                    ):
-                        raise IntegrityError(
-                            "remote commit has an invalid object digest"
-                        )
                     self._fetch_raw_to_store(store, asset_id)
-                elif asset_id.startswith("sha256-tree:"):
-                    digest = asset_id.removeprefix("sha256-tree:")
-                    data = self._metadata_bytes(
-                        Path("objects") / "sha256-tree" / digest[:2] / digest
-                    )
-                    with tempfile.NamedTemporaryFile(dir=root, delete=False) as file:
-                        temporary = Path(file.name)
-                        file.write(data)
-                        file.flush()
-                    try:
-                        store.import_tree_object(temporary, asset_id)
-                    finally:
-                        temporary.unlink(missing_ok=True)
-                else:
-                    raise IntegrityError("remote commit has an unknown asset type")
             output = root / "runs" / run_id
             for file in manifest.get("files", []):
                 store.materialize(run_id, file["path"])

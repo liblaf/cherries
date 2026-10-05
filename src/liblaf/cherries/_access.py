@@ -32,18 +32,25 @@ class RunAccessor:
         self.reason = "read:" + str(uuid.uuid4())
         self.closed = False
         self.workspace = workspace
-        if workspace is not None:
-            self._bind_workspace(Path(workspace))
-        else:
-            self.store.hold(self.run_id, self.reason)
+        self.store.hold(self.run_id, self.reason)
+        try:
+            if workspace is not None:
+                self._bind_workspace(Path(workspace))
+        except BaseException:
+            self.store.release_hold(self.run_id, self.reason)
+            raise
 
     def _bind_workspace(self, workspace: Path) -> None:
         config_path = workspace / "analysis.json"
         with (workspace / ".analysis.lock").open("a+b") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             config = json.loads(config_path.read_text())
-            self.reason = "analysis:" + config["workspace_id"]
-            self.store.hold(self.run_id, self.reason)
+            reason = "analysis:" + config["workspace_id"]
+            acquired = reason not in self.store.projection(self.run_id)["holds"]
+            if acquired:
+                self.store.hold(self.run_id, reason)
+            if self.run_id in config.get("sources", []):
+                return
             config["sources"] = sorted(set(config.get("sources", [])) | {self.run_id})
             temporary = workspace / (".analysis-" + str(uuid.uuid4()))
             try:
@@ -51,6 +58,10 @@ class RunAccessor:
                     json.dumps(config, sort_keys=True, indent=2) + "\n"
                 )
                 temporary.replace(config_path)
+            except BaseException:
+                if acquired:
+                    self.store.release_hold(self.run_id, reason)
+                raise
             finally:
                 temporary.unlink(missing_ok=True)
 
@@ -127,7 +138,7 @@ class RunAccessor:
             return self.remote.fetch_asset(self.store, self.run_id, relative)
 
     def close(self) -> None:
-        if not self.closed and self.workspace is None:
+        if not self.closed:
             self.store.release_hold(self.run_id, self.reason)
         self.closed = True
 
