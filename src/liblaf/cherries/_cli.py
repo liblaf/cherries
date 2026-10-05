@@ -5,6 +5,8 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
 import hashlib
 import json
 import os
@@ -103,7 +105,22 @@ def _read_analysis(folder: Path) -> dict[str, Any]:
 
 
 def _write_analysis(folder: Path, config: Mapping[str, Any]) -> None:
-    _analysis_config(folder).write_text(_json(dict(config)) + "\n")
+    """Atomically replace the editable analysis workspace pointer."""
+    target = _analysis_config(folder)
+    temporary = folder / f".analysis-{uuid.uuid4()}.json"
+    try:
+        temporary.write_text(_json(dict(config)) + "\n")
+        temporary.replace(target)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+@contextlib.contextmanager
+def _analysis_locked(folder: Path) -> Any:
+    """Serialize updates to one editable analysis workspace."""
+    with (folder / ".analysis.lock").open("a+b") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
 
 
 def command_init(args: argparse.Namespace) -> dict[str, Any]:
@@ -201,6 +218,7 @@ def command_show(args: argparse.Namespace) -> Any:
     return {
         "record": store.read_record(run_id),
         "manifest": store.read_manifest(run_id),
+        "projection": store.projection(run_id),
     }
 
 
@@ -615,9 +633,20 @@ def command_analysis_new(args: argparse.Namespace) -> Any:
     for source in sources:
         store.hold(source, f"analysis:{workspace}")
     _write_analysis(
-        folder, {"workspace_id": workspace, "sources": sources, "outputs": []}
+        folder,
+        {
+            "workspace_id": workspace,
+            "name": args.name,
+            "sources": sources,
+            "outputs": [],
+        },
     )
-    return {"workspace_id": workspace, "folder": str(folder), "sources": sources}
+    return {
+        "workspace_id": workspace,
+        "name": args.name,
+        "folder": str(folder),
+        "sources": sources,
+    }
 
 
 def command_analysis_source(args: argparse.Namespace) -> Any:
@@ -639,48 +668,87 @@ def command_analysis_source(args: argparse.Namespace) -> Any:
 def command_analysis_save(args: argparse.Namespace) -> Any:
     store = _store(_storage(args), args.machine_id)
     folder = args.folder.resolve()
-    config = _read_analysis(folder)
-    outputs: list[str] = args.output or list(config.get("outputs", []))
-    output_root = (folder / "out").resolve()
-    validated: list[tuple[Path, Path]] = []
-    for output in outputs:
-        relative = Path(output)
-        if (
-            relative.is_absolute()
-            or ".." in relative.parts
-            or not relative.parts
-            or relative.parts[0] != "out"
-        ):
-            raise RuntimeError(f"analysis output must be contained in out/: {output}")
-        source = (folder / relative).resolve()
-        if not source.is_relative_to(output_root) or not source.is_file():
-            raise RuntimeError(f"declared analysis output missing: {folder / relative}")
-        validated.append((source, relative.relative_to("out")))
-    run_id = str(uuid.uuid4())
-    work = store.start_work(
-        run_id, metadata={"mode": "analysis", "workspace": config["workspace_id"]}
-    )
-    work = Path(work)
-    for source, relative in validated:
-        destination = work / "outputs" / relative
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, destination)
-    for name in ("RUN.md", "analysis.json"):
-        source = folder / name
-        if source.is_file():
-            shutil.copy2(source, work / name)
-    source_tree = folder / "src"
-    if source_tree.is_dir():
-        shutil.copytree(source_tree, work / "source", dirs_exist_ok=True)
-    for source in config["sources"]:
-        store.register_parent(run_id, source)
-    record = {
-        "mode": "analysis",
-        "reproducibility": "lightweight",
-        "parents": config["sources"],
-        "used_in": args.used_in,
-    }
-    return dict(store.seal(run_id, record, work))
+    with _analysis_locked(folder):
+        config = _read_analysis(folder)
+        outputs: list[str] = args.output or list(config.get("outputs", []))
+        output_root = (folder / "out").resolve()
+        validated: list[tuple[Path, Path]] = []
+        for output in outputs:
+            relative = Path(output)
+            if (
+                relative.is_absolute()
+                or ".." in relative.parts
+                or not relative.parts
+                or relative.parts[0] != "out"
+            ):
+                raise RuntimeError(
+                    f"analysis output must be contained in out/: {output}"
+                )
+            source = (folder / relative).resolve()
+            if not source.is_relative_to(output_root) or not source.is_file():
+                raise RuntimeError(
+                    f"declared analysis output missing: {folder / relative}"
+                )
+            validated.append((source, relative.relative_to("out")))
+
+        previous_revision = config.get("latest_record")
+        revision = int(config.get("revision", 0)) + 1
+        parents = list(config["sources"])
+        if previous_revision and previous_revision not in parents:
+            parents.append(previous_revision)
+        run_id = str(uuid.uuid4())
+        work = Path(
+            store.start_work(
+                run_id,
+                metadata={
+                    "mode": "analysis",
+                    "workspace_id": config["workspace_id"],
+                    "name": config.get("name"),
+                    "revision": revision,
+                    "previous_revision": previous_revision,
+                },
+            )
+        )
+        for source, relative in validated:
+            destination = work / "outputs" / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+        for name in ("RUN.md", "analysis.json"):
+            source = folder / name
+            if source.is_file():
+                shutil.copy2(source, work / name)
+        source_tree = folder / "src"
+        if source_tree.is_dir():
+            shutil.copytree(source_tree, work / "source", dirs_exist_ok=True)
+        for source in parents:
+            store.register_parent(run_id, source)
+        record = {
+            "mode": "analysis",
+            "reproducibility": "lightweight",
+            "parents": parents,
+            "workspace_id": config["workspace_id"],
+            "name": config.get("name"),
+            "revision": revision,
+            "previous_revision": previous_revision,
+            "used_in": args.used_in,
+        }
+        sealed = dict(store.seal(run_id, record, work))
+
+        # A failed seal must never advance the editable workspace's latest pointer.
+        config["latest_record"] = run_id
+        config["revision"] = revision
+        _write_analysis(folder, config)
+
+        link = {
+            "analysis_run": run_id,
+            "workspace_id": config["workspace_id"],
+            "name": config.get("name"),
+            "revision": revision,
+            "previous_revision": previous_revision,
+        }
+        for source in config["sources"]:
+            store.append_event("link", source, link)
+        return sealed
 
 
 def command_analysis_close(args: argparse.Namespace) -> Any:

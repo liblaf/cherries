@@ -68,6 +68,12 @@ class FakeStore:
     def label(self, run_id: str, action: str, labels: list[str]) -> dict[str, object]:
         return {"run_id": run_id, "action": action, "labels": labels}
 
+    def append_event(
+        self, kind: str, subject: str, value: dict[str, object]
+    ) -> dict[str, object]:
+        self.events.append((kind, (subject, value)))
+        return {"kind": kind, "subject": subject, "value": value}
+
 
 def test_browse_filters_quality_and_emits_json(
     tmp_path: Path, monkeypatch, capsys
@@ -256,6 +262,108 @@ def test_analysis_save_rejects_invalid_outputs_before_creating_pending_work(
         )
     assert not list((root / "pending").glob("*.json"))
     assert not list((root / "work").iterdir())
+
+
+def test_analysis_saves_living_run_notes_as_immutable_revisions(
+    tmp_path: Path, capsys
+) -> None:
+    """A closed workspace may save a later Markdown-only interpretation."""
+    from liblaf.cherries.records import Store
+
+    root = tmp_path / "store"
+    store = Store(root, machine_id="machine")
+    store.ensure_initialized("collection")
+    _seal(store, "source", {"name": "original experiment"})
+    source_record = store.read_record("source")
+    workspace = tmp_path / "analysis"
+
+    assert (
+        _cli.main(
+            [
+                "--storage",
+                str(root),
+                "analysis",
+                "new",
+                str(workspace),
+                "--source",
+                "source",
+                "--name",
+                "weekly notes",
+            ]
+        )
+        == 0
+    )
+    (workspace / "RUN.md").write_bytes(b"# First finding\n")
+    assert _cli.main(["--storage", str(root), "analysis", "save", str(workspace)]) == 0
+    first = json.loads((workspace / "analysis.json").read_text())["latest_record"]
+
+    assert _cli.main(["--storage", str(root), "analysis", "close", str(workspace)]) == 0
+    assert "analysis:" not in " ".join(store.projection("source")["holds"])
+    (workspace / "RUN.md").write_bytes(b"# Revised finding\n")
+    assert _cli.main(["--storage", str(root), "analysis", "save", str(workspace)]) == 0
+    config = json.loads((workspace / "analysis.json").read_text())
+    second = config["latest_record"]
+
+    assert config["name"] == "weekly notes"
+    assert config["revision"] == 2
+    assert first != second
+    record = store.read_record(second)["record"]
+    assert record["workspace_id"] == config["workspace_id"]
+    assert record["name"] == "weekly notes"
+    assert record["revision"] == 2
+    assert record["previous_revision"] == first
+    assert set(store.read_record(second)["parents"]) == {"source", first}
+    assert store.materialize(first, "RUN.md").read_bytes() == b"# First finding\n"
+    assert store.materialize(second, "RUN.md").read_bytes() == b"# Revised finding\n"
+    assert store.read_record("source") == source_record
+
+    capsys.readouterr()
+    assert _cli.main(["--storage", str(root), "--json", "show", "source"]) == 0
+    shown = json.loads(capsys.readouterr().out)
+    assert shown["projection"]["links"][-1] == {
+        "analysis_run": second,
+        "workspace_id": config["workspace_id"],
+        "name": "weekly notes",
+        "revision": 2,
+        "previous_revision": first,
+    }
+
+
+def test_analysis_failed_seal_does_not_advance_living_note_pointer(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from liblaf.cherries.records import Store
+
+    root = tmp_path / "store"
+    store = Store(root, machine_id="machine")
+    store.ensure_initialized("collection")
+    _seal(store, "source")
+    workspace = tmp_path / "analysis"
+    _cli.main(
+        [
+            "--storage",
+            str(root),
+            "analysis",
+            "new",
+            str(workspace),
+            "--source",
+            "source",
+            "--name",
+            "notes",
+        ]
+    )
+    (workspace / "RUN.md").write_text("draft")
+    original = json.loads((workspace / "analysis.json").read_text())
+
+    def fail_seal(*_args: object, **_kwargs: object) -> dict[str, object]:
+        message = "seal failed"
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(store, "seal", fail_seal)
+    monkeypatch.setattr(_cli, "_store", lambda *_: store)
+    with pytest.raises(SystemExit, match="2"):
+        _cli.main(["--storage", str(root), "analysis", "save", str(workspace)])
+    assert json.loads((workspace / "analysis.json").read_text()) == original
 
 
 def test_remote_failed_browse_is_rejected_without_claiming_import(
