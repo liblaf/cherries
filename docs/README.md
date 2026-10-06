@@ -220,6 +220,11 @@ object keeps its complete member closure while any resident local record needs i
 payload-free checkpoint marker last. Checkpoint import can merge remote receipt
 metadata and the selected record's required ancestor graph, but it never
 establishes remote payload availability.
+Selected restore and metadata import install only that lineage's records and
+event history, including updates for ancestors already present locally. Global
+metadata sync still imports the whole collection. The current checkpoint format
+requires reading and validating all checkpoint-bound events before installation;
+unrelated event files are verified but not installed by a selected import.
 `browse --failed` lists local failed-attempt diagnostics only; attempts are not
 published or imported through remote metadata sync.
 

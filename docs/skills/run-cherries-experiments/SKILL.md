@@ -217,8 +217,12 @@ publishers; do not use a marker-file lock or stale-owner takeover. Use
 `cherries sync --remote REMOTE [--coordinated]` to transfer append-only metadata.
 Sync writes SHA-bound control metadata, events, and a payload-free checkpoint
 marker last. Checkpoint import merges selected receipt metadata with its required
-ancestor graph only; it does not prove remote payload availability. Failed attempts
-in `browse --failed` are local diagnostics and are never published or imported.
+ancestor graph only; it does not prove remote payload availability.
+Selected restore and import install only that lineage's events, including updates
+for already-local ancestors. All checkpoint-bound event proofs are still verified
+before installation. Global metadata sync retains its collection-wide scope.
+Failed attempts in `browse --failed` are local diagnostics and are never published
+or imported.
 
 `--evict` releases only an eligible materialized local view after verification.
 Other resident records, active work, reader/analysis holds, and `--keep-local`
