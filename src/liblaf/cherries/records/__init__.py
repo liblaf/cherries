@@ -13,6 +13,7 @@ from ._store import (
     Store,
     canonical_json,
     hash_file,
+    record_asset_ids,
 )
 
 __all__ = [
@@ -23,4 +24,5 @@ __all__ = [
     "Store",
     "canonical_json",
     "hash_file",
+    "record_asset_ids",
 ]

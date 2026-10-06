@@ -22,6 +22,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from liblaf.cherries.records import record_asset_ids
+
 
 class RemoteError(RuntimeError):
     """A foreground archive transport failed."""
@@ -660,19 +662,6 @@ class Remote:
             temporary.unlink(missing_ok=True)
 
     @staticmethod
-    def _record_assets(value: Any) -> set[str]:
-        """Return the asset IDs declared anywhere in immutable record metadata."""
-        if isinstance(value, str) and value.startswith(("sha256:", "sha256-tree:")):
-            return {value}
-        if isinstance(value, Mapping):
-            return set().union(
-                *(Remote._record_assets(item) for item in value.values())
-            )
-        if isinstance(value, list):
-            return set().union(*(Remote._record_assets(item) for item in value))
-        return set()
-
-    @staticmethod
     def _validate_closure_asset(asset_id: Any) -> str:
         """Reject a malformed asset before using it as a remote object path."""
         if not isinstance(asset_id, str):
@@ -794,7 +783,7 @@ class Remote:
                     raise IntegrityError(f"remote commit does not bind native {field}")
             declared_assets = {
                 *(item["asset_id"] for item in manifest.get("files", [])),
-                *self._record_assets(record.get("record", {})),
+                *record_asset_ids(record.get("record", {})),
             }
             if not declared_assets <= closure_ids:
                 raise IntegrityError("remote commit has an incomplete object closure")
