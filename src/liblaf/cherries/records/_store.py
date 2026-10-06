@@ -637,6 +637,68 @@ class Store:
                 target.chmod(target.stat().st_mode | 0o111)
         return destination
 
+    def materialize_tree_binding(self, run_id: str, binding: Mapping[str, Any]) -> Path:
+        """Restore a recorded tree at its directory or companion-file location.
+
+        Companion trees live beside their primary file. A tree explicitly
+        staged as an input directory keeps that directory even when its source
+        was a companion bundle. Conflicting manifest associations fail before
+        any view files are written.
+        """
+        run_id = self.resolve_id(run_id)
+        relative = _relative_path(binding.get("staged_path", binding.get("path")))
+        view = self.root / "runs" / run_id
+        result = view / relative
+        companions = (
+            binding.get("kind") == "companions" and binding.get("directory") is not True
+        )
+        if companions and binding.get("primary") != result.name:
+            msg = "companion binding must name its logical primary file"
+            raise IntegrityError(msg)
+        destination = result.parent if companions else result
+        if not destination.resolve().is_relative_to(view.resolve()):
+            msg = "tree binding escapes its run view"
+            raise IntegrityError(msg)
+        descriptor = self.resolve_asset(binding["asset_id"])["tree"]
+        manifest = self._manifest_index(run_id)
+        members = {entry["path"]: entry for entry in descriptor["entries"]}
+        if companions:
+            primary = members.get(result.name)
+            expected = manifest.get(relative)
+            if primary is None or expected is None:
+                msg = "companion tree primary must be a declared manifest file"
+                raise IntegrityError(msg)
+        directories = {destination}
+        directories.update(
+            destination / name for name in descriptor.get("directories", [])
+        )
+        for entry in descriptor["entries"]:
+            target = destination / entry["path"]
+            logical = target.relative_to(view).as_posix()
+            expected = manifest.get(logical)
+            if expected is not None and expected["asset_id"] != entry["asset_id"]:
+                msg = f"tree member conflicts with manifest file: {logical}"
+                raise IntegrityError(msg)
+            directories.add(target.parent)
+        self._check_tree_directories(view, directories, manifest)
+        self.materialize_tree(binding["asset_id"], destination)
+        return result
+
+    @staticmethod
+    def _check_tree_directories(
+        view: Path, directories: Iterable[Path], manifest: Mapping[str, Any]
+    ) -> None:
+        for directory in directories:
+            current = directory
+            while current.is_relative_to(view):
+                logical = current.relative_to(view).as_posix()
+                if logical in manifest:
+                    msg = f"tree directory conflicts with manifest file: {logical}"
+                    raise IntegrityError(msg)
+                if current == view:
+                    break
+                current = current.parent
+
     def object_path(self, asset_id: str) -> Path:
         """Return the local immutable object path, or raise when it is absent."""
         path = self._object_path(self._asset_digest(asset_id))
@@ -887,18 +949,7 @@ class Store:
         if not relpath or Path(relpath).is_absolute() or ".." in Path(relpath).parts:
             msg = "materialized path must be relative and contained"
             raise ValueError(msg)
-        manifest = self._read_manifest_cached(run_id)
-        manifest_digest = self._read_control(
-            self._record_dir(run_id) / "complete.json"
-        )["manifest_digest"]
-        indexed = self._manifest_indexes.get(run_id)
-        if indexed is None or indexed[0] != manifest_digest:
-            indexed = (
-                manifest_digest,
-                {item["path"]: item for item in manifest["files"]},
-            )
-            self._manifest_indexes[run_id] = indexed
-        binding = indexed[1].get(relpath)
+        binding = self._manifest_index(run_id).get(relpath)
         if binding is None:
             msg = f"asset path is not in record: {relpath}"
             raise NotFoundError(msg)
@@ -912,6 +963,20 @@ class Store:
         if binding.get("executable"):
             target.chmod(target.stat().st_mode | 0o111)
         return target
+
+    def _manifest_index(self, run_id: str) -> dict[str, dict[str, Any]]:
+        manifest = self._read_manifest_cached(run_id)
+        manifest_digest = self._read_control(
+            self._record_dir(run_id) / "complete.json"
+        )["manifest_digest"]
+        indexed = self._manifest_indexes.get(run_id)
+        if indexed is None or indexed[0] != manifest_digest:
+            indexed = (
+                manifest_digest,
+                {item["path"]: item for item in manifest["files"]},
+            )
+            self._manifest_indexes[run_id] = indexed
+        return indexed[1]
 
     @_mutation
     def import_legacy(
