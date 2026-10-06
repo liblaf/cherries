@@ -7,6 +7,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v4.0.7](https://github.com/liblaf/cherries/releases/tag/v4.0.7) - 2026-10-06
+
+### 🐛 Bug Fixes
+
+- restore companion bundles at their primary paths (#185) - [e16d420](https://github.com/liblaf/cherries/commit/e16d420a734be24a584c338a601e1917b63fa52c) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf)
+
 ## [v4.0.6](https://github.com/liblaf/cherries/releases/tag/v4.0.6) - 2026-10-06
 
 ### 🐛 Bug Fixes
@@ -15,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
+- [@liblaf-release-please[bot]](https://github.com/apps/liblaf-release-please)
 - [@liblaf](https://github.com/liblaf)
 
 ## [v4.0.5](https://github.com/liblaf/cherries/releases/tag/v4.0.5) - 2026-10-06
@@ -25,9 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
+- [@liblaf-release-please[bot]](https://github.com/apps/liblaf-release-please)
 - [@liblaf](https://github.com/liblaf)
 
-## [v4.0.4](https://github.com/liblaf/cherries/releases/tag/v4.0.4) - 2026-10-06
+## [v4.0.4](https://github.com/liblaf/cherries/releases/tag/v4.0.4) - 2026-10-05
 
 ### 🐛 Bug Fixes
 
@@ -45,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ❤️ Contributors
 
+- [@liblaf-release-please[bot]](https://github.com/apps/liblaf-release-please)
 - [@liblaf](https://github.com/liblaf)
 
 ## [v4.0.2](https://github.com/liblaf/cherries/releases/tag/v4.0.2) - 2026-10-05
