@@ -233,6 +233,12 @@ block it. `--important` protects logical retention rather than a local view. A
 shared tree object keeps its full member closure while any resident local record
 needs that tree.
 
+An archive can be committed even if a later source-local annotation fails.
+`archive` then returns its verified location and a `warnings` entry with success
+exit status; `--evict` skips that record and reports `eviction_skipped`. Preserve
+the returned commit evidence and local bytes. A remote publication error still
+fails the command; never infer its outcome from a local annotation failure.
+
 ## Review and lightweight analysis
 
 A successful run starts `unreviewed`. Review is subjective and separate from

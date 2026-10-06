@@ -219,6 +219,12 @@ active work, a read/analysis hold, or `--keep-local` remains local. `--important
 protects logical retention; it is separate from local view eviction. A shared tree
 object keeps its complete member closure while any resident local record needs it.
 
+If the archive is verified and committed but its local verification annotation
+cannot be saved, `archive` returns the committed location with a `warnings`
+entry and exits successfully. `--evict` skips that record and reports
+`eviction_skipped`, preserving its local bytes. A remote publication error still
+fails the command.
+
 `sync` publishes SHA-bound control metadata, sealed receipts, events, and a
 payload-free checkpoint marker last. Checkpoint import can merge remote receipt
 metadata and the selected record's required ancestor graph, but it never
