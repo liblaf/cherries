@@ -421,7 +421,11 @@ class Remote:
         )
 
     def import_metadata(self, store: Any, run_id: str | None = None) -> dict[str, int]:
-        """Import committed payload records and payload-free checkpoints safely."""
+        """Import verified metadata, optionally scoped to one record's ancestry.
+
+        A selected import installs events for that lineage only. All checkpoint
+        event proofs are still validated before installing any metadata.
+        """
         checkpoint_records: dict[str, Mapping[str, str]] = {}
         checkpoint_events: dict[Path, str] = {}
         collection_missing = False
@@ -508,7 +512,7 @@ class Remote:
                 ):
                     raise IntegrityError("metadata checkpoints disagree on an event")
                 checkpoint_events[relative] = proof
-        verified_events: list[tuple[Path, bytes]] = []
+        verified_events: list[tuple[Path, bytes, str]] = []
         # Validate every checkpoint-bound event before installing any record
         # metadata.  A checkpoint is a single publication boundary, so a bad
         # event must not leave its otherwise-valid records partially imported.
@@ -544,7 +548,7 @@ class Remote:
                 or event.get("machine_id") != remote_path.parts[2]
             ):
                 raise IntegrityError("remote event is invalid")
-            verified_events.append((remote_path, data))
+            verified_events.append((remote_path, data, subject))
         candidates = (
             {run_id}
             if run_id
@@ -624,6 +628,22 @@ class Remote:
                     for parent in parents
                     if parent not in pending and parent not in set(store.list_records())
                 )
+        selected_subjects = None
+        if run_id is not None:
+            selected_subjects = set(pending)
+            ancestors = [
+                parent
+                for data in pending.values()
+                for parent in data["record"].get("parents", [])
+            ]
+            while ancestors:
+                parent = ancestors.pop()
+                if parent in selected_subjects:
+                    continue
+                selected_subjects.add(parent)
+                # Candidate staging skips controls already present locally;
+                # their remote annotations still belong to this lineage.
+                ancestors.extend(store.read_record(parent).get("parents", []))
         records = 0
         known = set(store.list_records())
         while pending:
@@ -644,8 +664,9 @@ class Remote:
         # metadata too.  Files copied before a new checkpoint are ordinary
         # in-progress publication state and are deliberately ignored.
         events = 0
-        for remote_path, data in verified_events:
-            events += store.import_metadata_file(remote_path, data)
+        for remote_path, data, subject in verified_events:
+            if selected_subjects is None or subject in selected_subjects:
+                events += store.import_metadata_file(remote_path, data)
         return {"records": records, "events": events}
 
     def _fetch_raw_to_store(self, store: Any, asset_id: str) -> Path:
@@ -758,7 +779,7 @@ class Remote:
         # A child commit may be the only payload archived.  Import the
         # checkpointed control graph first so Store can validate its parents;
         # this still does not assert that an ancestor's payload is remote.
-        self.import_metadata(store)
+        self.import_metadata(store, run_id)
         store.hold(run_id, reader_reason)
         try:
             root = Path(store.root)
