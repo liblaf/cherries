@@ -205,6 +205,11 @@ verifies each immutable object, publishes record metadata, then writes the remot
 over a possibly stale publisher. A local directory remote uses its filesystem's
 atomic publication boundary.
 
+Payload closure includes manifest files and explicit asset bindings, including
+bundle descriptors and their members. Parent manifest and record digests are
+control evidence, so they are verified as metadata rather than uploaded as CAS
+payloads. Digest-shaped parameter values are not asset declarations.
+
 `archive --evict` requires verified remote publication and removes only an
 eligible materialized local view. A view needed by another resident record,
 active work, a read/analysis hold, or `--keep-local` remains local. `--important`

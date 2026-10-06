@@ -83,6 +83,67 @@ def canonical_json(value: Any) -> bytes:
     return _canonical_bytes(value)
 
 
+def _declared_asset_id(value: Any) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        msg = "asset ID must be a string"
+        raise IntegrityError(msg)
+    prefix, separator, digest = value.partition(":")
+    if (
+        prefix not in {"sha256", "sha256-tree"}
+        or not separator
+        or len(digest) != 64
+        or any(char not in "0123456789abcdef" for char in digest)
+    ):
+        msg = f"invalid declared asset ID: {value}"
+        raise IntegrityError(msg)
+    return value
+
+
+def record_asset_ids(record: Mapping[str, Any]) -> set[str]:
+    """Return payload IDs from the record's explicit asset bindings.
+
+    Control digests and arbitrary parameters or metadata are not payload
+    declarations, even when they use the same ``sha256:`` spelling.
+    The legacy top-level ``bundle`` reference remains a payload declaration.
+
+    Examples:
+        >>> payload = "sha256:" + "a" * 64
+        >>> control = "sha256:" + "b" * 64
+        >>> binding = {"asset_id": payload, "manifest_digest": control}
+        >>> record_asset_ids({"input_bindings": [binding]}) == {payload}
+        True
+    """
+    result: set[str] = set()
+    legacy_bundle = _declared_asset_id(record.get("bundle"))
+    if legacy_bundle is not None:
+        result.add(legacy_bundle)
+    for field in ("bundles", "input_bindings"):
+        bindings = record.get(field, [])
+        if not isinstance(bindings, list):
+            msg = "asset bindings must be lists"
+            raise IntegrityError(msg)
+        for binding in bindings:
+            if not isinstance(binding, Mapping):
+                msg = "asset binding must be an object"
+                raise IntegrityError(msg)
+            entries = [binding]
+            for members_field in ("members", "companions", "input_snapshot"):
+                members = binding.get(members_field, [])
+                if not isinstance(members, list) or any(
+                    not isinstance(member, Mapping) for member in members
+                ):
+                    msg = "asset binding members must be a list of objects"
+                    raise IntegrityError(msg)
+                entries.extend(members)
+            for entry in entries:
+                asset_id = _declared_asset_id(entry.get("asset_id"))
+                if asset_id is not None:
+                    result.add(asset_id)
+    return result
+
+
 def _validate_id(value: Any, name: str = "id") -> str:
     if (
         not isinstance(value, str)
@@ -594,10 +655,10 @@ class Store:
         return path
 
     def asset_closure(self, run_id: str) -> list[str]:
-        """Return all raw file IDs required by a record, including tree members."""
+        """Return declared raw and tree payload IDs, including tree members."""
         run_id = self.resolve_id(run_id)
         ids = {item["asset_id"] for item in self.read_manifest(run_id)["files"]}
-        for asset_id in self._asset_ids(self.read_record(run_id)["record"]):
+        for asset_id in record_asset_ids(self.read_record(run_id)["record"]):
             ids.add(asset_id)
             if asset_id.startswith("sha256-tree:"):
                 ids.update(
@@ -1315,7 +1376,7 @@ class Store:
             for file in self.read_manifest(run)["files"]
         }
         for run in self.list_live_records():
-            for asset_id in self._asset_ids(self.read_record(run)["record"]):
+            for asset_id in record_asset_ids(self.read_record(run)["record"]):
                 rooted.add(asset_id)
                 if asset_id.startswith("sha256-tree:"):
                     rooted.update(
@@ -1519,7 +1580,7 @@ class Store:
             raise IntegrityError(msg)
         for entry in manifest["files"]:
             self._verify_object(entry["asset_id"], entry["size"])
-        for asset_id in self._asset_ids(record["record"]):
+        for asset_id in record_asset_ids(record["record"]):
             if asset_id.startswith("sha256-tree:"):
                 digest = self._tree_digest(asset_id)
                 descriptor = self._read_tree(
@@ -1837,16 +1898,6 @@ class Store:
             and event["value"]["operation_id"] not in removed
             and (field is None or event["value"].get(field) == value)
         }
-
-    @staticmethod
-    def _asset_ids(value: Any) -> set[str]:
-        if isinstance(value, str) and (value.startswith(("sha256:", "sha256-tree:"))):
-            return {value}
-        if isinstance(value, Mapping):
-            return set().union(*(Store._asset_ids(item) for item in value.values()))
-        if isinstance(value, list):
-            return set().union(*(Store._asset_ids(item) for item in value))
-        return set()
 
     @staticmethod
     def _bounded_diagnostics(value: Mapping[str, Any]) -> dict[str, Any]:

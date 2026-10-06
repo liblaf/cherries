@@ -20,6 +20,7 @@ from typing import Any
 
 from ._remote import Remote, RemoteError
 from ._settings import load_settings, storage_root
+from .records import record_asset_ids
 
 
 def _store(root: Path, machine_id: str | None) -> Any:
@@ -78,19 +79,6 @@ def _remote(args: argparse.Namespace) -> Remote:
             raise RuntimeError("archive.main.path is not configured")
         value = configured
     return Remote(value, coordinated=bool(getattr(args, "coordinated", False)))
-
-
-def _asset_ids(value: Any) -> set[str]:
-    result: set[str] = set()
-    if isinstance(value, str) and value.startswith(("sha256:", "sha256-tree:")):
-        result.add(value)
-    elif isinstance(value, Mapping):
-        for item in value.values():
-            result.update(_asset_ids(item))
-    elif isinstance(value, list):
-        for item in value:
-            result.update(_asset_ids(item))
-    return result
 
 
 def _analysis_config(folder: Path) -> Path:
@@ -212,7 +200,8 @@ def command_browse(args: argparse.Namespace) -> Any:
                 file["asset_id"]
                 for file in store.read_manifest(item["run_id"])["files"]
             }
-            or args.asset in _asset_ids(store.read_record(item["run_id"])["record"])
+            or args.asset
+            in record_asset_ids(store.read_record(item["run_id"])["record"])
         ]
     if args.search:
         term = args.search.casefold()
@@ -347,7 +336,7 @@ def command_path(args: argparse.Namespace) -> Any:
             with _analysis_locked(args.workspace):
                 _bind_analysis_source(store, args.workspace, run_id)
         if args.path.startswith("sha256-tree:"):
-            if args.path not in _asset_ids(store.read_record(run_id)["record"]):
+            if args.path not in record_asset_ids(store.read_record(run_id)["record"]):
                 raise RuntimeError("tree asset is not declared by the selected record")
             destination = (
                 Path(store.root)
