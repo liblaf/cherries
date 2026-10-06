@@ -10,7 +10,12 @@ import pytest
 
 from liblaf.cherries import _cli
 from liblaf.cherries._remote import Remote
-from liblaf.cherries.records import IntegrityError, NotFoundError, Store
+from liblaf.cherries.records import (
+    IntegrityError,
+    NotFoundError,
+    Store,
+    record_asset_ids,
+)
 
 
 def _seal(
@@ -92,9 +97,17 @@ def test_archive_child_excludes_control_digests_and_restores_referenced_payloads
     remote.archive(source, "child")
 
     def browsed_run_ids(asset_id: str) -> set[str]:
+        capsys.readouterr()
         assert (
             _cli.main(
-                ["--storage", str(source.root), "--json", "browse", "--asset", asset_id]
+                [
+                    "--storage",
+                    str(source.root),
+                    "--json",
+                    "browse",
+                    "--asset",
+                    asset_id,
+                ]
             )
             == 0
         )
@@ -104,6 +117,32 @@ def test_archive_child_excludes_control_digests_and_restores_referenced_payloads
     assert browsed_run_ids(parent_record["manifest_digest"]) == set()
     assert browsed_run_ids("sha256:" + "1" * 64) == set()
     assert browsed_run_ids("sha256-tree:" + "2" * 64) == set()
+
+    capsys.readouterr()
+    assert (
+        _cli.main(["--storage", str(source.root), "--json", "path", "child", tree_id])
+        == 0
+    )
+    selected = json.loads(capsys.readouterr().out)
+    lease = selected["lease"]
+    assert (Path(selected["path"]) / "support.txt").read_text() == "bundle payload\n"
+    assert source.projection("child")["holds"]
+    assert (
+        _cli.main(["--storage", str(source.root), "--json", "path", "--release", lease])
+        == 0
+    )
+    assert json.loads(capsys.readouterr().out)["released"] is True
+    assert source.projection("child")["holds"] == set()
+    with pytest.raises(SystemExit, match="2"):
+        _cli.main(
+            [
+                "--storage",
+                str(source.root),
+                "path",
+                "child",
+                "sha256-tree:" + "2" * 64,
+            ]
+        )
 
     commit = json.loads((remote_root / "records" / "child" / "commit.json").read_text())
     assert set(commit["closure"]) == {
@@ -181,6 +220,43 @@ def test_archive_rejects_malformed_declared_binding_members(tmp_path: Path) -> N
         Remote(remote_root).archive(source, "run")
 
     assert not (remote_root / "records" / "run" / "commit.json").exists()
+
+
+@pytest.mark.parametrize(
+    "asset_id", [False, "sha256:not-a-digest", "sha512:" + "0" * 64]
+)
+def test_archive_rejects_malformed_declared_asset_id_without_commit(
+    tmp_path: Path, asset_id: object
+) -> None:
+    source = Store(tmp_path / "source", machine_id="source-machine")
+    source.ensure_initialized("collection")
+    _seal(
+        source,
+        "run",
+        {"outputs/result.txt": "result\n"},
+        {"input_bindings": [{"asset_id": asset_id}]},
+    )
+    remote_root = tmp_path / "remote"
+
+    with pytest.raises(IntegrityError, match="asset ID"):
+        Remote(remote_root).archive(source, "run")
+
+    assert not (remote_root / "records" / "run" / "commit.json").exists()
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        {"input_bindings": {}},
+        {"bundles": [None]},
+        {"input_bindings": [{"members": {}}]},
+    ],
+)
+def test_public_record_asset_ids_rejects_malformed_binding_containers(
+    record: dict[str, object],
+) -> None:
+    with pytest.raises(IntegrityError, match="asset binding"):
+        record_asset_ids(record)
 
 
 def test_minimal_binding_without_asset_id_archives_and_restores(tmp_path: Path) -> None:
