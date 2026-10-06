@@ -415,17 +415,43 @@ def command_restore(args: argparse.Namespace) -> Any:
 def command_archive(args: argparse.Namespace) -> Any:
     store = _store(_storage(args), args.machine_id)
     remote = _remote(args)
-    locations = [remote.archive(store, run_id).__dict__ for run_id in args.run_ids]
-    for location in locations:
-        store.append_event("location-verified", location["run_id"], location)
+    locations: list[dict[str, Any]] = []
+    annotated: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = []
+    for run_id in args.run_ids:
+        location = remote.archive(store, run_id).__dict__
+        locations.append(location)
+        try:
+            store.append_event("location-verified", location["run_id"], location)
+        except OSError as error:
+            # A returned location binds a verified remote commit. A later
+            # source-local write failure cannot undo that publication.
+            warnings.append(
+                {
+                    "stage": "local_annotation",
+                    **location,
+                    "errno": error.errno,
+                    "error": str(error),
+                }
+            )
+        else:
+            annotated.append(location)
     evicted: list[dict[str, Any]] = []
     if args.evict:
-        for location in locations:
+        for location in annotated:
             result = store.evict_local(location["run_id"], remote_verified=True)
             if not result["allowed"]:
                 raise RuntimeError(f"local eviction blocked: {result['blocked']}")
             evicted.append(result)
-    return {"locations": locations, "evicted": evicted}
+    outcome: dict[str, Any] = {"locations": locations, "evicted": evicted}
+    if warnings:
+        outcome["warnings"] = warnings
+        if args.evict:
+            outcome["eviction_skipped"] = [
+                {"run_id": item["run_id"], "reason": "local_annotation_failed"}
+                for item in warnings
+            ]
+    return outcome
 
 
 def command_sync(args: argparse.Namespace) -> Any:
