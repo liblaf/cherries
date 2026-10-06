@@ -186,6 +186,9 @@ the selected record; it restores its full topology, including declared empty
 directories. `restore` verifies the full record under a temporary restore hold,
 then creates a locally restored resident view.
 
+A companion bundle's primary path returns a file with its companions beside it.
+Tree inputs use their recorded staged paths, including declared empty folders.
+
 The JSON `path` result contains a lease ID; release that exact ID when inspection
 ends. This applies equally to a migrated raw path such as `legacy/data/example.vtu`.
 

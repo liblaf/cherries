@@ -119,14 +119,16 @@ class RunAccessor:
             and binding.get("asset_id", "").startswith("sha256-tree:")
         ]
         if tree_bindings:
-            asset_id = tree_bindings[0]["asset_id"]
-            destination = self.store.root / "runs" / self.run_id / relative
             try:
-                return self.store.materialize_tree(asset_id, destination)
+                return self.store.materialize_tree_binding(
+                    self.run_id, tree_bindings[0]
+                )
             except (FileNotFoundError, NotFoundError):
                 if self.remote is None:
                     raise
-                return self.remote.fetch_tree(self.store, asset_id, destination)
+                return self.remote.fetch_tree_binding(
+                    self.store, self.run_id, tree_bindings[0]
+                )
         return None
 
     def _materialize(self, relative: str) -> Path:

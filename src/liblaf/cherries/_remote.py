@@ -745,6 +745,17 @@ class Remote:
 
     def fetch_tree(self, store: Any, tree_id: str, destination: Path) -> Path:
         """Fetch a declared bundle descriptor and every declared companion."""
+        self._fetch_tree_members(store, tree_id)
+        return Path(store.materialize_tree(tree_id, destination))
+
+    def fetch_tree_binding(
+        self, store: Any, run_id: str, binding: Mapping[str, Any]
+    ) -> Path:
+        """Fetch a tree and restore its validated logical record location."""
+        self._fetch_tree_members(store, binding["asset_id"])
+        return Path(store.materialize_tree_binding(run_id, binding))
+
+    def _fetch_tree_members(self, store: Any, tree_id: str) -> None:
         digest = tree_id.removeprefix("sha256-tree:")
         if not tree_id.startswith("sha256-tree:") or len(digest) != 64:
             raise RemoteError("tree ID must be a complete sha256-tree ID")
@@ -752,7 +763,6 @@ class Remote:
         descriptor = store.resolve_asset(tree_id)["tree"]
         for entry in descriptor["entries"]:
             self._fetch_raw_to_store(store, entry["asset_id"])
-        return Path(store.materialize_tree(tree_id, destination))
 
     def restore(self, store: Any, run_id: str) -> Path:
         """Fetch a committed closure, verify every object, and materialize copies."""
@@ -832,7 +842,7 @@ class Remote:
                 asset_id = binding.get("asset_id", "")
                 relative = binding.get("staged_path", binding.get("path"))
                 if isinstance(relative, str) and asset_id.startswith("sha256-tree:"):
-                    store.materialize_tree(asset_id, output / relative)
+                    store.materialize_tree_binding(run_id, binding)
             store.append_event(
                 "location-restored", run_id, {"remote": self.remote, "complete": True}
             )

@@ -272,17 +272,15 @@ def _materialize_selected_path(
                 *record.get("bundles", []),
                 *record.get("input_bindings", []),
             ]
-            if binding.get("path", binding.get("staged_path")) == relative
+            if binding.get("staged_path", binding.get("path")) == relative
             and str(binding.get("asset_id", "")).startswith("sha256-tree:")
         ]
         if not bindings:
             raise RuntimeError(f"asset path is not in record: {relative}")
-        tree_id = bindings[0]["asset_id"]
-        destination = Path(store.root) / "runs" / run_id / relative
         return (
-            Path(remote.fetch_tree(store, tree_id, destination))
+            Path(remote.fetch_tree_binding(store, run_id, bindings[0]))
             if remote is not None
-            else Path(store.materialize_tree(tree_id, destination))
+            else Path(store.materialize_tree_binding(run_id, bindings[0]))
         )
 
     def materialize(path: str) -> Path:
@@ -405,7 +403,7 @@ def command_restore(args: argparse.Namespace) -> Any:
                 asset_id = binding.get("asset_id", "")
                 relative = binding.get("staged_path", binding.get("path"))
                 if isinstance(relative, str) and asset_id.startswith("sha256-tree:"):
-                    store.materialize_tree(asset_id, path / relative)
+                    store.materialize_tree_binding(run_id, binding)
             store.append_event(
                 "location-restored", run_id, {"remote": None, "complete": True}
             )

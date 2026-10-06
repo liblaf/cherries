@@ -169,6 +169,9 @@ declared empty directories. `restore` verifies and materializes the complete
 record under a temporary restore hold, then marks it as a locally restored
 resident view.
 
+A companion bundle's primary path returns a file, with companion files beside
+it. Tree inputs restore at their recorded staged path and retain empty folders.
+
 The JSON result of `path` contains its lease ID. Keep the selected raw path only
 while needed, then pass that exact ID to `path --release`; a lease holds the run
 against eviction. Use the same form for a migrated path such as
