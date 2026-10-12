@@ -104,6 +104,11 @@ threads, but cannot join or track foreign native threads. Native housekeeping
 threads do not block sealing; synchronizing native library or GPU work remains
 the experiment's responsibility.
 
+Join and close multiprocessing workers before returning. The stdlib resource
+tracker can remain alive after joined workers finish; Cherries recognizes its
+owned PID and pipe without treating it as a live experiment worker. A tracker
+with writable work-file descriptors still prevents sealing.
+
 Asset helpers require an active run:
 
 - `input(source, name=..., source_run=...)` accepts a local file/directory, full

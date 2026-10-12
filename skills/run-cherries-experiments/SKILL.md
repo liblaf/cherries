@@ -92,6 +92,11 @@ Complete asynchronous native operations and all work-folder writes before
 threads, but cannot join or track foreign native threads. Native housekeeping
 threads do not block sealing; explicitly synchronize native library or GPU work.
 
+Join and close multiprocessing workers before returning. The genuine stdlib
+resource tracker may remain alive after workers finish and does not block
+sealing, unless it still holds a writable work-file descriptor. Other live
+experiment children must finish.
+
 `input()` accepts a local path, complete `sha256:` file ID, `sha256-tree:` bundle
 ID, or `run:<record-id>/<logical-path>`. It verifies and stages an independent
 copy under `inputs/`, records the selected producer, and registers lineage before
