@@ -7,11 +7,14 @@ import json
 import os
 import subprocess
 import sys
+from multiprocessing import resource_tracker
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
+from liblaf.cherries.core import Run
 from liblaf.cherries.records import Store
 
 _EXPERIMENT = """\
@@ -176,3 +179,68 @@ def test_live_processes_retain_work_including_tracker_with_writable_file(
     work = store.root / "work" / report["run_id"]
     assert (work / "outputs" / "result.txt").read_text() == "completed\n"
     assert not (store.root / "records" / report["run_id"] / "complete.json").exists()
+
+
+@pytest.mark.skipif(not Path("/proc/self/fd").exists(), reason="Linux process guards")
+def test_tracker_identity_inspection_does_not_manage_helper_lifecycle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Inspect a test-owned tracker without starting, probing or stopping it."""
+    tracker = resource_tracker.ResourceTracker()
+    tracker.ensure_running()
+    pid = tracker._pid  # noqa: SLF001
+
+    def unexpected_lifecycle_call(*_args: object, **_kwargs: object) -> None:
+        pytest.fail("identity inspection must not manage tracker lifecycle")
+
+    try:
+        with monkeypatch.context() as patches:
+            patches.setattr(resource_tracker, "_resource_tracker", tracker)
+            for name in ("ensure_running", "getfd", "_check_alive", "_stop"):
+                patches.setattr(tracker, name, unexpected_lifecycle_call)
+            assert Run._is_resource_tracker(pid) is True  # noqa: SLF001
+            assert Run._is_resource_tracker(os.getpid()) is False  # noqa: SLF001
+    finally:
+        tracker._stop()  # noqa: SLF001
+
+
+@pytest.mark.skipif(not Path("/proc/self/fd").exists(), reason="Linux process guards")
+@pytest.mark.parametrize("proof", ["regular-file", "read-pipe", "closed-pipe"])
+def test_tracker_identity_requires_an_open_write_fifo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, proof: str
+) -> None:
+    """A matching PID alone cannot replace the parent write-pipe proof."""
+    read_fd, write_fd = os.pipe()
+    try:
+        with (tmp_path / "regular.txt").open("w") as regular:
+            descriptor = {
+                "regular-file": regular.fileno(),
+                "read-pipe": read_fd,
+                "closed-pipe": write_fd,
+            }[proof]
+            if proof == "closed-pipe":
+                os.close(write_fd)
+                write_fd = None
+            tracker = SimpleNamespace(_pid=os.getpid(), _fd=descriptor)
+            monkeypatch.setattr(resource_tracker, "_resource_tracker", tracker)
+            assert Run._is_resource_tracker(os.getpid()) is False  # noqa: SLF001
+    finally:
+        os.close(read_fd)
+        if write_fd is not None:
+            os.close(write_fd)
+
+
+@pytest.mark.parametrize(
+    "tracker",
+    [
+        None,
+        SimpleNamespace(),
+        SimpleNamespace(_pid=1),
+        SimpleNamespace(_pid=1, _fd=True),
+    ],
+)
+def test_tracker_identity_fails_closed_when_private_state_is_missing(
+    monkeypatch: pytest.MonkeyPatch, tracker: object
+) -> None:
+    monkeypatch.setattr(resource_tracker, "_resource_tracker", tracker)
+    assert Run._is_resource_tracker(1) is False  # noqa: SLF001
