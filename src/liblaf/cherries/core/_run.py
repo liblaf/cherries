@@ -1,12 +1,14 @@
 # Copyright (c) 2026 liblaf
 from __future__ import annotations
 
+import fcntl
 import functools
 import json
 import logging
 import math
 import os
 import shlex
+import stat
 import sys
 import threading
 import time
@@ -271,7 +273,11 @@ class Run:
                 raise RuntimeError(msg)
         for pid in self._children() - self._child_pids:
             status = Path(f"/proc/{pid}/status")
-            if status.exists() and "State:\tZ" not in status.read_text():
+            if (
+                status.exists()
+                and "State:\tZ" not in status.read_text()
+                and not self._is_resource_tracker(pid)
+            ):
                 msg = "an experiment child process is still running; work retained"
                 raise RuntimeError(msg)
         writers = self._external_work_writers()
@@ -281,6 +287,53 @@ class Run:
                 "work retained: " + ", ".join(map(str, sorted(writers)))
             )
             raise RuntimeError(msg)
+
+    @staticmethod
+    def _is_resource_tracker(pid: int) -> bool:
+        """Identify the existing stdlib tracker by its owned PID and pipe.
+
+        Looking at its state starts no helper and sends no probe. A matching
+        command line alone is insufficient, and reused/stale PIDs without the
+        same read pipe remain ordinary child processes.
+        """
+        from multiprocessing import resource_tracker
+
+        tracker = getattr(resource_tracker, "_resource_tracker", None)
+        if pid != getattr(tracker, "_pid", None):
+            return False
+        fd = getattr(tracker, "_fd", None)
+        if not isinstance(fd, int) or isinstance(fd, bool) or fd < 0:
+            return False
+        try:
+            pipe = os.fstat(fd)
+            if (
+                not stat.S_ISFIFO(pipe.st_mode)
+                or fcntl.fcntl(fd, fcntl.F_GETFL) & os.O_ACCMODE != os.O_WRONLY
+            ):
+                return False
+            descriptors = tuple(Path(f"/proc/{pid}/fd").iterdir())
+        except OSError:
+            return False
+        for descriptor in descriptors:
+            try:
+                child_pipe = descriptor.stat()
+                flags = next(
+                    line.removeprefix("flags:").strip()
+                    for line in Path(f"/proc/{pid}/fdinfo/{descriptor.name}")
+                    .read_text()
+                    .splitlines()
+                    if line.startswith("flags:")
+                )
+                if (
+                    stat.S_ISFIFO(child_pipe.st_mode)
+                    and (child_pipe.st_dev, child_pipe.st_ino)
+                    == (pipe.st_dev, pipe.st_ino)
+                    and int(flags, 8) & os.O_ACCMODE == os.O_RDONLY
+                ):
+                    return True
+            except (OSError, StopIteration, ValueError):
+                continue
+        return False
 
     @staticmethod
     def _children() -> set[int]:
