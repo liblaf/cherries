@@ -18,7 +18,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from ._remote import Remote, RemoteError
+from ._remote import ArchiveMetadataError, Remote, RemoteError
 from ._settings import load_settings, storage_root
 from .records import record_asset_ids
 
@@ -418,39 +418,64 @@ def command_archive(args: argparse.Namespace) -> Any:
     locations: list[dict[str, Any]] = []
     annotated: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
-    for run_id in args.run_ids:
-        location = remote.archive(store, run_id).__dict__
-        locations.append(location)
-        try:
-            store.append_event("location-verified", location["run_id"], location)
-        except OSError as error:
-            # A returned location binds a verified remote commit. A later
-            # source-local write failure cannot undo that publication.
-            warnings.append(
-                {
-                    "stage": "local_annotation",
-                    **location,
-                    "errno": error.errno,
-                    "error": str(error),
-                }
-            )
-        else:
-            annotated.append(location)
     evicted: list[dict[str, Any]] = []
-    if args.evict:
-        for location in annotated:
-            result = store.evict_local(location["run_id"], remote_verified=True)
-            if not result["allowed"]:
-                raise RuntimeError(f"local eviction blocked: {result['blocked']}")
-            evicted.append(result)
+    skipped: list[dict[str, str]] = []
+    try:
+        with remote.archive_batch(store, args.run_ids) as batch:
+            for run_id in batch.run_ids:
+                location = batch.archive(run_id).__dict__
+                locations.append(location)
+                try:
+                    store.append_event(
+                        "location-verified", location["run_id"], location
+                    )
+                except OSError as error:
+                    # A returned location binds a verified remote commit. A later
+                    # source-local write failure cannot undo that publication.
+                    warnings.append(
+                        {
+                            "stage": "local_annotation",
+                            **location,
+                            "errno": error.errno,
+                            "error": str(error),
+                        }
+                    )
+                    if args.evict:
+                        skipped.append(
+                            {
+                                "run_id": location["run_id"],
+                                "reason": "local_annotation_failed",
+                            }
+                        )
+                else:
+                    annotated.append(location)
+            if args.evict and annotated:
+                # Bind all successful location annotations before releasing any
+                # local bytes. Context exit then checkpoints eviction events.
+                batch.sync_metadata()
+                for location in annotated:
+                    result = store.evict_local(location["run_id"], remote_verified=True)
+                    if not result["allowed"]:
+                        raise RuntimeError(
+                            f"local eviction blocked: {result['blocked']}"
+                        )
+                    evicted.append(result)
+    except ArchiveMetadataError as error:
+        warnings.append(
+            {"stage": "metadata_sync", "remote": remote.remote, "error": str(error)}
+        )
+        if args.evict:
+            completed = {item["run_id"] for item in evicted}
+            skipped.extend(
+                {"run_id": item["run_id"], "reason": "metadata_sync_failed"}
+                for item in annotated
+                if item["run_id"] not in completed
+            )
     outcome: dict[str, Any] = {"locations": locations, "evicted": evicted}
     if warnings:
         outcome["warnings"] = warnings
-        if args.evict:
-            outcome["eviction_skipped"] = [
-                {"run_id": item["run_id"], "reason": "local_annotation_failed"}
-                for item in warnings
-            ]
+    if skipped:
+        outcome["eviction_skipped"] = skipped
     return outcome
 
 
