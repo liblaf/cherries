@@ -430,3 +430,41 @@ def test_metadata_snapshot_ignores_completed_seal_staging_before_atomic_rename(
     target.ensure_initialized("collection")
     assert remote.import_metadata(target)["records"] == 2
     assert set(target.list_records()) == {"selected", "new-run"}
+
+
+@pytest.mark.parametrize("completion_id", [None, "different-run"])
+def test_metadata_snapshot_rejects_canonical_completion_identity_mismatch(
+    tmp_path: Path, completion_id: str | None
+) -> None:
+    store = _store(tmp_path)
+    _seal(store, "canonical")
+    complete = store.root / "records" / "canonical" / "complete.json"
+    value = json.loads(complete.read_text())
+    value["run_id"] = completion_id
+    complete.write_text(json.dumps(value))
+    remote_root = tmp_path / "remote"
+
+    with pytest.raises(IntegrityError, match="completion ID disagree"):
+        Remote(remote_root).sync_metadata(store.root)
+
+    assert _checkpoints(remote_root) == []
+    assert not (remote_root / "records" / "canonical" / "complete.json").exists()
+
+
+def test_metadata_snapshot_preserves_dot_prefixed_canonical_record(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    _seal(store, ".canonical.run")
+    remote_root = tmp_path / "remote"
+    remote = Remote(remote_root)
+
+    remote.sync_metadata(store.root)
+
+    [checkpoint] = _checkpoints(remote_root)
+    assert set(checkpoint["records"]) == {".canonical.run"}
+    assert (remote_root / "records" / ".canonical.run" / "complete.json").is_file()
+    target = Store(tmp_path / "reader", machine_id="reader")
+    target.ensure_initialized("collection")
+    assert remote.import_metadata(target)["records"] == 1
+    assert target.list_records() == [".canonical.run"]
