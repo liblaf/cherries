@@ -1001,11 +1001,20 @@ class Remote:
                 record_dir = remaining.pop()
                 if record_dir.name in visited:
                     continue
-                visited.add(record_dir.name)
                 complete = record_dir / "complete.json"
                 if not complete.is_file():
                     continue
                 complete_data = json.loads(complete.read_text())
+                record_id = complete_data.get("run_id")
+                if record_id != record_dir.name:
+                    if _is_contained_id(record_id) and record_dir.name.startswith(
+                        f".{record_id}."
+                    ):
+                        # Store.seal/import has fsynced this staging directory,
+                        # but has not atomically published its canonical name.
+                        continue
+                    raise IntegrityError("record directory and completion ID disagree")
+                visited.add(record_dir.name)
                 inventory[record_dir.name] = {
                     key: complete_data[key]
                     for key in ("record_digest", "manifest_digest", "root_digest")

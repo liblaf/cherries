@@ -383,3 +383,88 @@ def test_batch_closes_parent_graph_when_parent_is_missed_by_directory_snapshot(
     assert target.projection("child")["labels"] == {"after-commit"}
     restored = remote.restore(target, "child")
     assert (restored / "result.txt").read_text() == "child payload\n"
+
+
+def test_metadata_snapshot_ignores_completed_seal_staging_before_atomic_rename(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = _store(tmp_path)
+    _seal(store, "selected")
+    remote_root = tmp_path / "remote"
+    remote = Remote(remote_root)
+    work = store.start_work("new-run")
+    (work / "result.txt").write_text("new payload\n")
+    original = store._fsync_dir  # noqa: SLF001
+    staging_names: list[str] = []
+
+    def snapshot_completed_staging(path: Path) -> None:
+        if (
+            path.parent == store.root / "records"
+            and path.name.startswith(".new-run.")
+            and (path / "complete.json").is_file()
+            and not staging_names
+        ):
+            staging_names.append(path.name)
+            assert not (store.root / "records" / "new-run").exists()
+            remote.sync_metadata(store.root)
+            checkpoints = _checkpoints(remote_root)
+            assert len(checkpoints) == 1
+            assert set(checkpoints[0]["records"]) == {"selected"}
+            assert not (remote_root / "records" / path.name).exists()
+            assert not (remote_root / "records" / "new-run").exists()
+        original(path)
+
+    monkeypatch.setattr(store, "_fsync_dir", snapshot_completed_staging)
+    store.seal("new-run", {}, work)
+    assert len(staging_names) == 1
+    remote.sync_metadata(store.root)
+    assert any(
+        set(checkpoint["records"]) == {"selected", "new-run"}
+        for checkpoint in _checkpoints(remote_root)
+    )
+    assert all(
+        not (set(checkpoint["records"]) & set(staging_names))
+        for checkpoint in _checkpoints(remote_root)
+    )
+    target = Store(tmp_path / "reader", machine_id="reader")
+    target.ensure_initialized("collection")
+    assert remote.import_metadata(target)["records"] == 2
+    assert set(target.list_records()) == {"selected", "new-run"}
+
+
+@pytest.mark.parametrize("completion_id", [None, "different-run"])
+def test_metadata_snapshot_rejects_canonical_completion_identity_mismatch(
+    tmp_path: Path, completion_id: str | None
+) -> None:
+    store = _store(tmp_path)
+    _seal(store, "canonical")
+    complete = store.root / "records" / "canonical" / "complete.json"
+    value = json.loads(complete.read_text())
+    value["run_id"] = completion_id
+    complete.write_text(json.dumps(value))
+    remote_root = tmp_path / "remote"
+
+    with pytest.raises(IntegrityError, match="completion ID disagree"):
+        Remote(remote_root).sync_metadata(store.root)
+
+    assert _checkpoints(remote_root) == []
+    assert not (remote_root / "records" / "canonical" / "complete.json").exists()
+
+
+def test_metadata_snapshot_preserves_dot_prefixed_canonical_record(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    _seal(store, ".canonical.run")
+    remote_root = tmp_path / "remote"
+    remote = Remote(remote_root)
+
+    remote.sync_metadata(store.root)
+
+    [checkpoint] = _checkpoints(remote_root)
+    assert set(checkpoint["records"]) == {".canonical.run"}
+    assert (remote_root / "records" / ".canonical.run" / "complete.json").is_file()
+    target = Store(tmp_path / "reader", machine_id="reader")
+    target.ensure_initialized("collection")
+    assert remote.import_metadata(target)["records"] == 1
+    assert target.list_records() == [".canonical.run"]
