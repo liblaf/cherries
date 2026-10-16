@@ -17,10 +17,11 @@ import shutil
 import subprocess
 import tempfile
 import uuid
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from types import TracebackType
+from typing import Any, Self
 
 from liblaf.cherries.records import record_asset_ids
 
@@ -112,20 +113,103 @@ def _atomic_copy(source: Path, destination: Path, expected: str) -> None:
             shutil.copyfileobj(input_file, temporary)
         temporary.flush()
         os.fsync(temporary.fileno())
+    raced = False
     try:
         try:
             os.link(temp, destination)
         except FileExistsError:
-            if sha256_file(destination) != expected:
-                raise IntegrityError(f"remote object differs: {destination}") from None
-        if sha256_file(destination) != expected:
-            raise IntegrityError(f"read-back hash differs: {destination}")
+            raced = True
     finally:
+        # Some mounted filesystems reject reopening the destination while its
+        # staging hard-link alias exists. The final name already owns the inode.
         temp.unlink(missing_ok=True)
+    if sha256_file(destination) != expected:
+        stage = "remote object" if raced else "read-back hash"
+        raise IntegrityError(f"{stage} differs: {destination}")
 
 
 class IntegrityError(RemoteError):
     """Bytes at a content-addressed destination did not match their digest."""
+
+
+class ArchiveMetadataError(RemoteError):
+    """A batch's final metadata I/O failed after its initial checkpoint."""
+
+
+@dataclass
+class _MetadataPublication:
+    root: Path
+    digests: dict[Path, str]
+    records: dict[str, dict[str, str]]
+    events: dict[str, str]
+    count: int
+
+
+class _ArchiveBatch:
+    """A frozen selection and metadata proofs valid for one open context only."""
+
+    def __init__(self, remote: Remote, store: Any, run_ids: Sequence[str]) -> None:
+        self.remote = remote
+        self.store = store
+        self.run_ids = tuple(dict.fromkeys(str(store.resolve_id(i)) for i in run_ids))
+        self._entered = False
+        self._open = False
+        self._metadata: _MetadataPublication | None = None
+
+    def __enter__(self) -> Self:
+        if self._entered:
+            raise RemoteError("archive batch cannot be reused")
+        self._entered = True
+        self._metadata = self.remote._sync_metadata(Path(self.store.root))  # noqa: SLF001
+        remaining = list(self.run_ids)
+        checked: set[str] = set()
+        while remaining:
+            run_id = remaining.pop()
+            if run_id in checked:
+                continue
+            if run_id not in self._metadata.records:
+                raise IntegrityError(
+                    f"record is absent from batch checkpoint: {run_id}"
+                )
+            checked.add(run_id)
+            remaining.extend(self.store.read_record(run_id).get("parents", []))
+        self._open = True
+        return self
+
+    def _require_open(self) -> None:
+        if not self._open:
+            raise RemoteError("archive batch is not open")
+
+    def archive(self, run_id: str) -> RemoteLocation:
+        self._require_open()
+        run_id = str(self.store.resolve_id(run_id))
+        if run_id not in self.run_ids:
+            raise RemoteError("record is outside the frozen archive selection")
+        return self.remote._archive_record(self.store, run_id)  # noqa: SLF001
+
+    def sync_metadata(self) -> int:
+        self._require_open()
+        try:
+            self._metadata = self.remote._sync_metadata(  # noqa: SLF001
+                Path(self.store.root), self._metadata
+            )
+        except IntegrityError:
+            raise
+        except (OSError, RemoteError) as error:
+            raise ArchiveMetadataError(str(error)) from error
+        return self._metadata.count
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        _exc: BaseException | None,
+        _traceback: TracebackType | None,
+    ) -> None:
+        try:
+            if exc_type is None:
+                self.sync_metadata()
+        finally:
+            self._open = False
 
 
 _EVENT_KINDS = frozenset(
@@ -290,6 +374,20 @@ class Remote:
         # Make the complete parent graph browseable before this child commit;
         # the checkpoint deliberately makes no payload-availability claim.
         self.sync_metadata(root)
+        return self._archive_record(store, run_id)
+
+    def archive_batch(self, store: Any, run_ids: Sequence[str]) -> _ArchiveBatch:
+        """Archive a frozen selection with initial and final delta checkpoints.
+
+        Use ``with remote.archive_batch(store, ids) as batch`` and call
+        ``batch.archive(run_id)`` for each ``batch.run_ids`` item. Append local
+        location events before leaving the context so its final checkpoint binds
+        them. Each run still verifies its full payload closure and commit marker.
+        """
+        return _ArchiveBatch(self, store, run_ids)
+
+    def _archive_record(self, store: Any, run_id: str) -> RemoteLocation:
+        root = Path(store.root)
         asset_ids = list(store.asset_closure(run_id))
         raw_assets = [item for item in asset_ids if item.startswith("sha256:")]
         tree_assets = [item for item in asset_ids if item.startswith("sha256-tree:")]
@@ -852,7 +950,28 @@ class Remote:
 
     def sync_metadata(self, root: Path) -> int:
         """Publish control evidence and a marker-last, payload-free checkpoint."""
-        root = Path(root)
+        return self._sync_metadata(root).count
+
+    def _sync_metadata(
+        self, root: Path, previous: _MetadataPublication | None = None
+    ) -> _MetadataPublication:
+        root = Path(root).resolve()
+        if previous is not None and previous.root != root:
+            raise IntegrityError("metadata proofs belong to another storage root")
+        digests = dict(previous.digests) if previous else {}
+        count = 0
+
+        def publish(source: Path, relative: Path, digest: str) -> None:
+            nonlocal count
+            known = digests.get(relative)
+            if known == digest:
+                return
+            if known is not None:
+                raise IntegrityError(f"published control changed: {relative}")
+            self._publish(source, relative, digest)
+            digests[relative] = digest
+            count += 1
+
         collection = root / "collection.json"
         if not collection.is_file():
             raise RemoteError("local collection metadata is unavailable")
@@ -860,22 +979,29 @@ class Remote:
         collection_id = collection_data.get("collection_id")
         if not isinstance(collection_id, str):
             raise IntegrityError("local collection metadata is invalid")
-        self._publish(
+        publish(
             collection, Path("metadata") / "collection.json", sha256_file(collection)
         )
-        count = 1
         events = root / "metadata" / "events"
-        event_digests: dict[str, str] = {}
+        event_digests: dict[str, str] = dict(previous.events) if previous else {}
         for source in sorted(events.rglob("*.json")) if events.exists() else []:
             relative = Path("metadata") / source.relative_to(root / "metadata")
             digest = sha256_file(source)
-            self._publish(source, relative, digest)
+            publish(source, relative, digest)
             event_digests[relative.as_posix()] = f"sha256:{digest}"
-            count += 1
         records = root / "records"
-        inventory: dict[str, dict[str, str]] = {}
+        inventory: dict[str, dict[str, str]] = (
+            dict(previous.records) if previous else {}
+        )
+        referenced: set[str] = set()
         if records.exists():
-            for record_dir in sorted(records.iterdir()):
+            remaining = sorted(records.iterdir(), reverse=True)
+            visited: set[str] = set()
+            while remaining:
+                record_dir = remaining.pop()
+                if record_dir.name in visited:
+                    continue
+                visited.add(record_dir.name)
                 complete = record_dir / "complete.json"
                 if not complete.is_file():
                     continue
@@ -890,12 +1016,23 @@ class Remote:
                         raise IntegrityError(
                             f"sealed record control is incomplete: {record_dir.name}"
                         )
-                    self._publish(
+                    publish(
                         source,
                         Path("records") / record_dir.name / name,
                         sha256_file(source),
                     )
-                    count += 1
+                # A pending child may have been listed before a concurrent
+                # publisher sealed its parent. Close that graph even when the
+                # parent was absent from our directory enumeration.
+                record = json.loads((record_dir / "record.json").read_text())
+                for parent in record.get("parents", []):
+                    if not _is_contained_id(parent):
+                        raise IntegrityError("record has an invalid parent ID")
+                    referenced.add(parent)
+                    if parent not in inventory:
+                        remaining.append(records / parent)
+        if referenced - inventory.keys():
+            raise IntegrityError("metadata checkpoint has an incomplete parent graph")
         checkpoint = {
             "format": 1,
             "kind": "cherries-metadata-checkpoint",
@@ -905,6 +1042,9 @@ class Remote:
         }
         data = _canonical_json(checkpoint)
         digest = hashlib.sha256(data).hexdigest()
+        relative = Path("metadata") / "checkpoints" / f"{digest}.json"
+        if digests.get(relative) == digest:
+            return _MetadataPublication(root, digests, inventory, event_digests, count)
         with tempfile.NamedTemporaryFile("wb", delete=False) as file:
             file.write(data)
             file.flush()
@@ -913,9 +1053,7 @@ class Remote:
         try:
             # This marker claims metadata completeness only. It never carries a
             # payload closure and therefore never establishes remote availability.
-            self._publish(
-                temporary, Path("metadata") / "checkpoints" / f"{digest}.json", digest
-            )
+            publish(temporary, relative, digest)
         finally:
             temporary.unlink(missing_ok=True)
-        return count + 1
+        return _MetadataPublication(root, digests, inventory, event_digests, count)

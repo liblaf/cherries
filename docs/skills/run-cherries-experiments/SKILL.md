@@ -232,6 +232,11 @@ before installation. Global metadata sync retains its collection-wide scope.
 Failed attempts in `browse --failed` are local diagnostics and are never published
 or imported.
 
+For multiple runs, pass their IDs to one `archive` command. It shares an initial
+collection checkpoint, preserves per-run closure verification and commit-last,
+then checkpoints location events and concurrent metadata additions. Avoid
+starting one archive process per run for a large collection.
+
 `--evict` releases only an eligible materialized local view after verification.
 Other resident records, active work, reader/analysis holds, and `--keep-local`
 block it. `--important` protects logical retention rather than a local view. A
@@ -241,8 +246,12 @@ needs that tree.
 An archive can be committed even if a later source-local annotation fails.
 `archive` then returns its verified location and a `warnings` entry with success
 exit status; `--evict` skips that record and reports `eviction_skipped`. Preserve
-the returned commit evidence and local bytes. A remote publication error still
-fails the command; never infer its outcome from a local annotation failure.
+the returned commit evidence and local bytes. Final metadata I/O failures after
+commits produce a `metadata_sync` warning with the known locations. With `--evict`,
+a failed location checkpoint skips eviction; a later eviction-event checkpoint
+failure preserves the actual completed-eviction list. Check both `evicted` and
+`eviction_skipped` before assuming bytes remain local. Integrity mismatches and
+per-record publication failures still fail the command.
 
 ## Review and lightweight analysis
 

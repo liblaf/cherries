@@ -213,6 +213,13 @@ verifies each immutable object, publishes record metadata, then writes the remot
 over a possibly stale publisher. A local directory remote uses its filesystem's
 atomic publication boundary.
 
+Pass multiple IDs to one `archive` command to share its initial collection
+checkpoint. Each selected run still verifies its complete payload closure and
+writes its own commit last. On completion, a delta checkpoint binds the new
+location events and concurrent metadata additions without republishing unchanged
+collection controls. The selection is fixed before publication; later runs are
+metadata-only until explicitly archived in another batch.
+
 Payload closure includes manifest files and explicit asset bindings, including
 bundle descriptors and their members. Parent manifest and record digests are
 control evidence, so they are verified as metadata rather than uploaded as CAS
@@ -228,7 +235,12 @@ If the archive is verified and committed but its local verification annotation
 cannot be saved, `archive` returns the committed location with a `warnings`
 entry and exits successfully. `--evict` skips that record and reports
 `eviction_skipped`, preserving its local bytes. A remote publication error still
-fails the command.
+fails the command before that run commits. A final metadata I/O failure after
+verified commits returns those locations with a `metadata_sync` warning.
+`--evict` checkpoints successful location annotations before releasing local bytes;
+a failure there skips eviction. If the later eviction-event checkpoint fails,
+the result still reports any completed evictions. Integrity mismatches always
+fail the command.
 
 `sync` publishes SHA-bound control metadata, sealed receipts, events, and a
 payload-free checkpoint marker last. Checkpoint import can merge remote receipt

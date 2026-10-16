@@ -138,6 +138,10 @@ the remote commit marker last. `--evict` only releases an eligible local view
 after remote verification; it never removes canonical bytes merely because one
 logical record was archived.
 
+Archive multiple records in one command (`archive <id1> <id2> ...`). A batch
+publishes collection metadata once, verifies every selected run independently,
+then checkpoints new location events and concurrent metadata additions.
+
 A local-directory remote has an atomic filesystem boundary. A generic rclone
 remote requires `--coordinated`, which is an explicit assertion that an external
 publisher serializes the collection; Cherries does not invent a marker-file lock
