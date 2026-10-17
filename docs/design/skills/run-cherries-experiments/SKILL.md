@@ -82,6 +82,8 @@ strings; never call them in class definitions:
 ```python
 class Config(cherries.BaseConfig):
     mesh: str = "sha256:<full-digest>"
+
+
 def main(cfg: Config) -> None:
     mesh = cherries.input(cfg.mesh, name="mesh.vtu")
     output = cherries.output("solution.npz")
