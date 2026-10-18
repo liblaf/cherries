@@ -125,6 +125,10 @@ and pending intent, report the nonzero outcome, and avoid claiming a confirmed
 commit. An execution failure records diagnostics and may discard only an unsealed
 local payload with no dependency or hold.
 
+The preservation policy below requires Cherries v4.0.12 or newer. Verify the
+installed version before opening a collection whose historical work must be
+preserved; do not apply these guarantees to an older runtime.
+
 Normal initialization preserves historical work and pending intents by default.
 Keep `collection.auto_recover = false` in project/local settings when retaining
 old staging evidence. CLI, runner, and default accessors use the selected project's
