@@ -98,7 +98,7 @@ def test_initialization_recovers_owned_work_after_seal_publication(
     pending = store.root / "pending" / "run.json"
     pending.write_bytes(canonical_json({"run_id": "run", "roots": [], "metadata": {}}))
 
-    Store(store.root).ensure_initialized()
+    Store(store.root, auto_recover=True).ensure_initialized()
 
     assert not work.exists()
     assert not pending.exists()
@@ -119,7 +119,7 @@ def test_initialization_preserves_work_when_sealed_payload_is_corrupt(
     pending.write_bytes(canonical_json({"run_id": "run", "roots": [], "metadata": {}}))
     (store.root / "records" / "run" / "manifest.json").write_text("{}")
 
-    Store(store.root).ensure_initialized()
+    Store(store.root, auto_recover=True).ensure_initialized()
 
     assert work.is_dir()
     assert pending.is_file()
@@ -138,7 +138,7 @@ def test_initialization_preserves_work_owned_by_a_live_process(tmp_path: Path) -
         canonical_json({"run_id": "run", "roots": [], "metadata": {"pid": os.getpid()}})
     )
 
-    Store(store.root).ensure_initialized()
+    Store(store.root, auto_recover=True).ensure_initialized()
 
     assert work.is_dir()
     assert pending.is_file()

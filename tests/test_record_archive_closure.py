@@ -309,7 +309,7 @@ def test_bootstrap_recovers_sealed_child_with_control_manifest_digest(
     pending = store.root / "pending" / "child.json"
     pending.write_text(json.dumps({"run_id": "child", "roots": [], "metadata": {}}))
 
-    Store(store.root).ensure_initialized()
+    Store(store.root, auto_recover=True).ensure_initialized()
 
     assert not work.exists()
     assert not pending.exists()

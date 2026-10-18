@@ -9,7 +9,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Self
 
-from ._settings import configured_remote, storage_root
+from ._settings import configured_remote, configured_store
 from .records import NotFoundError, Store
 
 
@@ -19,7 +19,7 @@ class RunAccessor:
     def __init__(
         self, run_id: str, *, workspace: Path | None = None, store: Store | None = None
     ) -> None:
-        self.store = store or Store(storage_root())
+        self.store = configured_store() if store is None else store
         self.store.ensure_initialized()
         self.remote = configured_remote(Path.cwd())
         try:

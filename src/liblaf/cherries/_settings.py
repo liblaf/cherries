@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ._remote import Remote
+    from .records import Store
 
 
 def configured_remote(project: Path) -> Remote | None:
@@ -60,3 +61,29 @@ def storage_root(project_dir: Path | None = None) -> Path:
         return (project / path).resolve() if not path.is_absolute() else path.resolve()
     identity = collection.get("id") or str(uuid.uuid5(uuid.NAMESPACE_URL, str(project)))
     return Path.home() / ".local/share/cherries/collections" / identity
+
+
+def configured_store(
+    project_dir: Path | None = None,
+    *,
+    root: Path | None = None,
+    machine_id: str | None = None,
+) -> Store:
+    """Build a store using the project's persistent recovery policy.
+
+    Old committed work and pending intents are preserved by default. Setting
+    ``collection.auto_recover = true`` authorizes recovery cleanup whenever this
+    store is initialized, including nested initialization during reader holds.
+    """
+    from .records import Store
+
+    collection = load_settings(project_dir).get("collection", {})
+    auto_recover = collection.get("auto_recover", False)
+    if not isinstance(auto_recover, bool):
+        msg = "collection.auto_recover must be a boolean"
+        raise TypeError(msg)
+    return Store(
+        storage_root(project_dir) if root is None else root,
+        machine_id=machine_id,
+        auto_recover=auto_recover,
+    )

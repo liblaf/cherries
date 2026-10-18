@@ -28,7 +28,7 @@ from environs import env
 from slugify import slugify
 
 from liblaf.cherries._capture import capture_environment, capture_source
-from liblaf.cherries._settings import load_settings, storage_root
+from liblaf.cherries._settings import configured_store, load_settings
 from liblaf.cherries.records import PublishedSealError, Store
 from liblaf.cherries.utils import GitUrlParsed, giturlparse, relative_or_absolute
 
@@ -198,7 +198,7 @@ class Run:
         self.run_id = str(uuid.uuid4())
         self.start_time = datetime.now().astimezone()
         self._settings = load_settings(self.project_dir)
-        self.store = Store(self.store_root or storage_root(self.project_dir))
+        self.store = configured_store(self.project_dir, root=self.store_root)
         self.store.ensure_initialized(self._settings.get("collection", {}).get("id"))
         self.working_dir = self.store.start_work(
             self.run_id,
