@@ -136,10 +136,23 @@ claims full replay verification. Git bases must remain available to replay sourc
 outside Cherries.
 
 On success, the store writes objects, stages `record.json`, `manifest.json`, and
-`complete.json`, fsyncs and renames that record directory, then appends a sealed
-event. On a normal execution error it writes diagnostic metadata and, with the
-default `failure_payload = "discard"`, removes only the unsealed payload. A
-missing declared output or sealing failure preserves the work stage and raises.
+`complete.json`, fsyncs and renames that record directory, and fsyncs its parent.
+It then appends a sealed event before removing pending intent and disposable work.
+`Store.seal()` returns `committed: true`; subsequent event or cleanup I/O errors
+appear in structured `warnings` with a stage, path, errno, and error message.
+The normal wrapper still succeeds and reports the saved run and warnings. A
+read-only scratch directory can therefore leave residual work without invalidating
+the record. Cleanup never changes permissions. Recovery retries cleanup only when
+ownership, a stopped process, and verified local payload can still be established;
+partial removal can lose the ownership receipt, so later cleanup is not guaranteed.
+
+If rename publishes a record but the parent-directory fsync fails,
+`PublishedSealError.result` reports `published: true` and
+`durability: "unconfirmed"`. The process fails, retains work and pending intent,
+and does not report Saved or recording-incomplete. A failure before publication
+still preserves work and raises a recording error. On a normal execution error
+Cherries writes diagnostics and, with the default `failure_payload = "discard"`,
+removes only the unsealed payload.
 
 ## Foreground CLI
 

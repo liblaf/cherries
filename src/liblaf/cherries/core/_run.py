@@ -15,6 +15,7 @@ import time
 import traceback
 import uuid
 from collections.abc import Iterator, Mapping
+from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, SupportsFloat, cast
@@ -28,7 +29,7 @@ from slugify import slugify
 
 from liblaf.cherries._capture import capture_environment, capture_source
 from liblaf.cherries._settings import load_settings, storage_root
-from liblaf.cherries.records import Store
+from liblaf.cherries.records import PublishedSealError, Store
 from liblaf.cherries.utils import GitUrlParsed, giturlparse, relative_or_absolute
 
 from .assets import AssetPluginProtocol, AssetsManager
@@ -509,18 +510,47 @@ class Run:
                 },
                 self.working_dir,
             )
-            logger.info("Saved Cherries run %s", self.run_id)
+            self._log_seal_result()
+        except PublishedSealError as failure:
+            self.record_result = failure.result
+            with suppress(OSError):
+                logger.exception(
+                    "Published Cherries run %s; durability unconfirmed; work retained at %s",
+                    self.run_id,
+                    self.working_dir,
+                )
+            raise
         except BaseException as failure:
-            self.store.append_event(
-                "recording-incomplete",
-                self.run_id,
-                {"reason": str(failure), "work": str(self.working_dir)},
-            )
+            if not (
+                self.record_result
+                and self.record_result.get("run_id") == self.run_id
+                and self.record_result.get("committed")
+            ):
+                self.store.append_event(
+                    "recording-incomplete",
+                    self.run_id,
+                    {"reason": str(failure), "work": str(self.working_dir)},
+                )
             raise
         finally:
             self._close_logging()
             self._assets.active = False
             self.active = False
+
+    def _log_seal_result(self) -> None:
+        # Logging handlers cannot turn a confirmed commit into a failed run.
+        with suppress(OSError):
+            logger.info("Saved Cherries run %s", self.run_id)
+        assert self.record_result is not None
+        for warning in self.record_result.get("warnings", []):
+            with suppress(OSError):
+                logger.warning(
+                    "Committed Cherries run %s: %s failed at %s: %s",
+                    self.run_id,
+                    warning["stage"],
+                    warning["path"],
+                    warning["error"],
+                )
 
     # endregion Lifecycle
 

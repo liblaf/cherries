@@ -113,9 +113,16 @@ runtime evidence, parameters, input bindings, logs, metrics, and declared
 outputs. It captures after ordinary imports at the `main` boundary, so record
 source stability but never claim `replay_verified`. Keep referenced Git bases
 available. A successful run seals canonical SHA-256 objects and a small immutable
-record. A missing declared output or recording error retains the work stage. An
-execution failure records diagnostics and may discard only an unsealed local
-payload with no dependency or hold.
+record. A missing declared output or recording error before publication retains
+the work stage. After a confirmed commit, event or disposable cleanup I/O failures
+are warnings; use the saved run ID and the reported residual work path. Do not
+reclassify the run as recording-incomplete, change scratch permissions, or promise
+automatic removal after partial cleanup. `Store.seal()` returns `committed: true`
+and structured `warnings` for these failures. `PublishedSealError` instead means
+the record is visible but directory durability is unconfirmed: preserve its work
+and pending intent, report the nonzero outcome, and avoid claiming a confirmed
+commit. An execution failure records diagnostics and may discard only an unsealed
+local payload with no dependency or hold.
 
 ## Living experiment documentation
 
