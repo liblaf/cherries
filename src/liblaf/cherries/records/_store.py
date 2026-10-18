@@ -13,19 +13,38 @@ import fcntl
 import functools
 import hashlib
 import json
+import logging
 import os
 import shutil
 import tempfile
 import threading
 import uuid
 from collections.abc import Iterable, Mapping
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 from typing import Any
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class RecordStoreError(RuntimeError):
     """Base error for record-store operations."""
+
+
+class PublishedSealError(RecordStoreError):
+    """A record is visible, but publication durability was not confirmed.
+
+    ``result`` identifies the published receipt and retained work. The original
+    I/O error is chained; callers must not treat this as a confirmed commit.
+    """
+
+    def __init__(self, result: dict[str, Any]) -> None:
+        self.result = result
+        msg = (
+            f"record {result['run_id']} was published, but durability is unconfirmed; "
+            "work and pending intent retained"
+        )
+        super().__init__(msg)
 
 
 class IntegrityError(RecordStoreError):
@@ -202,6 +221,7 @@ class Store:
         self._events_by_subject: dict[str, list[dict[str, Any]]] = {}
         self._clock_stamp: tuple[tuple[str, int], ...] | None = None
         self._observed_clock = 0
+        self._sealing_runs: set[str] = set()
 
     @property
     def collection_id(self) -> str:
@@ -358,7 +378,12 @@ class Store:
         work: Path,
         exclude: Iterable[str] = ("scratch",),
     ) -> dict[str, Any]:
-        """Store all retained work files as objects and publish immutable metadata."""
+        """Publish retained files and return the authoritative committed receipt.
+
+        After durable publication, optional event/cleanup I/O failures are
+        returned in ``warnings``. A visible record whose directory fsync fails
+        raises ``PublishedSealError`` and retains work and its pending intent.
+        """
         self.ensure_initialized()
         self._assert_no_maintenance()
         run_id = _validate_id(run_id, "run ID")
@@ -423,6 +448,13 @@ class Store:
         root_digest = _digest_bytes(
             _canonical_bytes({"record": record_digest, "manifest": manifest_digest})
         )
+        result: dict[str, Any] = {
+            "run_id": run_id,
+            "record_digest": f"sha256:{record_digest}",
+            "manifest_digest": f"sha256:{manifest_digest}",
+            "root_digest": f"sha256:{root_digest}",
+            "assets": files,
+        }
         staging = Path(
             tempfile.mkdtemp(prefix=f".{run_id}.", dir=self.root / "records")
         )
@@ -440,19 +472,64 @@ class Store:
             )
             self._fsync_dir(staging)
             staging.replace(self._record_dir(run_id))
-            self._fsync_dir(self._record_dir(run_id).parent)
         except BaseException:
             shutil.rmtree(staging, ignore_errors=True)
             raise
-        (self.root / "pending" / f"{run_id}.json").unlink(missing_ok=True)
-        shutil.rmtree(work)
-        self.append_event("sealed", run_id, {"root_digest": f"sha256:{root_digest}"})
+        try:
+            self._fsync_dir(self._record_dir(run_id).parent)
+        except OSError as error:
+            result.update(
+                published=True,
+                durability="unconfirmed",
+                warnings=[
+                    self._seal_warning(
+                        "record_durability", self._record_dir(run_id), error
+                    )
+                ],
+            )
+            raise PublishedSealError(result) from error
+
+        result["committed"] = True
+        return self._finish_seal(run_id, work, result)
+
+    def _finish_seal(
+        self, run_id: str, work: Path, result: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Record a durable seal before attempting disposable cleanup."""
+        # append_event initializes the store again. Do not let its recovery
+        # mistake this same, still-in-progress seal for abandoned work.
+        self._sealing_runs.add(run_id)
+        try:
+            try:
+                self.append_event(
+                    "sealed", run_id, {"root_digest": result["root_digest"]}
+                )
+            except OSError as error:
+                result["warnings"] = [self._seal_warning("sealed_event", work, error)]
+                return result
+            pending_path = self.root / "pending" / f"{run_id}.json"
+            try:
+                pending_path.unlink(missing_ok=True)
+            except OSError as error:
+                result["warnings"] = [
+                    self._seal_warning("pending_cleanup", pending_path, error)
+                ]
+                return result
+            try:
+                shutil.rmtree(work)
+            except OSError as error:
+                result["warnings"] = [self._seal_warning("work_cleanup", work, error)]
+            return result
+        finally:
+            self._sealing_runs.discard(run_id)
+
+    @staticmethod
+    def _seal_warning(stage: str, path: Path, error: OSError) -> dict[str, Any]:
         return {
-            "run_id": run_id,
-            "record_digest": f"sha256:{record_digest}",
-            "manifest_digest": f"sha256:{manifest_digest}",
-            "root_digest": f"sha256:{root_digest}",
-            "assets": files,
+            "stage": stage,
+            "path": str(path),
+            "errno": error.errno,
+            "error": str(error),
         }
 
     @_mutation
@@ -1565,6 +1642,8 @@ class Store:
             if path.is_dir() and not path.is_symlink()
         )
         for run_id in candidates:
+            if run_id in self._sealing_runs:
+                continue
             try:
                 _validate_id(run_id, "run ID")
             except ValueError:
@@ -1588,9 +1667,19 @@ class Store:
                 json.JSONDecodeError,
             ):
                 continue
-            (self.root / "pending" / f"{run_id}.json").unlink(missing_ok=True)
-            if work.exists():
-                shutil.rmtree(work)
+            try:
+                # A prior publisher may have failed this durability step after
+                # rename. Confirm it before deleting any remaining source work.
+                self._fsync_dir(self._record_dir(run_id).parent)
+                if work.exists():
+                    shutil.rmtree(work)
+                (self.root / "pending" / f"{run_id}.json").unlink(missing_ok=True)
+            except OSError as error:
+                # A diagnostic handler must not make optional cleanup fatal.
+                with suppress(OSError):
+                    logger.warning(
+                        "Retained published Cherries work at %s: %s", work, error
+                    )
 
     def _owned_dead_work(self, work: Path, run_id: str) -> bool:
         if not work.exists():
@@ -2017,8 +2106,10 @@ class Store:
     @staticmethod
     def _fsync_dir(path: Path) -> None:
         descriptor = os.open(path, os.O_DIRECTORY)
-        os.fsync(descriptor)
-        os.close(descriptor)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
 
     def _atomic_json(self, path: Path, value: Mapping[str, Any]) -> None:
         self._atomic_bytes(path, _canonical_bytes(value))

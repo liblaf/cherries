@@ -113,7 +113,9 @@ untracked source, runtime facts, resolved parameters, inputs, logs, metrics, and
 outputs. Capture begins after normal module imports, so it records source at the
 `main` boundary and does not claim replay verification. An execution exception
 keeps a diagnostic event and may discard only the unsealed work payload. A missing
-output or recording failure leaves the work stage for recovery and raises an error.
+output or recording failure before publication preserves work and raises an error.
+After a confirmed commit, disposable cleanup failures are warnings: the saved run
+remains readable and the warning identifies any residual work path.
 
 ## Inspect, archive, and restore
 
