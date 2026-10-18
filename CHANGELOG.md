@@ -7,6 +7,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v4.0.12](https://github.com/liblaf/cherries/releases/tag/v4.0.12) - 2026-10-18
+
+### 🐛 Bug Fixes
+
+- **(records)** preserve historical work during normal access (#197) - [1071a7c](https://github.com/liblaf/cherries/commit/1071a7c4414349f4e9df50be3e044e39d10ce4b0) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf)
+
 ## [v4.0.11](https://github.com/liblaf/cherries/releases/tag/v4.0.11) - 2026-10-18
 
 ### 🐛 Bug Fixes
