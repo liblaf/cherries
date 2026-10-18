@@ -239,7 +239,7 @@ def test_recovery_cleanup_failure_does_not_block_verified_record(
     result = store.seal("run", {}, work)
     assert result["committed"] is True
     controls = _control_hashes(store, "run")
-    fresh = Store(store.root)
+    fresh = Store(store.root, auto_recover=True)
     fresh.ensure_initialized()
     assert fresh.list_records() == ["run"]
     assert work.is_dir()

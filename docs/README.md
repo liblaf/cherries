@@ -42,6 +42,7 @@ takes precedence over `collection.storage`.
 # cherries.toml
 [collection]
 id = "<collection-uuid>"
+auto_recover = false
 
 [capture]
 roots = ["libs/apple", "libs/melon", "tools"]
@@ -62,6 +63,22 @@ storage = "/data/cherries/phace-exp"
 The local recorder currently supports Linux with Python 3.12 or newer. Choose a
 data volume through `collection.storage` or `--storage`; `--remote main` requires
 an explicitly configured `archive.main.path`.
+
+Initialization preserves abandoned work and pending intents by default. Keep
+`collection.auto_recover = false` when historical work must remain available for
+inspection. The CLI, experiment runner, and default `open_run()` read this policy
+from the selected project's settings, including local overrides. Explicitly
+passing `Store(path, auto_recover=False)` keeps that Store's policy throughout
+accessor creation, hold acquisition, and close/release; project settings never
+override a supplied Store. The option must be a TOML/Python boolean.
+
+`Store(path, auto_recover=True).ensure_initialized()` explicitly enables the
+existing cleanup of owned, stopped, verified published work. Setting
+`collection.auto_recover = true` enables it throughout configured Store use,
+including reads and lease updates; use it only within an authorized cleanup
+scope. Disabling recovery preserves old staging data; normal sealing still
+reclaims its own current work. This policy does not make access strictly read-only:
+accessors retain normal hold/release events, materialization, and remote behavior.
 
 ## Python contract
 
@@ -142,9 +159,10 @@ It then appends a sealed event before removing pending intent and disposable wor
 appear in structured `warnings` with a stage, path, errno, and error message.
 The normal wrapper still succeeds and reports the saved run and warnings. A
 read-only scratch directory can therefore leave residual work without invalidating
-the record. Cleanup never changes permissions. Recovery retries cleanup only when
-ownership, a stopped process, and verified local payload can still be established;
-partial removal can lose the ownership receipt, so later cleanup is not guaranteed.
+the record. Cleanup never changes permissions. When explicitly enabled, recovery
+retries cleanup only when ownership, a stopped process, and verified local payload
+can still be established; partial removal can lose the ownership receipt, so later
+cleanup is not guaranteed.
 
 If rename publishes a record but the parent-directory fsync fails,
 `PublishedSealError.result` reports `published: true` and

@@ -32,6 +32,7 @@ Use a configured local data volume, not `/tmp`:
 # cherries.local.toml (normally Git ignored)
 [collection]
 storage = "/data/cherries/phace-exp"
+auto_recover = false
 ```
 
 Initialize a new collection explicitly:
@@ -123,6 +124,20 @@ the record is visible but directory durability is unconfirmed: preserve its work
 and pending intent, report the nonzero outcome, and avoid claiming a confirmed
 commit. An execution failure records diagnostics and may discard only an unsealed
 local payload with no dependency or hold.
+
+Normal initialization preserves historical work and pending intents by default.
+Keep `collection.auto_recover = false` in project/local settings when retaining
+old staging evidence. CLI, runner, and default accessors use the selected project's
+policy. With an explicit Store, pass `Store(path, auto_recover=False)`; that
+instance's policy persists through repeated initialization and reader hold/release
+calls and is not overridden by working-directory settings. Normal accessors still
+append leases and materialize assets; this is not a strict read-only mode.
+
+Enable `auto_recover=True` only for authorized cleanup: initialization can then
+remove owned, stopped, verified published work and its pending intent. A
+maintenance pause does not disable this opt-in recovery. Normal sealing's cleanup
+of its own current work is independent of this policy. Do not enable recovery as
+an implicit part of upgrading, browsing, or investigating historical evidence.
 
 ## Living experiment documentation
 

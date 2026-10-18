@@ -117,6 +117,12 @@ output or recording failure before publication preserves work and raises an erro
 After a confirmed commit, disposable cleanup failures are warnings: the saved run
 remains readable and the warning identifies any residual work path.
 
+Initialization preserves historical work and pending intents by default. Keep
+`[collection] auto_recover = false` in project settings, or pass
+`Store(path, auto_recover=False)`, to state that policy explicitly. It applies
+throughout reader initialization and hold/release calls. Recovery cleanup requires
+explicit `auto_recover=True`; normal sealing still cleans its own current work.
+
 ## Inspect, archive, and restore
 
 All commands are foreground operations. Add `--json` before the subcommand for

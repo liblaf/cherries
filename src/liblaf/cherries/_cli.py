@@ -19,14 +19,12 @@ from pathlib import Path
 from typing import Any
 
 from ._remote import ArchiveMetadataError, Remote, RemoteError
-from ._settings import load_settings, storage_root
+from ._settings import configured_store, load_settings, storage_root
 from .records import record_asset_ids
 
 
-def _store(root: Path, machine_id: str | None) -> Any:
-    from .records import Store
-
-    return Store(root, machine_id=machine_id)
+def _store(root: Path, machine_id: str | None, project_dir: Path | None = None) -> Any:
+    return configured_store(project_dir, root=root, machine_id=machine_id)
 
 
 def _storage(args: argparse.Namespace) -> Path:
@@ -130,7 +128,7 @@ def _bind_analysis_source(store: Any, folder: Path, run_id: str) -> dict[str, An
 
 
 def command_init(args: argparse.Namespace) -> dict[str, Any]:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     return dict(store.ensure_initialized(collection_id=_collection_id(args)))
 
 
@@ -165,7 +163,7 @@ def _browse_summary(store: Any, run_id: str) -> dict[str, Any]:
 
 
 def command_browse(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     if args.failed and args.remote:
         raise RuntimeError(
             "remote failed-attempt import is not implemented; browse failures locally"
@@ -218,7 +216,7 @@ def command_browse(args: argparse.Namespace) -> Any:
 
 
 def command_show(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     if args.remote:
         _remote(args).import_metadata(store, args.run_id)
     run_id = store.resolve_id(args.run_id)
@@ -230,7 +228,7 @@ def command_show(args: argparse.Namespace) -> Any:
 
 
 def command_read(args: argparse.Namespace) -> str:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     if args.remote:
         _remote(args).import_metadata(store, args.run_id)
     run_id = store.resolve_id(args.run_id)
@@ -310,7 +308,7 @@ def _materialize_selected_path(
 
 
 def command_path(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     if args.release:
         lease = _lease_path(store, args.release)
         if not lease.is_file():
@@ -384,7 +382,7 @@ def command_path(args: argparse.Namespace) -> Any:
 
 
 def command_restore(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     run_id = args.run_id if args.remote else store.resolve_id(args.run_id)
     if args.remote:
         path = _remote(args).restore(store, run_id)
@@ -413,7 +411,7 @@ def command_restore(args: argparse.Namespace) -> Any:
 
 
 def command_archive(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     remote = _remote(args)
     locations: list[dict[str, Any]] = []
     annotated: list[dict[str, Any]] = []
@@ -480,7 +478,7 @@ def command_archive(args: argparse.Namespace) -> Any:
 
 
 def command_sync(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     remote = _remote(args)
     return {
         "published_events": remote.sync_metadata(Path(store.root)),
@@ -489,20 +487,20 @@ def command_sync(args: argparse.Namespace) -> Any:
 
 
 def command_index(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     imported = _import_remote_if_requested(store, args)
     return {"index": store.rebuild_index(), "imported": imported}
 
 
 def command_review(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     return _optional(
         store, ("review",), store.resolve_id(args.run_id), args.quality, note=args.note
     )
 
 
 def command_label(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     run_id = store.resolve_id(args.run_id)
     return [
         store.label(run_id, label, present=args.action == "add")
@@ -511,7 +509,7 @@ def command_label(args: argparse.Namespace) -> Any:
 
 
 def command_mark(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     run_id = store.resolve_id(args.run_id)
     if args.important is not None:
         return store.mark(run_id, important=args.important)
@@ -519,7 +517,7 @@ def command_mark(args: argparse.Namespace) -> Any:
 
 
 def command_note_or_link(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     payload = Path(args.file).read_text() if hasattr(args, "file") else args.commit
     return store.append_event(
         args.command, store.resolve_id(args.run_id), {"value": payload}
@@ -563,7 +561,7 @@ def _write_plan(
 
 
 def command_maintenance(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     if args.action == "pause":
         return store.pause_maintenance()
     if not args.token:
@@ -573,7 +571,7 @@ def command_maintenance(args: argparse.Namespace) -> Any:
 
 
 def command_discard_or_prune(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     if args.plan:
         receipt = _active_maintenance_receipt(store)
         plan = (
@@ -614,7 +612,7 @@ def command_discard_or_prune(args: argparse.Namespace) -> Any:
 def command_rerun(args: argparse.Namespace) -> dict[str, Any]:
     from ._capture import prepare_replay
 
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     if args.close:
         replay = Path(args.close) / "replay.json"
         if not replay.is_file():
@@ -676,7 +674,7 @@ def command_rerun(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def command_analysis_new(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     folder = args.folder.resolve()
     sources = [str(store.resolve_id(item)) for item in args.source]
     folder.mkdir(parents=True, exist_ok=False)
@@ -712,7 +710,7 @@ def command_analysis_new(args: argparse.Namespace) -> Any:
 
 
 def command_analysis_source(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     source = str(store.resolve_id(args.run_id))
     with _analysis_locked(args.folder):
         if args.action == "add":
@@ -725,7 +723,7 @@ def command_analysis_source(args: argparse.Namespace) -> Any:
 
 
 def command_analysis_save(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     folder = args.folder.resolve()
     with _analysis_locked(folder):
         config = _read_analysis(folder)
@@ -818,7 +816,7 @@ def command_analysis_save(args: argparse.Namespace) -> Any:
 
 
 def command_analysis_close(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id)
+    store = _store(_storage(args), args.machine_id, args.project_dir)
     with _analysis_locked(args.folder):
         config = _read_analysis(args.folder)
         for source in config["sources"]:

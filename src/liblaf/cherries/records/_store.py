@@ -197,11 +197,21 @@ class Store:
     ``root`` is a configured data volume, never a temporary system directory.
     The class performs no synchronization by itself; remote publication is a
     separate transport concern.
+
+    Old work and pending intents are preserved by default. Explicitly setting
+    ``auto_recover=True`` authorizes cleanup of verified committed work during
+    every initialization, including initialization nested in reader holds.
     """
 
     format_version = 1
 
-    def __init__(self, root: Path, machine_id: str | None = None) -> None:
+    def __init__(
+        self, root: Path, machine_id: str | None = None, *, auto_recover: bool = False
+    ) -> None:
+        if not isinstance(auto_recover, bool):
+            msg = "auto_recover must be a boolean"
+            raise TypeError(msg)
+        self._auto_recover = auto_recover
         self.root = Path(root)
         self._machine_id = machine_id
         self._collection_id: str | None = None
@@ -222,6 +232,11 @@ class Store:
         self._clock_stamp: tuple[tuple[str, int], ...] | None = None
         self._observed_clock = 0
         self._sealing_runs: set[str] = set()
+
+    @property
+    def auto_recover(self) -> bool:
+        """Whether initialization may clean up old, verified committed work."""
+        return self._auto_recover
 
     @property
     def collection_id(self) -> str:
@@ -254,6 +269,7 @@ class Store:
 
     @_mutation
     def ensure_initialized(self, collection_id: str | None = None) -> dict[str, Any]:
+        """Initialize identities and apply this store's lifetime recovery policy."""
         self.root.mkdir(parents=True, exist_ok=True)
         for name in (
             "objects/sha256",
@@ -295,7 +311,8 @@ class Store:
             msg = "collection ID must be a string"
             raise IntegrityError(msg)
         self._collection_id = collection_value
-        self._recover_sealed_work()
+        if self.auto_recover:
+            self._recover_sealed_work()
         return data
 
     @_mutation
