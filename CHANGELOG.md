@@ -7,6 +7,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v4.0.13](https://github.com/liblaf/cherries/releases/tag/v4.0.13) - 2026-10-19
+
+### 🐛 Bug Fixes
+
+- **(records)** batch scoped remote metadata imports (#200) - [f7903a1](https://github.com/liblaf/cherries/commit/f7903a185f0d54d0780f5ad90cea65ee281a1d5f) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf)
+- [@renovate[bot]](https://github.com/apps/renovate)
+
 ## [v4.0.12](https://github.com/liblaf/cherries/releases/tag/v4.0.12) - 2026-10-18
 
 ### 🐛 Bug Fixes
