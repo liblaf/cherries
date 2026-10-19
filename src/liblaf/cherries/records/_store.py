@@ -867,6 +867,84 @@ class Store:
         different-byte collision is always an integrity failure.
         """
         relative = Path(relative)
+        self._validate_metadata_file(relative, data)
+        target = self.root / relative
+        if target.exists():
+            if target.read_bytes() != data:
+                msg = f"immutable metadata conflict: {relative}"
+                raise IntegrityError(msg)
+            return False
+        self._atomic_bytes(target, data)
+        return True
+
+    @_mutation
+    def import_metadata_files(self, files: Iterable[tuple[Path, bytes]]) -> int:
+        """Import immutable metadata with directory barriers shared across files.
+
+        All paths, events, and byte conflicts are checked before writing. Each
+        new file is individually flushed and atomically published, then affected
+        directories are synced once. I/O failures can leave a partial import;
+        retrying identical bytes performs the directory barriers again without
+        rewriting existing files. The return value counts newly imported files.
+        """
+        entries: dict[Path, bytes] = {}
+        new_entries: list[tuple[Path, bytes]] = []
+        directories: set[Path] = set()
+        for path, data in files:
+            relative = Path(path)
+            self._validate_metadata_file(relative, data)
+            if relative in entries and entries[relative] != data:
+                msg = f"immutable metadata conflict: {relative}"
+                raise IntegrityError(msg)
+            entries[relative] = data
+        for relative, data in entries.items():
+            target = self.root / relative
+            if target.exists():
+                if target.read_bytes() != data:
+                    msg = f"immutable metadata conflict: {relative}"
+                    raise IntegrityError(msg)
+            else:
+                new_entries.append((target, data))
+            # Fence every namespace ancestor even on retries: an earlier import
+            # may have created a directory without completing its parent barrier.
+            parent = target.parent
+            while parent != self.root:
+                directories.add(parent)
+                parent = parent.parent
+            directories.add(self.root)
+        try:
+            for target, data in new_entries:
+                self._atomic_bytes(target, data, sync_directory=False)
+        except BaseException as error:
+            try:
+                self._sync_metadata_directories(directories, allow_missing=True)
+            except OSError as barrier_error:
+                error.add_note(
+                    f"metadata import directory durability also failed: {barrier_error}"
+                )
+            raise
+        self._sync_metadata_directories(directories)
+        return len(new_entries)
+
+    def _sync_metadata_directories(
+        self, directories: Iterable[Path], *, allow_missing: bool = False
+    ) -> None:
+        # Deepest first confirms file entries before the directory namespace.
+        failure: OSError | None = None
+        for directory in sorted(directories, key=lambda path: (-len(path.parts), path)):
+            try:
+                self._fsync_dir(directory)
+            except OSError as error:
+                if allow_missing and isinstance(error, FileNotFoundError):
+                    continue
+                if failure is None:
+                    failure = error
+                else:
+                    failure.add_note(f"additional directory barrier failed: {error}")
+        if failure is not None:
+            raise failure
+
+    def _validate_metadata_file(self, relative: Path, data: bytes) -> None:
         parts = relative.parts
         valid_record = (
             len(parts) == 3
@@ -934,14 +1012,6 @@ class Store:
             if Path(relative).stem != event["event_id"]:
                 msg = "event ID does not match metadata path"
                 raise IntegrityError(msg)
-        target = self.root / relative
-        if target.exists():
-            if target.read_bytes() != data:
-                msg = f"immutable metadata conflict: {relative}"
-                raise IntegrityError(msg)
-            return False
-        self._atomic_bytes(target, data)
-        return True
 
     @_mutation
     def import_remote_record(  # noqa: C901 - remote receipt checks are one gate
@@ -2131,7 +2201,9 @@ class Store:
     def _atomic_json(self, path: Path, value: Mapping[str, Any]) -> None:
         self._atomic_bytes(path, _canonical_bytes(value))
 
-    def _atomic_bytes(self, path: Path, data: bytes) -> None:
+    def _atomic_bytes(
+        self, path: Path, data: bytes, *, sync_directory: bool = True
+    ) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
         try:
@@ -2140,6 +2212,7 @@ class Store:
                 file.flush()
                 os.fsync(file.fileno())
             Path(temp_name).replace(path)
-            self._fsync_dir(path.parent)
+            if sync_directory:
+                self._fsync_dir(path.parent)
         finally:
             Path(temp_name).unlink(missing_ok=True)

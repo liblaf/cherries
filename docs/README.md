@@ -282,6 +282,23 @@ event history, including updates for ancestors already present locally. Global
 metadata sync still imports the whole collection. The current checkpoint format
 requires reading and validating all checkpoint-bound events before installation;
 unrelated event files are verified but not installed by a selected import.
+Remote fallback for `open_run`, `run:<id>/<path>` inputs, and SHA inputs with an
+explicit `source_run` uses that selected lineage too. Exact record IDs take
+precedence over prefixes; a fallback prefix must identify one record across the
+local and remote record IDs. Use a full ID when the prefix is ambiguous.
+Existing local ancestors must agree with the verified remote controls before
+the selected child can be installed.
+SHA lookup without a known producer still needs collection-wide discovery.
+
+Selected event installation shares directory durability barriers across the
+batch. Each new event still receives its own content fsync and atomic rename;
+affected directories and their namespace ancestors are synced before success.
+Identical events are not rewritten, but repeat imports perform those shared
+barriers to confirm names left by a previously interrupted import. An I/O failure
+can leave a partial import and still propagates; a verified retry completes it.
+This reduces directory syncs to the number of affected namespaces, while file
+fsyncs still scale with new events and proof reads still cover all checkpoint
+events. It does not provide a fixed wall-clock import bound on slow storage.
 `browse --failed` lists local failed-attempt diagnostics only; attempts are not
 published or imported through remote metadata sync.
 

@@ -27,7 +27,7 @@ class RunAccessor:
         except NotFoundError:
             if self.remote is None:
                 raise
-            self.remote.import_metadata(self.store)
+            self.remote.import_metadata(self.store, run_id)
             self.run_id = self.store.resolve_id(run_id)
         self.reason = "read:" + str(uuid.uuid4())
         self.closed = False

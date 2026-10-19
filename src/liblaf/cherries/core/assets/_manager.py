@@ -260,7 +260,7 @@ class AssetsManager:
             except NotFoundError:
                 if remote is None:
                     raise
-                remote.import_metadata(self.store)
+                remote.import_metadata(self.store, source_run)
                 binding = self._remote_origin(declaration, source_run)
             producer = binding.get("run_id")
             if not producer:
@@ -276,7 +276,7 @@ class AssetsManager:
         except NotFoundError:
             if remote is None:
                 raise
-            remote.import_metadata(self.store)
+            remote.import_metadata(self.store, producer)
             producer = self.store.resolve_id(producer)
         files = self.store.read_manifest(producer)["files"]
         selected = [

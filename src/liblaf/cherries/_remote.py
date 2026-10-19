@@ -23,7 +23,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, Self
 
-from liblaf.cherries.records import record_asset_ids
+from liblaf.cherries.records import NotFoundError, record_asset_ids
 
 
 class RemoteError(RuntimeError):
@@ -647,11 +647,25 @@ class Remote:
             ):
                 raise IntegrityError("remote event is invalid")
             verified_events.append((remote_path, data, subject))
-        candidates = (
-            {run_id}
-            if run_id
-            else set(self.list_remote_records()) | set(checkpoint_records)
-        )
+        if run_id is not None:
+            if not _is_contained_id(run_id):
+                raise RemoteError("remote record ID is not contained")
+            if run_id not in checkpoint_records:
+                available = set(checkpoint_records) | set(self.list_remote_records())
+                if run_id not in available:
+                    matches = sorted(
+                        value
+                        for value in available | set(store.list_records())
+                        if value.startswith(run_id)
+                    )
+                    if len(matches) != 1 or matches[0] not in available:
+                        raise NotFoundError(
+                            f"remote record prefix must match exactly one record: {run_id}"
+                        )
+                    run_id = matches[0]
+            candidates = {run_id}
+        else:
+            candidates = set(self.list_remote_records()) | set(checkpoint_records)
         pending: dict[str, dict[str, Any]] = {}
         todo = list(candidates)
         while todo:
@@ -721,29 +735,30 @@ class Remote:
                 "complete": complete,
             }
             if run_id is not None:
-                todo.extend(
-                    parent
-                    for parent in parents
-                    if parent not in pending and parent not in set(store.list_records())
-                )
-        selected_subjects = None
-        if run_id is not None:
-            selected_subjects = set(pending)
-            ancestors = [
-                parent
-                for data in pending.values()
-                for parent in data["record"].get("parents", [])
-            ]
-            while ancestors:
-                parent = ancestors.pop()
-                if parent in selected_subjects:
-                    continue
-                selected_subjects.add(parent)
-                # Candidate staging skips controls already present locally;
-                # their remote annotations still belong to this lineage.
-                ancestors.extend(store.read_record(parent).get("parents", []))
-        records = 0
+                todo.extend(parent for parent in parents if parent not in pending)
+        # A local record with the same ID is not evidence of the remote lineage.
+        # Compare every staged existing receipt before publishing any child;
+        # otherwise a child could be linked to a different valid local parent.
         known = set(store.list_records())
+        for identifier in known & pending.keys():
+            complete_path = Path(store.root) / "records" / identifier / "complete.json"
+            if not complete_path.is_file():
+                # Duck-typed adapters may list records without native controls.
+                # Native Store.list_records only lists complete.json entries.
+                continue
+            try:
+                complete = json.loads(complete_path.read_bytes())
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise IntegrityError("local completion metadata is invalid") from error
+            local = {
+                "record": store.read_record(identifier),
+                "manifest": store.read_manifest(identifier),
+                "complete": complete,
+            }
+            if local != pending[identifier]:
+                raise IntegrityError(f"remote record conflict: {identifier}")
+        selected_subjects = set(pending) if run_id is not None else None
+        records = 0
         while pending:
             ready = [
                 identifier
@@ -761,10 +776,20 @@ class Remote:
         # Marker-last checkpoints are the publication boundary for event
         # metadata too.  Files copied before a new checkpoint are ordinary
         # in-progress publication state and are deliberately ignored.
-        events = 0
-        for remote_path, data, subject in verified_events:
-            if selected_subjects is None or subject in selected_subjects:
-                events += store.import_metadata_file(remote_path, data)
+        selected_events = [
+            (remote_path, data)
+            for remote_path, data, subject in verified_events
+            if selected_subjects is None or subject in selected_subjects
+        ]
+        import_batch = getattr(store, "import_metadata_files", None)
+        events = (
+            import_batch(selected_events)
+            if import_batch is not None
+            else sum(
+                store.import_metadata_file(remote_path, data)
+                for remote_path, data in selected_events
+            )
+        )
         return {"records": records, "events": events}
 
     def _fetch_raw_to_store(self, store: Any, asset_id: str) -> Path:
