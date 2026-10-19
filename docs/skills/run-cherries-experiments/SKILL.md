@@ -235,6 +235,17 @@ analysis workspace hold. In either mode, close the accessor or use a context
 manager: its temporary reader hold protects active reads even if the workspace
 is closed. The workspace's own hold remains until `cherries analysis close`.
 
+The following import optimizations require Cherries v4.0.13 or newer.
+Remote readers and inputs with a known run or `source_run` import only that
+lineage's records and event history. Unknown-origin SHA lookup still discovers
+the collection. Selected import validates every checkpoint-bound event before
+installation, including unrelated events, so do not describe it as fetching only
+selected metadata or infer a deadlock from a slow import. New event content is
+synced individually; directory barriers are shared. A repeated import avoids
+event rewrites but still confirms directory durability, and interrupted imports
+may leave partial metadata for a verified retry. Keep active experiment runtimes
+separate from performance reproducers and release acceptance.
+
 `cherries rerun <id> --prepare-only --workspace replay/<id>` reconstructs a
 fresh workspace from saved Git HEADs, binary diffs, selected untracked source,
 captured entrypoint, and input mapping. It requires local captured Git bases and

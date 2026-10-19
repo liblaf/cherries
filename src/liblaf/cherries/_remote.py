@@ -23,7 +23,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, Self
 
-from liblaf.cherries.records import record_asset_ids
+from liblaf.cherries.records import NotFoundError, record_asset_ids
 
 
 class RemoteError(RuntimeError):
@@ -647,11 +647,23 @@ class Remote:
             ):
                 raise IntegrityError("remote event is invalid")
             verified_events.append((remote_path, data, subject))
-        candidates = (
-            {run_id}
-            if run_id
-            else set(self.list_remote_records()) | set(checkpoint_records)
-        )
+        if run_id is not None:
+            if not _is_contained_id(run_id):
+                raise RemoteError("remote record ID is not contained")
+            if run_id not in checkpoint_records:
+                available = set(checkpoint_records) | set(self.list_remote_records())
+                if run_id not in available:
+                    matches = sorted(
+                        value for value in available if value.startswith(run_id)
+                    )
+                    if len(matches) != 1:
+                        raise NotFoundError(
+                            f"remote record prefix must match exactly one record: {run_id}"
+                        )
+                    run_id = matches[0]
+            candidates = {run_id}
+        else:
+            candidates = set(self.list_remote_records()) | set(checkpoint_records)
         pending: dict[str, dict[str, Any]] = {}
         todo = list(candidates)
         while todo:
@@ -761,10 +773,20 @@ class Remote:
         # Marker-last checkpoints are the publication boundary for event
         # metadata too.  Files copied before a new checkpoint are ordinary
         # in-progress publication state and are deliberately ignored.
-        events = 0
-        for remote_path, data, subject in verified_events:
-            if selected_subjects is None or subject in selected_subjects:
-                events += store.import_metadata_file(remote_path, data)
+        selected_events = [
+            (remote_path, data)
+            for remote_path, data, subject in verified_events
+            if selected_subjects is None or subject in selected_subjects
+        ]
+        import_batch = getattr(store, "import_metadata_files", None)
+        events = (
+            import_batch(selected_events)
+            if import_batch is not None
+            else sum(
+                store.import_metadata_file(remote_path, data)
+                for remote_path, data in selected_events
+            )
+        )
         return {"records": records, "events": events}
 
     def _fetch_raw_to_store(self, store: Any, asset_id: str) -> Path:
