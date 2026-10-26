@@ -7,6 +7,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v4.0.14](https://github.com/liblaf/cherries/releases/tag/v4.0.14) - 2026-10-27
+
+### 🐛 Bug Fixes
+
+- **(main)** detach broken console mirrors without losing run logs (#203) - [25094e5](https://github.com/liblaf/cherries/commit/25094e589a4645716002604903a2a478757e7945) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf)
+- [@renovate[bot]](https://github.com/apps/renovate)
+
 ## [v4.0.13](https://github.com/liblaf/cherries/releases/tag/v4.0.13) - 2026-10-19
 
 ### 🐛 Bug Fixes
