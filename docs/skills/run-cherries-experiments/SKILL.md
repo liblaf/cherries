@@ -143,6 +143,23 @@ maintenance pause does not disable this opt-in recovery. Normal sealing's cleanu
 of its own current work is independent of this policy. Do not enable recovery as
 an implicit part of upgrading, browsing, or investigating historical evidence.
 
+For long jobs that must survive controller/SSH exit, route stdout and stderr to
+owned append files with null stdin. A systemd launch should use
+`StandardOutput=append:/absolute/owned/worker.log`, an appropriate
+`StandardError=append:...` path, and `StandardInput=null`, without `--pipe` or
+`--pty`. Verify the worker continues and seals after its controller exits using a
+new disposable CPU run before relying on the launch path.
+
+Cherries v4.0.14 adds console-disconnect handling for captured Python text writes:
+the durable log is written first, and only a console `BrokenPipeError` detaches
+its mirror. Matching stdout/stderr pipe or socket descriptors are detached
+together to prevent Python shutdown errors. Durable log errors and other console
+exceptions still propagate; native/binary output and an application resetting
+SIGPIPE are outside this handling. A verified append-file launch can proceed on
+older versions independently. Preserve previous failed attempts as failed; a new
+release cannot reconstruct their discarded unsealed payload. Let the execution
+owner verify and adopt a new package in an idle environment.
+
 ## Living experiment documentation
 
 Automatically maintain experiment notes during experiment sessions. This is a

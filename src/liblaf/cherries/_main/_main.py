@@ -2,6 +2,9 @@
 import asyncio
 import contextlib
 import inspect
+import io
+import os
+import stat
 import sys
 from collections.abc import Awaitable, Callable, Iterator, Mapping, Sequence
 from inspect import Parameter
@@ -101,14 +104,53 @@ class _Tee:
     def __init__(self, original: Any, stream: Any) -> None:
         self.original = original
         self.stream = stream
+        self.console_enabled = True
+        self.peer: _Tee | None = None
 
     def write(self, text: str) -> int:
-        self.original.write(text)
-        return self.stream.write(text)
+        written = self.stream.write(text)
+        if self.console_enabled:
+            try:
+                self.original.write(text)
+            except BrokenPipeError:
+                self._detach_console()
+        return written
 
     def flush(self) -> None:
-        self.original.flush()
         self.stream.flush()
+        if self.console_enabled:
+            try:
+                self.original.flush()
+            except BrokenPipeError:
+                self._detach_console()
+
+    def _detach_console(self) -> None:
+        self.console_enabled = False
+        try:
+            descriptor = self.original.fileno()
+        except (AttributeError, io.UnsupportedOperation):
+            return
+        descriptors = {descriptor}
+        if self.peer is not None:
+            try:
+                peer_descriptor = self.peer.original.fileno()
+            except (AttributeError, io.UnsupportedOperation):
+                pass
+            else:
+                failed = os.fstat(descriptor)
+                peer = os.fstat(peer_descriptor)
+                if descriptor == peer_descriptor or (
+                    (stat.S_ISFIFO(failed.st_mode) or stat.S_ISSOCK(failed.st_mode))
+                    and (failed.st_dev, failed.st_ino, stat.S_IFMT(failed.st_mode))
+                    == (peer.st_dev, peer.st_ino, stat.S_IFMT(peer.st_mode))
+                ):
+                    self.peer.console_enabled = False
+                    descriptors.add(peer_descriptor)
+        # Restoring a broken buffered standard stream would make Python's final
+        # flush exit with status 120 even after the record was successfully sealed.
+        with Path(os.devnull).open("w") as sink:
+            for descriptor in descriptors:
+                os.dup2(sink.fileno(), descriptor)
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self.original, name)
@@ -123,10 +165,20 @@ def _capture_stdio(run: core.Run) -> Iterator[None]:
     with (
         (logs / "stdout.log").open("w") as stdout,
         (logs / "stderr.log").open("w") as stderr,
-        contextlib.redirect_stdout(_Tee(sys.stdout, stdout)),
-        contextlib.redirect_stderr(_Tee(sys.stderr, stderr)),
     ):
-        yield
+        stdout_tee = _Tee(sys.stdout, stdout)
+        stderr_tee = _Tee(sys.stderr, stderr)
+        stdout_tee.peer = stderr_tee
+        stderr_tee.peer = stdout_tee
+        with (
+            contextlib.redirect_stdout(stdout_tee),
+            contextlib.redirect_stderr(stderr_tee),
+        ):
+            try:
+                yield
+            finally:
+                stdout_tee.flush()
+                stderr_tee.flush()
 
 
 def _make_args(func: Callable) -> tuple[Sequence[Any], Mapping[str, Any]]:
