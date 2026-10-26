@@ -172,6 +172,23 @@ still preserves work and raises a recording error. On a normal execution error
 Cherries writes diagnostics and, with the default `failure_payload = "discard"`,
 removes only the unsealed payload.
 
+Starting with v4.0.14, captured Python text writes go to `logs/stdout.log` or
+`logs/stderr.log` before the console mirror. A console `BrokenPipeError` disables
+that mirror and redirects its failed descriptor to `/dev/null`, allowing Python
+to finish without a shutdown flush error. If stdout and stderr share the same
+failed pipe or socket, both mirrors are detached. An independent console remains
+usable. Capture exit flushes buffered text before sealing; durable log errors and
+other console exceptions still propagate. Direct binary/native writes and an
+application that resets SIGPIPE to its default disposition are outside this
+handling.
+
+For jobs that must outlive an SSH controller, send stdout and stderr directly to
+owned append files and use null stdin. For systemd jobs, use
+`StandardOutput=append:/absolute/owned/worker.log`, an appropriate
+`StandardError=append:...` path, and `StandardInput=null`; avoid `--pipe` and
+`--pty`. This file-output path can be used on earlier versions independently of
+the console-disconnect fix.
+
 ## Foreground CLI
 
 Global options precede the command:
