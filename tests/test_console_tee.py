@@ -5,9 +5,11 @@ import errno
 import io
 import os
 import select
+import socket
 import subprocess
 import sys
 import time
+from contextlib import ExitStack
 from pathlib import Path
 from typing import Literal
 
@@ -87,6 +89,73 @@ def test_unrelated_console_errors_propagate(operation: str, error: Exception) ->
         invoke()
 
     assert caught.value is error
+
+
+@pytest.mark.parametrize(
+    "peer_kind", ["duplicate", "same", "independent", "no_fd", "socket_duplicate"]
+)
+def test_owned_console_descriptors_recover_without_muting_healthy_peer(
+    peer_kind: str,
+) -> None:
+    with ExitStack() as resources:
+        if peer_kind == "socket_duplicate":
+            sender, receiver = socket.socketpair()
+            resources.enter_context(sender)
+            resources.enter_context(receiver)
+            original = resources.enter_context(os.fdopen(os.dup(sender.fileno()), "w"))
+        else:
+            read_fd, write_fd = os.pipe()
+            receiver = resources.enter_context(os.fdopen(read_fd, "rb", buffering=0))
+            original = resources.enter_context(os.fdopen(write_fd, "w"))
+
+        healthy_reader = None
+        if peer_kind in {"duplicate", "socket_duplicate"}:
+            sibling = resources.enter_context(os.fdopen(os.dup(original.fileno()), "w"))
+        elif peer_kind == "same":
+            sibling = original
+        elif peer_kind == "independent":
+            read_fd, write_fd = os.pipe()
+            healthy_reader = resources.enter_context(
+                os.fdopen(read_fd, "rb", buffering=0)
+            )
+            sibling = resources.enter_context(os.fdopen(write_fd, "w"))
+        else:
+            sibling = resources.enter_context(io.StringIO())
+        failed_log = io.StringIO()
+        sibling_log = io.StringIO()
+        tee = _Tee(original, failed_log)
+        peer = _Tee(sibling, sibling_log)
+        tee.peer = peer
+        peer.peer = tee
+
+        receiver.close()
+        assert tee.write("failed console message\n") == len("failed console message\n")
+        tee.flush()
+        tee.write("durable subsequent message\n")
+        tee.flush()
+        peer.write("sibling message\n")
+        peer.flush()
+
+        # Python restores the original streams after capture. Their remaining
+        # buffers and later writes must flush safely at interpreter shutdown.
+        original.write("restored original\n")
+        original.flush()
+        sibling.write("restored sibling\n")
+        sibling.flush()
+        assert (
+            failed_log.getvalue()
+            == "failed console message\ndurable subsequent message\n"
+        )
+        assert sibling_log.getvalue() == "sibling message\n"
+        if healthy_reader is not None:
+            readable, _, _ = select.select([healthy_reader], [], [], 1)
+            assert readable, "healthy peer stopped delivering console output"
+            assert (
+                os.read(healthy_reader.fileno(), 4096)
+                == b"sibling message\nrestored sibling\n"
+            )
+        elif peer_kind == "no_fd":
+            assert sibling.getvalue() == "sibling message\nrestored sibling\n"
 
 
 @pytest.mark.parametrize("console", ["stdout", "stderr", "shared"])
