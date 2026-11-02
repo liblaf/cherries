@@ -94,6 +94,7 @@ paths and must not call `input`, `output`, or `temp` during class definition:
 class Config(cherries.BaseConfig):
     mesh: str = "sha256:<full-digest>"
 
+
 def main(cfg: Config) -> None:
     mesh = cherries.input(cfg.mesh, name="mesh.vtu")
     result = cherries.output("solution.npz")
