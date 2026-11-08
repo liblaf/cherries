@@ -972,7 +972,7 @@ def _normalize_global_flags(argv: Sequence[str] | None) -> list[str] | None:
     return prefix + values
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def legacy_main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(_normalize_global_flags(argv))
     try:
@@ -980,3 +980,43 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (RemoteError, RuntimeError, OSError, ValueError) as error:
         parser.error(str(error))
     return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Route explicit command namespaces without format-error fallback."""
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if arguments and arguments[0] == "legacy":
+        return legacy_main(arguments[1:])
+    before_command = (
+        arguments[: arguments.index("--")] if "--" in arguments else arguments
+    )
+    new_groups = {"store", "project", "run", "file", "report", "metrics", "code"}
+    command = None
+    skip = False
+    values = {"--store", "--project", "--project-dir", "--storage", "--machine-id"}
+    for value in before_command:
+        if skip:
+            skip = False
+        elif value in values:
+            skip = True
+        elif not value.startswith("-"):
+            command = value
+            break
+    selected = command in new_groups
+    selected |= "--store" in before_command or any(
+        value.startswith("--store=") for value in before_command
+    )
+    selected |= "--project" in before_command or any(
+        value.startswith("--project=") for value in before_command
+    )
+    if command == "index":
+        from .store._config import settings
+
+        selected |= bool(
+            os.environ.get("CHERRIES_STORE") or settings()[1].get("project")
+        )
+    if selected or not arguments or arguments in (["--help"], ["--version"]):
+        from .store._cli import main as store_main
+
+        return store_main(arguments)
+    return legacy_main(arguments)

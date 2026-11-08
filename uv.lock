@@ -1419,6 +1419,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-slugify" },
+    { name = "pyyaml" },
     { name = "toolz" },
 ]
 
@@ -1469,6 +1470,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2" },
     { name = "pydantic-settings", specifier = ">=2.7" },
     { name = "python-slugify", specifier = ">=8.0.4" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "toolz", specifier = ">=1.1" },
 ]
 

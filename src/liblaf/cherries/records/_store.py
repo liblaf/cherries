@@ -62,6 +62,7 @@ class DeletionBlockedError(RecordStoreError):
 def _mutation(method: Any) -> Any:
     @functools.wraps(method)
     def wrapped(self: Store, *args: Any, **kwargs: Any) -> Any:
+        self._assert_legacy_format()
         with self._mutation_lock():
             return method(self, *args, **kwargs)
 
@@ -213,6 +214,7 @@ class Store:
             raise TypeError(msg)
         self._auto_recover = auto_recover
         self.root = Path(root)
+        self._assert_legacy_format()
         self._machine_id = machine_id
         self._collection_id: str | None = None
         self._thread_lock = threading.RLock()
@@ -233,6 +235,11 @@ class Store:
         self._observed_clock = 0
         self._sealing_runs: set[str] = set()
 
+    def _assert_legacy_format(self) -> None:
+        if (self.root / "store.yaml").exists():
+            message = "a project/run store cannot be opened as a legacy collection"
+            raise IntegrityError(message)
+
     @property
     def auto_recover(self) -> bool:
         """Whether initialization may clean up old, verified committed work."""
@@ -252,6 +259,7 @@ class Store:
 
     def _ensure_readable(self) -> None:
         """Load existing identities without waiting for a long payload writer."""
+        self._assert_legacy_format()
         if self._collection_id is not None:
             return
         collection_path = self.root / "collection.json"
@@ -270,6 +278,7 @@ class Store:
     @_mutation
     def ensure_initialized(self, collection_id: str | None = None) -> dict[str, Any]:
         """Initialize identities and apply this store's lifetime recovery policy."""
+        self._assert_legacy_format()
         self.root.mkdir(parents=True, exist_ok=True)
         for name in (
             "objects/sha256",

@@ -11,222 +11,168 @@
 
 </div>
 
-## What Cherries does
+---
 
-Cherries records ordinary Python experiments in a local, content-addressed store.
-A successful `cherries.main(main)` run stages inputs and declared outputs in a
-fresh work directory, captures source and runtime evidence, seals a small record
-and manifest, and stores retained bytes once by SHA-256. It does not require a
-background service or create Git commits. Comet is opt-in with `CHERRIES_COMET=1`;
-its SDK is not loaded otherwise.
+## Experiment stores
 
-Use a separate experiment Git repository for authored studies. Keep Apple and
-Melon there as submodules; keep generated run payloads in the configured Cherries
-store. Git LFS is for curated fixtures and selected reviewable assets, not every
-output, checkpoint, or log.
+Cherries records computations and visualizations as editable run folders. All
+projects in a store share SHA-256 file contents; ordinary YAML, reports, logs and
+Parquet metrics remain directly readable. Each execution retains a real Git end
+ref and an independent source archive, including submodules and Git LFS data.
 
-## Install and configure
-
-The local recorder currently supports Linux with Python 3.12 or newer.
+Linux and Python 3.12 or newer are supported. Git is required; source histories
+containing LFS files also require Git LFS.
 
 ```bash
 uv add liblaf-cherries
+cherries store init /data/cherries
+cherries --store /data/cherries project add my-project --repo .
 ```
 
-Place settings at the experiment repository root. `cherries.local.toml` is useful
-for a machine-specific data volume and can stay Git ignored.
+Select the project and storage at the source repository root:
 
 ```toml
 # cherries.toml
-[collection]
-id = "<collection-uuid>"
+[project]
+id = "my-project"
 
-[capture]
-roots = ["libs/apple", "libs/melon", "tools"]
-
-[execution]
-failure_payload = "discard"
-
-[archive.main]
-path = "/archive/cherries/phace-exp"
+[recording]
+on_error = "keep"
+metric_durability = "fsync"
 ```
 
 ```toml
-# cherries.local.toml
-[collection]
-storage = "/data/cherries/phace-exp"
+# cherries.local.toml, normally Git ignored
+[store]
+path = "/data/cherries"
 ```
 
-`CHERRIES_STORAGE` overrides `collection.storage`. Initialize a collection
-explicitly before sharing it with other machines:
+`--store` overrides `CHERRIES_STORE` and configured paths. `--project` overrides
+`CHERRIES_PROJECT` and `[project].id`. Opening a store never initializes or
+cleans it implicitly.
 
-```bash
-cherries --project-dir . --storage /data/cherries/phace-exp init \
-  --collection-id "<collection-uuid>"
-```
-
-Choose a local data volume through `collection.storage` or `--storage`.
-Configure `archive.main.path` before using archive or sync with `--remote main`.
-
-## Run a sealed experiment
-
-Keep module scope passive: do not read experiment data, create outputs, initialize
-a solver, or call Cherries asset, metric, parameter, or step helpers until
-`main`. Config defaults are raw source strings or paths.
+## Record an experiment
 
 ```python
 from liblaf import cherries
 
+with cherries.run(name="baseline", parameters={"steps": 200}) as run:
+    result = run.output("answer.txt")
+    result.write_text("42\n")
+    run.log_metric("loss", 0.001, step=200)
+    run.report("README.md").write_text("# Baseline\n\nAnswer: 42.\n")
 
-class Config(cherries.BaseConfig):
-    mesh: str = "sha256:<full-digest>"
-    steps: int = 200
-
-
-def main(cfg: Config) -> None:
-    mesh = cherries.input(cfg.mesh, name="mesh.vtu")
-    output = cherries.output("solution.txt")
-    cherries.temp("solver-cache")
-    output.write_text(f"{mesh.name}: {cfg.steps}\n")
-    cherries.log_metric("steps", cfg.steps)
-
-
-if __name__ == "__main__":
-    cherries.main(main)
+print(run.result.run_id)
 ```
 
-Run the script normally; `BaseConfig` accepts kebab-case flags.
+Execute normally with `uv run python experiment.py`, or use the CLI to record
+an external command and its native output:
 
 ```bash
-uv run python exp/2026/10/05/mouthopen/src/10-run.py --steps 200
+cherries run exec --name baseline -- uv run python experiment.py
 ```
 
-`input()` accepts a local path, a full `sha256:` asset ID, a `sha256-tree:`
-bundle ID, or `run:<record-id>/<logical-path>`. It copies verified bytes into
-`work/<id>/inputs` and registers lineage before use. `output()` returns a path
-under `work/<id>/outputs`; every declared output must exist at completion.
-`log_output()` imports an already-created external file. `temp()` uses disposable
-`work/<id>/scratch` and is not retained by default.
+A CLI controller and an inner Python context share one run. During execution,
+`CHERRIES_RUN_DIR` identifies the ordinary work directory. `input()` fixes content
+before returning a readable copy; `output()` and `figure()` declare required
+files; `scratch()` provides unretained working paths. Complete all asynchronous
+writes before returning from the context.
 
-Cherries captures the entry script, Git HEAD, binary working-tree diff, selected
-untracked source, runtime facts, resolved parameters, inputs, logs, metrics, and
-outputs. Capture begins after normal module imports, so it records source at the
-`main` boundary and does not claim replay verification. An execution exception
-keeps a diagnostic event and may discard only the unsealed work payload. A missing
-output or recording failure before publication preserves work and raises an error.
-After a confirmed commit, disposable cleanup failures are warnings: the saved run
-remains readable and the warning identifies any residual work path.
+Metrics append to JSONL with explicit durability, then convert to Parquet when
+saved. Duplicate steps and timestamps are retained. Execution failures keep
+marked diagnostic runs by default; recording failures preserve unpublished work.
 
-Initialization preserves historical work and pending intents by default. Keep
-`[collection] auto_recover = false` in project settings, or pass
-`Store(path, auto_recover=False)`, to state that policy explicitly. It applies
-throughout reader initialization and hold/release calls. Recovery cleanup requires
-explicit `auto_recover=True`; normal sealing still cleans its own current work.
-
-## Inspect, archive, and restore
-
-All commands are foreground operations. Add `--json` before the subcommand for
-machine-readable output.
+## Read, explain and visualize
 
 ```bash
-cherries --storage /data/cherries/phace-exp browse --quality unreviewed
-cherries --storage /data/cherries/phace-exp browse --failed
-cherries --storage /data/cherries/phace-exp show <record-id>
-cherries --storage /data/cherries/phace-exp read <record-id> RUN.md
-cherries --storage /data/cherries/phace-exp path <record-id> outputs/solution.txt
-cherries --storage /data/cherries/phace-exp path --release <lease-id>
-cherries --storage /data/cherries/phace-exp archive <record-id> --remote /archive/cherries --evict
-cherries --storage /data/cherries/phace-exp restore <record-id> --remote /archive/cherries
+cherries run list --status succeeded --where 'metrics["loss"].last < 0.01'
+cherries run show <run-id>
+cherries file get <run-id> outputs/answer.txt --to ./answer.txt
+cherries run tag add <run-id> selected
+cherries report edit <run-id> README.md
 ```
 
-`path` materializes the selected record file only and creates a durable read lease;
-release it when finished. `restore` verifies and materializes a complete record
-view. `archive` verifies object bytes, uploads the complete closure, and writes
-the remote commit marker last. `--evict` only releases an eligible local view
-after remote verification; it never removes canonical bytes merely because one
-logical record was archived.
-
-Archive multiple records in one command (`archive <id1> <id2> ...`). A batch
-publishes collection metadata once, verifies every selected run independently,
-then checkpoints new location events and concurrent metadata additions.
-
-A local-directory remote has an atomic filesystem boundary. A generic rclone
-remote requires `--coordinated`, which is an explicit assertion that an external
-publisher serializes the collection; Cherries does not invent a marker-file lock
-or stale-owner takeover. Metadata-only synchronization is available through
-`cherries sync --remote ... [--coordinated]`.
-
-`sync` publishes SHA-bound collection control, sealed receipts, events, and a
-payload-free checkpoint marker last. Checkpoint import can merge receipt metadata
-and lineage; it does not establish that payload objects are remotely available.
-Failed attempts appear only in local `browse --failed`; they are not remotely
-published or imported.
-
-For Python follow-up work, use a closeable reader hold:
+Reports, assets, names and tags can change after execution. Original execution
+parameters, results, source commits and consumed inputs stay fixed. A new
+calculation or visualization creates a new run and binds exact input contents:
 
 ```python
-with cherries.open_run("<record-id>") as saved:
-    path = saved.path("outputs/solution.txt")
+store = cherries.Store.open("/data/cherries")
+project = store.projects.get("my-project")
+saved = project.runs.get("<run-id>")
+source = saved.file("outputs/answer.txt").ref()
+
+with project.run(name="comparison", kind="analysis") as analysis:
+    answer = analysis.input(source, name="answer.txt")
+    analysis.output("comparison.txt").write_text(answer.read_text())
 ```
 
-Pass `workspace=Path("analysis/compare")` to attach the source to an existing
-analysis workspace. Close the accessor or use a context manager in either mode:
-its temporary reader hold protects active reads even if the workspace is closed.
-The workspace's own source hold remains until `cherries analysis close`.
-
-`cherries rerun <record-id> --prepare-only --workspace replay/<record-id>`
-reconstructs a workspace from the saved project/submodule HEADs, binary patches,
-selected untracked source, and recorded input mapping. It requires the captured
-local Git bases and a source-stable experiment receipt. Omit `--prepare-only` to
-execute with `uv run` (using `--locked` when `uv.lock` is saved). It creates a
-new attempt and leaves `replay_verified` false until scientific checks establish
-replay. Close a retained prepared workspace with `cherries rerun --close <path>`.
-
-## Review and follow-up analysis
-
-Successful records start `unreviewed`. Review, labels, and retention flags are
-append-only metadata rather than changes to the sealed receipt.
+## Archive and reclaim space
 
 ```bash
-cherries review <record-id> --quality good --note "Useful comparison"
-cherries label add <record-id> mouthopen promising
-cherries mark <record-id> --important
-cherries mark <record-id> --keep-local
-cherries analysis new analysis/compare --source <record-id>
-cherries analysis save analysis/compare --output out/figure.png --used-in weekly/2026-10-05
-cherries analysis close analysis/compare
+cherries run copy <run-id> --to-store /archive/cherries
+cherries code checkout <run-id> --to ./source-copy
+cherries project verify my-project --git --lfs --offline
+cherries run delete <run-id> --dry-run
+cherries store gc --dry-run
 ```
 
-An analysis workspace holds its source records while it is open. Saving it creates
-a lightweight dependent record. `RUN.md` and `analysis.json` retain their names;
-workspace `src/...` becomes `source/...`, and explicitly selected `out/...` files
-become `outputs/...` in the saved record. Read saved scripts and figures using
-those record-relative paths, including for existing saved analyses. A record
-with dependents cannot be discarded. Local single-machine maintenance is explicit
-and receipt-bound:
+Initialize the destination store before copying. Copy includes source runs, CAS
+and source Git/LFS closure and checks conflicts before publication. Deletion
+checks retained dependents. Global GC reads authoritative references across every
+project. Remove `--dry-run` to apply the reviewed deletion or GC operation.
+
+## Storage and compatibility
+
+```text
+store/
+  store.yaml
+  objects/sha256/ab/cd/<full-digest>.<suffix>
+  projects/<project>/
+    project.yaml
+    <project>.git/
+    runs/<uuid>.tmp/             # unpublished work
+    runs/<uuid>/
+      run.yaml  run.log  metrics.parquet
+      inputs/...lfs  outputs/...lfs  figs/...lfs
+      README.md  reports/...  assets/...
+```
+
+The CAS contains real file bytes. Standard pointer files reference digest and
+size; suffix changes do not invalidate them. Reports carry ordinary asset copies.
+Each bare repository has its own self-contained LFS store, which can duplicate
+bytes also retained by CAS. SQLite indexes and materialized file copies live in
+machine-local caches and can be rebuilt.
+
+The v4 immutable collection format remains available through
+`liblaf.cherries.legacy` and `cherries legacy ...`. Existing explicit v4
+configuration uses its old recorder; new stores are never opened as collections.
+Explicit imports preserve original IDs and evidence limitations:
 
 ```bash
-cherries maintenance pause
-cherries discard <record-id> --plan
-cherries discard --apply <plan-path>
-cherries prune --plan
-cherries prune --apply <plan-path>
-cherries maintenance resume <pause-token>
+cherries run import /old/collection --inspect
+cherries run import /old/collection
 ```
 
-Pause freezes reference creation. It fails closed with active or pending work,
-legacy provenance, or foreign participants. Plans bind to the pause receipt and
-local inventory; an inventory change requires a new plan. This does not implement
-remote or distributed deletion.
+Legacy source evidence is retained as audit attachments; importing bytes does
+not establish executable source recovery or verified replay.
+
+Read the [workflow and CLI documentation](https://github.com/liblaf/cherries/blob/main/docs/README.md),
+[detailed storage workflow](https://github.com/liblaf/cherries/blob/main/docs/design/storage-workflow.md)
+and [API design](https://github.com/liblaf/cherries/blob/main/docs/design/storage-cli-api.md).
 
 ## Development
 
 ```bash
+uv sync
 uv run pytest
-mise run lint
-mise run docs:build
+uv run nox
+uv run ruff check .
+uv run lint-imports
+uv build
 ```
 
-See [docs/README.md](docs/README.md) for the detailed runtime and CLI contract,
-and [docs/design/run-records.md](docs/design/run-records.md) for the remaining
-distributed-maintenance and replay design.
+## License
+
+Copyright © 2026 [liblaf](https://github.com/liblaf).
+[MIT](https://github.com/liblaf/cherries/blob/main/LICENSE).
