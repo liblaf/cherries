@@ -443,7 +443,7 @@ with saved.edit() as edit:
 
 local_path = saved.file("outputs/result.vtu").materialize()
 saved.file("outputs/result.vtu").copy_to("./result.vtu")
-curves = saved.metrics.scan()               # Polars LazyFrame
+curves = saved.metrics.scan()  # Polars LazyFrame
 rows = project.runs.query(
     tags=["smile"],
     status="succeeded",
