@@ -38,3 +38,9 @@ junit.xml
 
 # [hatch-vcs](https://github.com/ofek/hatch-vcs)
 _version.py
+
+# Local experiment files
+/cherries/
+/exp/**/data/
+/exp/**/figs/
+/exp/**/tmp/

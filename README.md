@@ -13,153 +13,143 @@
 
 ---
 
-## Experiment stores
+## Experiments as files
 
-Cherries records computations and visualizations as editable run folders. All
-projects in a store share SHA-256 file contents; ordinary YAML, reports, logs and
-Parquet metrics remain directly readable. Each execution retains a real Git end
-ref and an independent source archive, including submodules and Git LFS data.
+Cherries records Python experiments in ordinary folders. A run keeps end-of-run
+input/output copies, its entry script, a Git snapshot, logs and Parquet metrics.
+Local copies use reflinks when available. Remote archives share SHA-256 contents
+across projects and keep self-contained Git/LFS repositories.
 
-Linux and Python 3.12 or newer are supported. Git is required; source histories
-containing LFS files also require Git LFS.
+Requires Linux, Python 3.12+ and Git. Source repositories using Git LFS also need
+Git LFS installed.
 
 ```bash
 uv add liblaf-cherries
-cherries store init /data/cherries
-cherries --store /data/cherries project add my-project --repo .
 ```
 
-Select the project and storage at the source repository root:
+## Run a script
 
-```toml
-# cherries.toml
-[project]
-id = "my-project"
-
-[recording]
-on_error = "keep"
-metric_durability = "fsync"
-```
-
-```toml
-# cherries.local.toml, normally Git ignored
-[store]
-path = "/data/cherries"
-```
-
-`--store` overrides `CHERRIES_STORE` and configured paths. `--project` overrides
-`CHERRIES_PROJECT` and `[project].id`. Opening a store never initializes or
-cleans it implicitly.
-
-## Record an experiment
-
-```python
-from liblaf import cherries
-
-with cherries.run(name="baseline", parameters={"steps": 200}) as run:
-    result = run.output("answer.txt")
-    result.write_text("42\n")
-    run.log_metric("loss", 0.001, step=200)
-    run.report("README.md").write_text("# Baseline\n\nAnswer: 42.\n")
-
-print(run.result.run_id)
-```
-
-Execute normally with `uv run python experiment.py`, or use the CLI to record
-an external command and its native output:
-
-```bash
-cherries run exec --name baseline -- uv run python experiment.py
-```
-
-A CLI controller and an inner Python context share one run. During execution,
-`CHERRIES_RUN_DIR` identifies the ordinary work directory. `input()` fixes content
-before returning a readable copy; `output()` and `figure()` declare required
-files; `scratch()` provides unretained working paths. Complete all asynchronous
-writes before returning from the context.
-
-Metrics append to JSONL with explicit durability, then convert to Parquet when
-saved. Duplicate steps and timestamps are retained. Execution failures keep
-marked diagnostic runs by default; recording failures preserve unpublished work.
-
-## Read, explain and visualize
-
-```bash
-cherries run list --status succeeded --where 'metrics["loss"].last < 0.01'
-cherries run show <run-id>
-cherries file get <run-id> outputs/answer.txt --to ./answer.txt
-cherries run tag add <run-id> selected
-cherries report edit <run-id> README.md
-```
-
-Reports, assets, names and tags can change after execution. Original execution
-parameters, results, source commits and consumed inputs stay fixed. A new
-calculation or visualization creates a new run and binds exact input contents:
-
-```python
-store = cherries.Store.open("/data/cherries")
-project = store.projects.get("my-project")
-saved = project.runs.get("<run-id>")
-source = saved.file("outputs/answer.txt").ref()
-
-with project.run(name="comparison", kind="analysis") as analysis:
-    answer = analysis.input(source, name="answer.txt")
-    analysis.output("comparison.txt").write_text(answer.read_text())
-```
-
-## Archive and reclaim space
-
-```bash
-cherries run copy <run-id> --to-store /archive/cherries
-cherries code checkout <run-id> --to ./source-copy
-cherries project verify my-project --git --lfs --offline
-cherries run delete <run-id> --dry-run
-cherries store gc --dry-run
-```
-
-Initialize the destination store before copying. Copy includes source runs, CAS
-and source Git/LFS closure and checks conflicts before publication. Deletion
-checks retained dependents. Global GC reads authoritative references across every
-project. Remove `--dry-run` to apply the reviewed deletion or GC operation.
-
-## Storage and compatibility
+Use an experiment repository with this layout:
 
 ```text
-store/
-  store.yaml
-  objects/sha256/ab/cd/<full-digest>.<suffix>
-  projects/<project>/
-    project.yaml
-    <project>.git/
-    runs/<uuid>.tmp/             # unpublished work
-    runs/<uuid>/
-      run.yaml  run.log  metrics.parquet
-      inputs/...lfs  outputs/...lfs  figs/...lfs
-      README.md  reports/...  assets/...
+project/
+  .git/
+  submodules/
+  exp/2026/11/15/example/
+    README.md
+    src/10-run.py
+    data/                 # prepare input files here
+    figs/
+    tmp/                  # debug intermediates; never saved in runs
+  cherries/runs/YYYY/mm/dd/  # saved local runs, partitioned by start date
 ```
 
-The CAS contains real file bytes. Standard pointer files reference digest and
-size; suffix changes do not invalidate them. Reports carry ordinary asset copies.
-Each bare repository has its own self-contained LFS store, which can duplicate
-bytes also retained by CAS. SQLite indexes and materialized file copies live in
-machine-local caches and can be rebuilt.
+Ignore `cherries/` and each study's `data/`, `figs/` and `tmp/` in Git. Put parameters in
+the script. Save this example as `src/10-run.py`, prepare `data/input.txt`, then
+execute `python src/10-run.py`:
 
-The v4 immutable collection format remains available through
-`liblaf.cherries.legacy` and `cherries legacy ...`. Existing explicit v4
-configuration uses its old recorder; new stores are never opened as collections.
-Explicit imports preserve original IDs and evidence limitations:
+```python
+from pathlib import Path
+
+from liblaf import cherries
+
+
+class Config(cherries.BaseConfig):
+    factor: int = 2
+    source: Path = cherries.input("input.txt")
+    result: Path = cherries.output("result.txt")
+
+
+def main(cfg: Config) -> None:
+    value = int(cfg.source.read_text()) * cfg.factor
+    cfg.result.write_text(str(value))
+    cherries.tmp("debug/value.txt").write_text(str(value))
+    cherries.log_metric("answer", value)
+
+
+if __name__ == "__main__":
+    cherries.run(main)
+```
+
+`input()` and `output()` return absolute paths under the study's `data/`;
+`fig()` uses its `figs/`. `tmp()` uses `tmp/`, creates parent directories and never
+registers or collects its files. Calls in Config and main behave identically. Registered
+files are copied at the end and recorded in `run.yaml.artifacts` with their
+relative name, SHA-256 and byte size. Paths must stay under the corresponding
+study `data/`, `figs/` or `tmp/` root; prepare outside files there before registering them. `run(main)` constructs the annotated config and
+records its values, including absolute paths. Each run's `src/` holds just the
+entry script; `refs/cherries/runs/<UUIDv7>` preserves the complete end snapshot.
+The run records `start-time` and `end-time` in the machine's local timezone at
+each instant, with an explicit numeric offset: `YYYY-mm-dd HH:MM:SS±HH:MM`
+(for example, `2026-11-15 08:00:00+08:00`). `start()` captures the start; main
+returning or manual `end()` captures the end before artifact copying and Git
+finalization. While running, `end-time` is null.
+
+For debugging, run `DEBUG=1 python src/10-run.py`. Cherries constructs the config
+and calls main once, leaves stdout/stderr in the terminal and returns `None`.
+It creates no run directory, logs, metrics, metadata, artifact copies or Git
+snapshot, and does not serialize the config. Path helpers still use the study
+workspace; outputs and intermediates remain there. Metric logging does nothing;
+`get_step()` and `set_step()` still work, starting at zero. Exceptions propagate
+without creating a record. Manual `start()`/`end()` supports the same behavior.
+Only the exact value `DEBUG=1` enables this mode when execution starts; changing
+the environment during execution does not switch it. Debugging also works
+outside Git with the same `<study>/src/<script>.py` layout. Normal `run(main)`
+returns the saved run directory (`Path`). Git snapshots exclude study `tmp/`
+alongside `data/` and `figs/`, even when those files are already tracked.
+
+## Inspect, explain and archive
 
 ```bash
-cherries run import /old/collection --inspect
-cherries run import /old/collection
+cherries list --tag selected --json
+cherries show RUN
+cherries files RUN
+cherries get RUN outputs/result.txt --output ./result.txt
+cherries edit RUN --description 'Result checked' --add-tag selected
+cherries add RUN analysis.md --as README.md
+cherries add RUN figs/loss.png --as assets/loss.png
+cherries --remote /mnt/archive/cherries push RUN
+cherries --remote /mnt/archive/cherries pull RUN
+cherries verify RUN
+cherries remove RUN
+cherries --remote /mnt/archive/cherries gc --dry-run
 ```
 
-Legacy source evidence is retained as audit attachments; importing bytes does
-not establish executable source recovery or verified replay.
+After execution, maintain the run's README, reports, assets and figures. Inputs,
+outputs, source, parameters, start/end times, log, metrics and Git ref stay fixed.
+Push and pull preserve the exact original strings across destination timezones.
+Default to Markdown; use HTML for complex layouts or interactive figures. When a
+run has one report, save it as `README.md` or `README.html` at the run root. Use
+`reports/` only for additional reports when the run has multiple reports. The
+README can serve as an entry point linking detailed reports without repeating
+their text. Reference images as `assets/image.png` from the root README and
+`../assets/image.png` from a report directly inside `reports/`; adjust relative
+paths for deeper report folders.
 
-Read the [workflow and CLI documentation](https://github.com/liblaf/cherries/blob/main/docs/README.md),
-[detailed storage workflow](https://github.com/liblaf/cherries/blob/main/docs/design/storage-workflow.md)
-and [API design](https://github.com/liblaf/cherries/blob/main/docs/design/storage-cli-api.md).
+Local runs use `cherries/runs/YYYY/mm/dd/<UUIDv7>[.tmp]/`; remote runs use
+`ROOT/projects/<project-id>/runs/YYYY/mm/dd/<UUIDv7>[.tmp]/`.
+The date comes from the persisted `run.yaml` `start-time` in its original local
+timezone. Finishing after midnight or pushing/pulling across timezones keeps that
+partition. UUIDv7 remains the run identifier; CLI `RUN` accepts the ID or a concrete
+run path. Running experiments use `.tmp`; completed records drop that suffix.
+`list` defaults to completed records; `list --unfinished` selects `.tmp` records.
+`remove` also removes empty date directories. Only this daily layout is supported.
+Metrics append and flush to JSONL, then become four-column Parquet at the end.
+Failures retain `.tmp` with diagnostic logs and re-raise the original exception.
+The required `artifacts` mapping lists `inputs`, `outputs` and `figs`; empty roles
+use `[]`. Local records keep real files alongside this manifest. Remote records
+store these payloads only in extensionless CAS objects and resolve logical paths
+such as `outputs/result.txt` through the manifest. Pull restores real files.
+Repeat push updates editable materials and retains remote-only files and figures.
+Repeat pull preserves existing local materials unless `--overwrite` is passed;
+figures merge by name and destination-only figures remain. Payloads are saved
+before the manifest is published atomically. `verify` checks recorded hashes and
+sizes against the actual saved bytes.
+
+The [storage specification](https://github.com/liblaf/cherries/blob/main/docs/design/cherries/storage.md),
+[Python API](https://github.com/liblaf/cherries/blob/main/docs/design/cherries/api.pyi)
+and [CLI reference](https://github.com/liblaf/cherries/blob/main/docs/design/cherries/cli.md)
+describe the exact format and commands.
 
 ## Development
 
@@ -170,6 +160,7 @@ uv run nox
 uv run ruff check .
 uv run lint-imports
 uv build
+uv run zensical build
 ```
 
 ## License

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 liblaf
 from typing import Any
 
 import nox

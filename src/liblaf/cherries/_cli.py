@@ -1,1022 +1,208 @@
 # Copyright (c) 2026 liblaf
-# ruff: noqa: C901, EM101, EM102, PLR0915, TRY003, TRY301
-"""The small foreground command interface for Cherries records."""
+"""Manage local and mounted-remote experiment records."""
 
 from __future__ import annotations
 
 import argparse
-import contextlib
-import fcntl
-import hashlib
 import json
-import os
-import shutil
-import subprocess
 import sys
-import uuid
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from ._remote import ArchiveMetadataError, Remote, RemoteError
-from ._settings import configured_store, load_settings, storage_root
-from .records import record_asset_ids
+import yaml
 
-
-def _store(root: Path, machine_id: str | None, project_dir: Path | None = None) -> Any:
-    return configured_store(project_dir, root=root, machine_id=machine_id)
-
-
-def _storage(args: argparse.Namespace) -> Path:
-    return args.storage or storage_root(args.project_dir)
-
-
-def _collection_id(args: argparse.Namespace) -> str | None:
-    if args.collection_id:
-        return args.collection_id
-    return load_settings(args.project_dir).get("collection", {}).get("id")
-
-
-def _json(value: Any) -> str:
-    return json.dumps(
-        value,
-        indent=2,
-        sort_keys=True,
-        default=lambda item: sorted(item) if isinstance(item, set) else str(item),
-    )
-
-
-def _emit(value: Any, args: argparse.Namespace) -> None:
-    if getattr(args, "json", False):
-        print(_json(value))
-    elif isinstance(value, Mapping):
-        for key, item in value.items():
-            print(f"{key}: {item}")
-    else:
-        print(value)
-
-
-def _optional(store: Any, names: Sequence[str], *args: Any, **kwargs: Any) -> Any:
-    for name in names:
-        function = getattr(store, name, None)
-        if function is not None:
-            return function(*args, **kwargs)
-    raise RuntimeError(f"record store does not provide any of: {', '.join(names)}")
-
-
-def _record_path(store: Any, run_id: str) -> Path:
-    return Path(store.root) / "records" / run_id
-
-
-def _remote(args: argparse.Namespace) -> Remote:
-    value = getattr(args, "remote", None) or "main"
-    settings = load_settings(args.project_dir)
-    if value == "main":
-        configured = settings.get("archive", {}).get("main", {}).get("path")
-        if not configured:
-            raise RuntimeError("archive.main.path is not configured")
-        value = configured
-    return Remote(value, coordinated=bool(getattr(args, "coordinated", False)))
-
-
-def _analysis_config(folder: Path) -> Path:
-    return folder / "analysis.json"
-
-
-def _read_analysis(folder: Path) -> dict[str, Any]:
-    path = _analysis_config(folder)
-    if not path.is_file():
-        raise RuntimeError(f"analysis workspace is not initialized: {folder}")
-    return json.loads(path.read_text())
-
-
-def _write_analysis(folder: Path, config: Mapping[str, Any]) -> None:
-    """Atomically replace the editable analysis workspace pointer."""
-    target = _analysis_config(folder)
-    temporary = folder / f".analysis-{uuid.uuid4()}.json"
-    try:
-        temporary.write_text(_json(dict(config)) + "\n")
-        temporary.replace(target)
-    finally:
-        temporary.unlink(missing_ok=True)
-
-
-@contextlib.contextmanager
-def _analysis_locked(folder: Path) -> Any:
-    """Serialize updates to one editable analysis workspace."""
-    with (folder / ".analysis.lock").open("a+b") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        yield
-
-
-def _bind_analysis_source(store: Any, folder: Path, run_id: str) -> dict[str, Any]:
-    """Bind a source while the caller holds the workspace lock."""
-    config = _read_analysis(folder)
-    reason = f"analysis:{config['workspace_id']}"
-    acquired = reason not in store.projection(run_id).get("holds", set())
-    if acquired:
-        store.hold(run_id, reason)
-    if run_id not in config["sources"]:
-        config["sources"].append(run_id)
-        try:
-            _write_analysis(folder, config)
-        except BaseException:
-            if acquired:
-                store.release_hold(run_id, reason)
-            raise
-    return config
-
-
-def command_init(args: argparse.Namespace) -> dict[str, Any]:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    return dict(store.ensure_initialized(collection_id=_collection_id(args)))
-
-
-def _import_remote_if_requested(
-    store: Any, args: argparse.Namespace
-) -> dict[str, int] | None:
-    return (
-        _remote(args).import_metadata(store) if getattr(args, "remote", None) else None
-    )
-
-
-def _current_quality(store: Any, run_id: str) -> str:
-    reviews = store.projection(run_id).get("reviews", [])
-    return reviews[-1].get("status", "unreviewed") if reviews else "unreviewed"
-
-
-def _browse_summary(store: Any, run_id: str) -> dict[str, Any]:
-    record = store.read_record(run_id).get("record", {})
-    item = dict(store.projection(run_id))
-    legacy_notes = [note for note in item.get("notes", []) if note.get("legacy_source")]
-    legacy_note = legacy_notes[-1] if legacy_notes else {}
-    item.update(
-        {
-            "quality": _current_quality(store, run_id),
-            "kind": record.get("kind", record.get("mode", "record")),
-            "name": record.get("name") or legacy_note.get("name"),
-            "legacy_origin": record.get("legacy", {}).get("origin"),
-            "legacy_source": legacy_note.get("legacy_source"),
-        }
-    )
-    return item
-
-
-def command_browse(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    if args.failed and args.remote:
-        raise RuntimeError(
-            "remote failed-attempt import is not implemented; browse failures locally"
-        )
-    imported = _import_remote_if_requested(store, args)
-    if args.failed:
-        return {"attempts": store.list_attempts(), "imported": imported}
-    records = [_browse_summary(store, run_id) for run_id in store.list_records()]
-    if args.used_in:
-        analyses = {
-            item["run_id"]
-            for item in records
-            if store.read_record(item["run_id"])["record"].get("used_in")
-            == args.used_in
-        }
-        sources = {
-            parent
-            for run_id in analyses
-            for parent in store.read_record(run_id).get("parents", [])
-        }
-        records = [item for item in records if item["run_id"] in analyses | sources]
-    if args.quality:
-        records = [item for item in records if item["quality"] == args.quality]
-    if args.label:
-        records = [item for item in records if args.label in item["labels"]]
-    if args.asset:
-        records = [
-            item
-            for item in records
-            if args.asset
-            in {
-                file["asset_id"]
-                for file in store.read_manifest(item["run_id"])["files"]
-            }
-            or args.asset
-            in record_asset_ids(store.read_record(item["run_id"])["record"])
-        ]
-    if args.search:
-        term = args.search.casefold()
-        records = [
-            item
-            for item in records
-            if term
-            in " ".join(
-                str(item.get(key) or "")
-                for key in ("name", "legacy_origin", "legacy_source", "kind")
-            ).casefold()
-        ]
-    return {"records": records, "imported": imported} if imported else records
-
-
-def command_show(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    if args.remote:
-        _remote(args).import_metadata(store, args.run_id)
-    run_id = store.resolve_id(args.run_id)
-    return {
-        "record": store.read_record(run_id),
-        "manifest": store.read_manifest(run_id),
-        "projection": store.projection(run_id),
-    }
-
-
-def command_read(args: argparse.Namespace) -> str:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    if args.remote:
-        _remote(args).import_metadata(store, args.run_id)
-    run_id = store.resolve_id(args.run_id)
-    reason = f"read:{uuid.uuid4()}"
-    store.hold(run_id, reason)
-    try:
-        path = (
-            _remote(args).fetch_asset(store, run_id, args.path)
-            if args.remote
-            else store.materialize(run_id, args.path)
-        )
-        return Path(path).read_text()
-    finally:
-        store.release_hold(run_id, reason)
-
-
-def _lease_path(store: Any, lease_id: str) -> Path:
-    return Path(store.root) / "leases" / f"{lease_id}.json"
-
-
-def _materialize_selected_path(
-    store: Any, remote: Remote | None, run_id: str, relative: str
-) -> Path:
-    """Materialize one declared file or directory and its required companions."""
-    if not relative or Path(relative).is_absolute() or ".." in Path(relative).parts:
-        raise RuntimeError("asset path must be relative and contained")
-    files = store.read_manifest(run_id)["files"]
-    selected = [
-        entry
-        for entry in files
-        if entry["path"] == relative
-        or entry["path"].startswith(relative.rstrip("/") + "/")
-    ]
-    if not selected:
-        record = store.read_record(run_id)["record"]
-        bindings = [
-            binding
-            for binding in [
-                *record.get("bundles", []),
-                *record.get("input_bindings", []),
-            ]
-            if binding.get("staged_path", binding.get("path")) == relative
-            and str(binding.get("asset_id", "")).startswith("sha256-tree:")
-        ]
-        if not bindings:
-            raise RuntimeError(f"asset path is not in record: {relative}")
-        return (
-            Path(remote.fetch_tree_binding(store, run_id, bindings[0]))
-            if remote is not None
-            else Path(store.materialize_tree_binding(run_id, bindings[0]))
-        )
-
-    def materialize(path: str) -> Path:
-        return (
-            Path(remote.fetch_asset(store, run_id, path))
-            if remote is not None
-            else Path(store.materialize(run_id, path))
-        )
-
-    from .core.assets.bundle import bundles
-
-    for entry in selected:
-        local = materialize(entry["path"])
-        for companion_name, optional in bundles.ls_files(local):
-            companion = Path(companion_name)
-            if not companion.resolve().is_relative_to(local.parent.resolve()):
-                raise RuntimeError("asset companion escapes its bundle")
-            logical = companion.relative_to(
-                Path(store.root) / "runs" / run_id
-            ).as_posix()
-            try:
-                materialize(logical)
-            except (FileNotFoundError, RuntimeError):
-                if not optional:
-                    raise
-    return Path(store.root) / "runs" / run_id / relative
-
-
-def command_path(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    if args.release:
-        lease = _lease_path(store, args.release)
-        if not lease.is_file():
-            raise RuntimeError(f"materialization lease is unknown: {args.release}")
-        binding = json.loads(lease.read_text())
-        if binding.get("owner") != store.machine_id:
-            raise RuntimeError("only the owning machine can release this lease")
-        store.release_hold(binding["run_id"], f"read:{args.release}")
-        lease.unlink()
-        return {"lease": args.release, "released": True}
-    if not args.run_id or not args.path:
-        raise RuntimeError("path requires RUN_ID and a record-relative path")
-    if args.remote:
-        _remote(args).import_metadata(store, args.run_id)
-    run_id = store.resolve_id(args.run_id)
-    lease_id = str(uuid.uuid4())
-    lease_reason = f"read:{lease_id}"
-    store.hold(run_id, lease_reason)
-    try:
-        if args.workspace:
-            with _analysis_locked(args.workspace):
-                _bind_analysis_source(store, args.workspace, run_id)
-        if args.path.startswith("sha256-tree:"):
-            if args.path not in record_asset_ids(store.read_record(run_id)["record"]):
-                raise RuntimeError("tree asset is not declared by the selected record")
-            destination = (
-                Path(store.root)
-                / "cache"
-                / "selected"
-                / run_id
-                / args.path.removeprefix("sha256-tree:")
-            )
-            result = (
-                _remote(args).fetch_tree(store, args.path, destination)
-                if args.remote
-                else store.materialize_tree(args.path, destination)
-            )
-        else:
-            result = _materialize_selected_path(
-                store, _remote(args) if args.remote else None, run_id, args.path
-            )
-    except BaseException:
-        store.release_hold(run_id, lease_reason)
-        raise
-    if args.workspace:
-        store.release_hold(run_id, lease_reason)
-        return {
-            "run_id": run_id,
-            "path": str(result),
-            "partial": True,
-            "workspace": str(args.workspace),
-        }
-    lease = _lease_path(store, lease_id)
-    lease.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        lease.write_text(
-            _json(
-                {
-                    "lease_id": lease_id,
-                    "run_id": run_id,
-                    "owner": store.machine_id,
-                    "path": args.path,
-                }
-            )
-            + "\n"
-        )
-    except BaseException:
-        store.release_hold(run_id, lease_reason)
-        raise
-    return {"run_id": run_id, "path": str(result), "partial": True, "lease": lease_id}
-
-
-def command_restore(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    run_id = args.run_id if args.remote else store.resolve_id(args.run_id)
-    if args.remote:
-        path = _remote(args).restore(store, run_id)
-    else:
-        reader_reason = f"restore:{uuid.uuid4()}"
-        store.hold(run_id, reader_reason)
-        try:
-            path = Path(store.root) / "runs" / run_id
-            for file in store.read_manifest(run_id)["files"]:
-                store.materialize(run_id, file["path"])
-            record = store.read_record(run_id)["record"]
-            for binding in [
-                *record.get("bundles", []),
-                *record.get("input_bindings", []),
-            ]:
-                asset_id = binding.get("asset_id", "")
-                relative = binding.get("staged_path", binding.get("path"))
-                if isinstance(relative, str) and asset_id.startswith("sha256-tree:"):
-                    store.materialize_tree_binding(run_id, binding)
-            store.append_event(
-                "location-restored", run_id, {"remote": None, "complete": True}
-            )
-        finally:
-            store.release_hold(run_id, reader_reason)
-    return {"run_id": run_id, "path": str(path), "complete": True}
-
-
-def command_archive(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    remote = _remote(args)
-    locations: list[dict[str, Any]] = []
-    annotated: list[dict[str, Any]] = []
-    warnings: list[dict[str, Any]] = []
-    evicted: list[dict[str, Any]] = []
-    skipped: list[dict[str, str]] = []
-    try:
-        with remote.archive_batch(store, args.run_ids) as batch:
-            for run_id in batch.run_ids:
-                location = batch.archive(run_id).__dict__
-                locations.append(location)
-                try:
-                    store.append_event(
-                        "location-verified", location["run_id"], location
-                    )
-                except OSError as error:
-                    # A returned location binds a verified remote commit. A later
-                    # source-local write failure cannot undo that publication.
-                    warnings.append(
-                        {
-                            "stage": "local_annotation",
-                            **location,
-                            "errno": error.errno,
-                            "error": str(error),
-                        }
-                    )
-                    if args.evict:
-                        skipped.append(
-                            {
-                                "run_id": location["run_id"],
-                                "reason": "local_annotation_failed",
-                            }
-                        )
-                else:
-                    annotated.append(location)
-            if args.evict and annotated:
-                # Bind all successful location annotations before releasing any
-                # local bytes. Context exit then checkpoints eviction events.
-                batch.sync_metadata()
-                for location in annotated:
-                    result = store.evict_local(location["run_id"], remote_verified=True)
-                    if not result["allowed"]:
-                        raise RuntimeError(
-                            f"local eviction blocked: {result['blocked']}"
-                        )
-                    evicted.append(result)
-    except ArchiveMetadataError as error:
-        warnings.append(
-            {"stage": "metadata_sync", "remote": remote.remote, "error": str(error)}
-        )
-        if args.evict:
-            completed = {item["run_id"] for item in evicted}
-            skipped.extend(
-                {"run_id": item["run_id"], "reason": "metadata_sync_failed"}
-                for item in annotated
-                if item["run_id"] not in completed
-            )
-    outcome: dict[str, Any] = {"locations": locations, "evicted": evicted}
-    if warnings:
-        outcome["warnings"] = warnings
-    if skipped:
-        outcome["eviction_skipped"] = skipped
-    return outcome
-
-
-def command_sync(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    remote = _remote(args)
-    return {
-        "published_events": remote.sync_metadata(Path(store.root)),
-        "imported": remote.import_metadata(store),
-    }
-
-
-def command_index(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    imported = _import_remote_if_requested(store, args)
-    return {"index": store.rebuild_index(), "imported": imported}
-
-
-def command_review(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    return _optional(
-        store, ("review",), store.resolve_id(args.run_id), args.quality, note=args.note
-    )
-
-
-def command_label(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    run_id = store.resolve_id(args.run_id)
-    return [
-        store.label(run_id, label, present=args.action == "add")
-        for label in args.labels
-    ]
-
-
-def command_mark(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    run_id = store.resolve_id(args.run_id)
-    if args.important is not None:
-        return store.mark(run_id, important=args.important)
-    return store.mark(run_id, keep_local=args.keep_local)
-
-
-def command_note_or_link(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    payload = Path(args.file).read_text() if hasattr(args, "file") else args.commit
-    return store.append_event(
-        args.command, store.resolve_id(args.run_id), {"value": payload}
-    )
-
-
-def _active_maintenance_receipt(store: Any) -> dict[str, Any]:
-    path = Path(store.root) / "maintenance.json"
-    if not path.is_file():
-        raise RuntimeError("a local maintenance pause receipt is required")
-    receipt = json.loads(path.read_text())
-    if receipt.get("machine_id") != store.machine_id:
-        raise RuntimeError("maintenance receipt belongs to another machine")
-    return receipt
-
-
-def _plan_digest(store: Any) -> str:
-    from .records import canonical_json
-
-    inventory = store.maintenance_inventory()
-    return f"sha256:{hashlib.sha256(canonical_json(inventory)).hexdigest()}"
-
-
-def _write_plan(
-    store: Any, plan: Mapping[str, Any], receipt: Mapping[str, Any]
-) -> dict[str, Any]:
-    plan_id = str(uuid.uuid4())
-    payload = {
-        "format": 1,
-        "plan_id": plan_id,
-        "machine_id": store.machine_id,
-        "maintenance": dict(receipt),
-        "inventory_digest": _plan_digest(store),
-        "plan": dict(plan),
-    }
-    directory = Path(store.root) / "plans"
-    directory.mkdir(parents=True, exist_ok=True)
-    path = directory / f"{plan_id}.json"
-    path.write_text(_json(payload) + "\n")
-    return {"plan_id": plan_id, "path": str(path), **payload}
-
-
-def command_maintenance(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    if args.action == "pause":
-        return store.pause_maintenance()
-    if not args.token:
-        raise RuntimeError("maintenance resume requires the pause receipt token")
-    store.resume_maintenance(args.token)
-    return {"resumed": True}
-
-
-def command_discard_or_prune(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    if args.plan:
-        receipt = _active_maintenance_receipt(store)
-        plan = (
-            store.plan_discard(args.run_id, inventory_complete=True, maintenance=True)
-            if args.command == "discard"
-            else store.plan_prune(inventory_complete=True, maintenance=True)
-        )
-        return _write_plan(store, plan, receipt)
-    path = Path(args.apply)
-    if not path.is_file():
-        raise RuntimeError(f"maintenance plan is unavailable: {path}")
-    saved = json.loads(path.read_text())
-    if saved.get("format") != 1 or saved.get("machine_id") != store.machine_id:
-        raise RuntimeError(
-            "maintenance plan belongs to another machine or has an unknown format"
-        )
-    receipt = _active_maintenance_receipt(store)
-    if saved.get("maintenance", {}).get("token") != receipt.get("token"):
-        raise RuntimeError("maintenance plan is not bound to the active pause receipt")
-    if saved.get("inventory_digest") != _plan_digest(store):
-        raise RuntimeError(
-            "collection inventory changed; create a new maintenance plan"
-        )
-    plan = saved.get("plan", {})
-    if plan.get("action") != args.command or not plan.get("allowed"):
-        raise RuntimeError(
-            f"maintenance plan is not allowed: {plan.get('blocked', [])}"
-        )
-    if args.command == "discard":
-        if plan.get("run_id") != store.resolve_id(plan.get("run_id", "")):
-            raise RuntimeError("discard plan record binding is invalid")
-        return store.apply_discard(
-            plan["run_id"], inventory_complete=True, maintenance=True
-        )
-    return store.apply_prune(inventory_complete=True, maintenance=True)
-
-
-def command_rerun(args: argparse.Namespace) -> dict[str, Any]:
-    from ._capture import prepare_replay
-
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    if args.close:
-        replay = Path(args.close) / "replay.json"
-        if not replay.is_file():
-            raise RuntimeError(f"replay workspace is not initialized: {args.close}")
-        prepared = json.loads(replay.read_text())
-        if prepared.get("owner") != store.machine_id:
-            raise RuntimeError(
-                "only the owning machine can close this replay workspace"
-            )
-        store.release_hold(prepared["run_id"], prepared["reader_hold"])
-        return {"workspace": str(args.close), "closed": True}
-    workspace = args.workspace or (
-        Path(store.root) / "replays" / f"{args.run_id}-{uuid.uuid4()}"
-    )
-    prepared = dict(prepare_replay(store, args.run_id, workspace))
-    prepared["owner"] = store.machine_id
-    try:
-        Path(workspace, "replay.json").write_text(_json(prepared) + "\n")
-    except BaseException:
-        store.release_hold(prepared["run_id"], prepared["reader_hold"])
-        raise
-    if args.prepare_only:
-        return {**prepared, "prepared": True}
-    environment = {
-        **os.environ,
-        "CHERRIES_STORAGE": str(store.root),
-        "CHERRIES_PARENT_RUN": prepared["run_id"],
-        "CHERRIES_REPLAY_INPUTS": str(prepared["input_mapping"]),
-    }
-    # Captured projects with a lock replay it exactly; unlocked projects may
-    # sync normally. Never inherit caller-specific uv environment selection
-    # or frozen-mode settings: replay must use the captured project's .venv.
-    environment.pop("UV_FROZEN", None)
-    environment.pop("UV_PROJECT_ENVIRONMENT", None)
-    environment.pop("VIRTUAL_ENV", None)
-    command = ["uv", "run"]
-    if (Path(prepared["project"]) / "uv.lock").is_file():
-        command.append("--locked")
-    command.extend(
-        [
-            "--project",
-            prepared["project"],
-            "python",
-            prepared["entrypoint"],
-            *prepared["argv"],
-        ]
-    )
-    try:
-        completed = subprocess.run(
-            command, cwd=prepared["project"], env=environment, check=False
-        )
-    finally:
-        store.release_hold(prepared["run_id"], prepared["reader_hold"])
-    if completed.returncode:
-        raise RuntimeError(
-            f"replay process failed with exit status {completed.returncode}"
-        )
-    return {**prepared, "prepared": False, "returncode": completed.returncode}
-
-
-def command_analysis_new(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    folder = args.folder.resolve()
-    sources = [str(store.resolve_id(item)) for item in args.source]
-    folder.mkdir(parents=True, exist_ok=False)
-    workspace = str(uuid.uuid4())
-    acquired: list[str] = []
-    try:
-        with _analysis_locked(folder):
-            for source in sources:
-                store.hold(source, f"analysis:{workspace}")
-                acquired.append(source)
-            _write_analysis(
-                folder,
-                {
-                    "workspace_id": workspace,
-                    "name": args.name,
-                    "sources": sources,
-                    "outputs": [],
-                },
-            )
-    except BaseException:
-        for source in acquired:
-            store.release_hold(source, f"analysis:{workspace}")
-        (folder / ".analysis.lock").unlink(missing_ok=True)
-        with contextlib.suppress(OSError):
-            folder.rmdir()
-        raise
-    return {
-        "workspace_id": workspace,
-        "name": args.name,
-        "folder": str(folder),
-        "sources": sources,
-    }
-
-
-def command_analysis_source(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    source = str(store.resolve_id(args.run_id))
-    with _analysis_locked(args.folder):
-        if args.action == "add":
-            return _bind_analysis_source(store, args.folder, source)
-        config = _read_analysis(args.folder)
-        config["sources"] = [item for item in config["sources"] if item != source]
-        _write_analysis(args.folder, config)
-        store.release_hold(source, f"analysis:{config['workspace_id']}")
-        return config
-
-
-def command_analysis_save(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    folder = args.folder.resolve()
-    with _analysis_locked(folder):
-        config = _read_analysis(folder)
-        outputs: list[str] = args.output or list(config.get("outputs", []))
-        output_root = (folder / "out").resolve()
-        validated: list[tuple[Path, Path]] = []
-        for output in outputs:
-            relative = Path(output)
-            if (
-                relative.is_absolute()
-                or ".." in relative.parts
-                or not relative.parts
-                or relative.parts[0] != "out"
-            ):
-                raise RuntimeError(
-                    f"analysis output must be contained in out/: {output}"
-                )
-            source = (folder / relative).resolve()
-            if not source.is_relative_to(output_root) or not source.is_file():
-                raise RuntimeError(
-                    f"declared analysis output missing: {folder / relative}"
-                )
-            validated.append((source, relative.relative_to("out")))
-
-        previous_revision = config.get("latest_record")
-        revision = int(config.get("revision", 0)) + 1
-        parents = list(config["sources"])
-        if previous_revision and previous_revision not in parents:
-            parents.append(previous_revision)
-        run_id = str(uuid.uuid4())
-        work = Path(
-            store.start_work(
-                run_id,
-                metadata={
-                    "mode": "analysis",
-                    "workspace_id": config["workspace_id"],
-                    "name": config.get("name"),
-                    "revision": revision,
-                    "previous_revision": previous_revision,
-                },
-            )
-        )
-        record = {
-            "mode": "analysis",
-            "reproducibility": "lightweight",
-            "parents": parents,
-            "workspace_id": config["workspace_id"],
-            "name": config.get("name"),
-            "revision": revision,
-            "previous_revision": previous_revision,
-            "used_in": args.used_in,
-        }
-        try:
-            for source in parents:
-                store.register_parent(run_id, source)
-            for source, relative in validated:
-                destination = work / "outputs" / relative
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source, destination)
-            for name in ("RUN.md", "analysis.json"):
-                source = folder / name
-                if source.is_file():
-                    shutil.copy2(source, work / name)
-            source_tree = folder / "src"
-            if source_tree.is_dir():
-                shutil.copytree(source_tree, work / "source", dirs_exist_ok=True)
-            sealed = dict(store.seal(run_id, record, work))
-        except BaseException as error:
-            try:
-                store.cancel_failed_work(run_id, {"error": str(error)})
-            except (RuntimeError, OSError) as cleanup_error:
-                error.add_note(f"failed to clean analysis work: {cleanup_error}")
-            raise
-
-        # A failed seal must never advance the editable workspace's latest pointer.
-        config["latest_record"] = run_id
-        config["revision"] = revision
-        _write_analysis(folder, config)
-
-        link = {
-            "analysis_run": run_id,
-            "workspace_id": config["workspace_id"],
-            "name": config.get("name"),
-            "revision": revision,
-            "previous_revision": previous_revision,
-        }
-        for source in config["sources"]:
-            store.append_event("link", source, link)
-        return sealed
-
-
-def command_analysis_close(args: argparse.Namespace) -> Any:
-    store = _store(_storage(args), args.machine_id, args.project_dir)
-    with _analysis_locked(args.folder):
-        config = _read_analysis(args.folder)
-        for source in config["sources"]:
-            store.release_hold(source, f"analysis:{config['workspace_id']}")
-        return {"workspace_id": config["workspace_id"], "closed": True}
+from . import _storage
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the record-management command line."""
     parser = argparse.ArgumentParser(prog="cherries")
-    parser.add_argument("--storage", type=Path)
-    parser.add_argument("--project-dir", type=Path, default=Path.cwd())
-    parser.add_argument("--machine-id")
-    parser.add_argument("--json", action="store_true")
-    sub = parser.add_subparsers(dest="command", required=True)
-    init = sub.add_parser("init")
-    init.add_argument("--collection-id")
-    init.set_defaults(func=command_init)
-    browse = sub.add_parser("browse")
-    browse.add_argument("--quality")
-    browse.add_argument("--label")
-    browse.add_argument("--used-in")
-    browse.add_argument("--asset")
-    browse.add_argument("--failed", action="store_true")
-    browse.add_argument("--search")
-    browse.add_argument("--remote", nargs="?", const="main")
-    browse.add_argument("--coordinated", action="store_true")
-    browse.set_defaults(func=command_browse)
-    show = sub.add_parser("show")
-    show.add_argument("run_id")
-    show.add_argument("--remote", nargs="?", const="main")
-    show.add_argument("--coordinated", action="store_true")
-    show.set_defaults(func=command_show)
-    read = sub.add_parser("read")
-    read.add_argument("run_id")
-    read.add_argument("path")
-    read.add_argument("--remote", nargs="?", const="main")
-    read.add_argument("--coordinated", action="store_true")
-    read.set_defaults(func=command_read)
-    path = sub.add_parser("path")
-    path.add_argument("run_id", nargs="?")
-    path.add_argument("path", nargs="?")
-    path.add_argument("--release")
-    path.add_argument("--workspace", type=Path)
-    path.add_argument("--remote", nargs="?", const="main")
-    path.add_argument("--coordinated", action="store_true")
-    path.set_defaults(func=command_path)
-    restore = sub.add_parser("restore")
-    restore.add_argument("run_id")
-    restore.add_argument("--remote", nargs="?", const="main")
-    restore.add_argument("--coordinated", action="store_true")
-    restore.set_defaults(func=command_restore)
-    archive = sub.add_parser("archive")
-    archive.add_argument("run_ids", nargs="+")
-    archive.add_argument("--remote", nargs="?", const="main", default="main")
-    archive.add_argument("--coordinated", action="store_true")
-    archive.add_argument("--evict", action="store_true")
-    archive.set_defaults(func=command_archive)
-    sync = sub.add_parser("sync")
-    sync.add_argument("--remote", nargs="?", const="main", default="main")
-    sync.add_argument("--coordinated", action="store_true")
-    sync.set_defaults(func=command_sync)
-    index = sub.add_parser("index")
-    index_sub = index.add_subparsers(dest="index_command", required=True)
-    rebuild = index_sub.add_parser("rebuild")
-    rebuild.add_argument("--remote", nargs="?", const="main")
-    rebuild.add_argument("--coordinated", action="store_true")
-    rebuild.set_defaults(func=command_index)
-    review = sub.add_parser("review")
-    review.add_argument("run_id")
-    review.add_argument("--quality", required=True)
-    review.add_argument("--note")
-    review.set_defaults(func=command_review)
-    label = sub.add_parser("label")
-    label.add_argument("action", choices=("add", "remove"))
-    label.add_argument("run_id")
-    label.add_argument("labels", nargs="+")
-    label.set_defaults(func=command_label)
-    mark = sub.add_parser("mark")
-    mark.add_argument("run_id")
-    group = mark.add_mutually_exclusive_group(required=True)
-    group.add_argument("--important", action="store_true", default=None)
-    group.add_argument("--no-important", action="store_false", dest="important")
-    group.add_argument("--keep-local", action="store_true", default=None)
-    group.add_argument("--no-keep-local", action="store_false", dest="keep_local")
-    mark.set_defaults(func=command_mark)
-    for name in ("note", "link"):
-        item = sub.add_parser(name)
-        item.add_argument("run_id")
-        if name == "note":
-            item.add_argument("--file", required=True)
-        else:
-            item.add_argument("--git", dest="commit", required=True)
-        item.set_defaults(func=command_note_or_link)
-    for name in ("discard", "prune"):
-        item = sub.add_parser(name)
-        if name == "discard":
-            item.add_argument("run_id", nargs="?")
-        action = item.add_mutually_exclusive_group(required=True)
-        action.add_argument("--plan", action="store_true")
-        action.add_argument("--apply")
-        item.set_defaults(func=command_discard_or_prune)
-    maintenance = sub.add_parser("maintenance")
-    maintenance.add_argument("action", choices=("pause", "resume"))
-    maintenance.add_argument("token", nargs="?")
-    maintenance.set_defaults(func=command_maintenance)
-    rerun = sub.add_parser("rerun")
-    rerun.add_argument("run_id", nargs="?")
-    rerun.add_argument("--prepare-only", action="store_true")
-    rerun.add_argument("--workspace", type=Path)
-    rerun.add_argument("--close", type=Path)
-    rerun.set_defaults(func=command_rerun)
-    analysis = sub.add_parser("analysis")
-    a_sub = analysis.add_subparsers(dest="analysis_command", required=True)
-    new = a_sub.add_parser("new")
-    new.add_argument("folder", type=Path)
-    new.add_argument("--source", action="append", required=True)
-    new.add_argument("--name")
-    new.set_defaults(func=command_analysis_new)
-    source = a_sub.add_parser("source")
-    source.add_argument("folder", type=Path)
-    source.add_argument("action", choices=("add", "remove"))
-    source.add_argument("run_id")
-    source.set_defaults(func=command_analysis_source)
-    save = a_sub.add_parser("save")
-    save.add_argument("folder", type=Path)
-    save.add_argument("--output", action="append")
-    save.add_argument("--used-in")
-    save.set_defaults(func=command_analysis_save)
-    close = a_sub.add_parser("close")
-    close.add_argument("folder", type=Path)
-    close.set_defaults(func=command_analysis_close)
+    parser.add_argument("--repo", type=Path)
+    parser.add_argument("--project-id")
+    parser.add_argument("--remote", type=Path)
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    listing = commands.add_parser("list", help="List experiment records")
+    listing.add_argument("--tag", action="append", default=[])
+    listing.add_argument("--param", action="append", default=[])
+    listing.add_argument("--search")
+    listing.add_argument("--limit", type=int, default=20)
+    listing.add_argument("--unfinished", action="store_true")
+    listing.add_argument("--json", action="store_true")
+
+    show = commands.add_parser("show", help="Show run.yaml")
+    show.add_argument("run")
+    show.add_argument("--json", action="store_true")
+
+    files = commands.add_parser("files", help="List logical run paths")
+    files.add_argument("run")
+    files.add_argument("path", nargs="?", default="")
+    files.add_argument("--json", action="store_true")
+
+    get = commands.add_parser("get", help="Copy run files to a destination")
+    get.add_argument("run")
+    get.add_argument("path")
+    get.add_argument("--output", type=Path, required=True)
+    get.add_argument("--overwrite", action="store_true")
+
+    edit = commands.add_parser("edit", help="Edit run annotations")
+    edit.add_argument("run")
+    edit.add_argument("--name")
+    description = edit.add_mutually_exclusive_group()
+    description.add_argument("--description")
+    description.add_argument("--clear-description", action="store_true")
+    edit.add_argument("--add-tag", action="append", default=[])
+    edit.add_argument("--remove-tag", action="append", default=[])
+    edit.add_argument("--metadata", action="append", default=[])
+    edit.add_argument("--unset-metadata", action="append", default=[])
+
+    add = commands.add_parser("add", help="Save a figure, asset, or report")
+    add.add_argument("run")
+    add.add_argument("source", type=Path)
+    add.add_argument("--as", dest="target", required=True)
+
+    push = commands.add_parser("push", help="Copy a local run to the remote")
+    push.add_argument("run")
+    pull = commands.add_parser("pull", help="Copy a remote run to the local repo")
+    pull.add_argument("run")
+    pull.add_argument("--overwrite", action="store_true")
+
+    remove = commands.add_parser("remove", help="Remove the selected run copy")
+    remove.add_argument("run")
+    gc = commands.add_parser("gc", help="Collect unreferenced storage objects")
+    gc.add_argument("--dry-run", action="store_true")
+    verify = commands.add_parser("verify", help="Verify record integrity")
+    verify.add_argument("run")
     return parser
 
 
-def _normalize_global_flags(argv: Sequence[str] | None) -> list[str] | None:
-    values = list(sys.argv[1:] if argv is None else argv)
-    prefix: list[str] = []
-    index = 0
-    flags_with_value = {"--storage", "--project-dir", "--machine-id"}
-    while index < len(values):
-        value = values[index]
-        if value == "--json":
-            prefix.append(value)
-            values.pop(index)
-            continue
-        if value in flags_with_value:
-            if index + 1 == len(values):
-                return values
-            prefix.extend(values[index : index + 2])
-            del values[index : index + 2]
-            continue
-        index += 1
-    return prefix + values
+def _assignments(values: Sequence[str]) -> dict[str, Any]:
+    return {key: json.loads(value) for key, value in (v.split("=", 1) for v in values)}
 
 
-def legacy_main(argv: Sequence[str] | None = None) -> int:
-    parser = build_parser()
-    args = parser.parse_args(_normalize_global_flags(argv))
-    try:
-        _emit(args.func(args), args)
-    except (RemoteError, RuntimeError, OSError, ValueError) as error:
-        parser.error(str(error))
-    return 0
+def _local(args: argparse.Namespace) -> _storage.LocalStore:
+    return _storage.LocalStore(args.repo or Path.cwd(), args.project_id)
+
+
+def _remote(args: argparse.Namespace) -> _storage.RemoteStore:
+    if args.remote is None:
+        message = "--remote is required for push and pull"
+        raise ValueError(message)
+    project_id = args.project_id
+    if project_id is None and args.command != "gc":
+        project_id = _local(args).project_id
+    return _storage.RemoteStore(args.remote, project_id)
+
+
+def _selected(args: argparse.Namespace) -> _storage.LocalStore | _storage.RemoteStore:
+    return _remote(args) if args.remote is not None else _local(args)
+
+
+def _print_json(value: Any) -> None:
+    print(json.dumps(value, ensure_ascii=False, indent=2))
+
+
+def _list(args: argparse.Namespace) -> None:
+    parameters = [
+        (key, json.loads(value))
+        for key, value in (item.split("=", 1) for item in args.param)
+    ]
+    records = sorted(
+        _selected(args).runs(unfinished=args.unfinished),
+        key=lambda record: record.id,
+        reverse=True,
+    )
+    matches = []
+    for record in records:
+        metadata = record.metadata
+        if not all(tag in metadata["tags"] for tag in args.tag):
+            continue
+        if not all(
+            key in metadata["params"] and metadata["params"][key] == value
+            for key, value in parameters
+        ):
+            continue
+        if args.search is not None and not any(
+            args.search in metadata.get(key, "") for key in ("run-name", "description")
+        ):
+            continue
+        matches.append(metadata)
+    matches = matches[: args.limit]
+    if args.json:
+        _print_json(matches)
+    else:
+        for metadata in matches:
+            description = metadata.get("description", "")
+            print(f"{metadata['run-id']}\t{metadata['run-name']}\t{description}")
+
+
+def _execute(args: argparse.Namespace) -> None:  # noqa: C901, PLR0912
+    if args.command == "list":
+        _list(args)
+        return
+    if args.command == "push":
+        result = _storage.push(_local(args).get(args.run), _remote(args))
+        print(result.resolve())
+        return
+    if args.command == "pull":
+        result = _storage.pull(
+            _remote(args).get(args.run), _local(args), overwrite=args.overwrite
+        )
+        print(result.resolve())
+        return
+    store = _selected(args)
+    if args.command == "gc":
+        print(yaml.safe_dump(store.gc(dry_run=args.dry_run), sort_keys=False), end="")
+        return
+    record = store.get(args.run)
+    if args.command == "show":
+        if args.json:
+            _print_json(record.metadata)
+        else:
+            print((record.directory / "run.yaml").read_text(encoding="utf-8"), end="")
+    elif args.command == "files":
+        paths = record.files(args.path)
+        if args.json:
+            _print_json(paths)
+        else:
+            for path in paths:
+                print(path)
+    elif args.command == "get":
+        print(
+            record.get(
+                args.path, args.output.resolve(), overwrite=args.overwrite
+            ).resolve()
+        )
+    elif args.command == "edit":
+        result = record.edit(
+            name=args.name,
+            description=args.description,
+            clear_description=args.clear_description,
+            add_tags=args.add_tag,
+            remove_tags=args.remove_tag,
+            metadata=_assignments(args.metadata),
+            unset_metadata=args.unset_metadata,
+        )
+        print(result.resolve())
+    elif args.command == "add":
+        print(record.add(args.source.resolve(), args.target).resolve())
+    elif args.command == "remove":
+        record.remove()
+    elif args.command == "verify":
+        record.verify()
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Route explicit command namespaces without format-error fallback."""
-    arguments = list(sys.argv[1:] if argv is None else argv)
-    if arguments and arguments[0] == "legacy":
-        return legacy_main(arguments[1:])
-    before_command = (
-        arguments[: arguments.index("--")] if "--" in arguments else arguments
-    )
-    new_groups = {"store", "project", "run", "file", "report", "metrics", "code"}
-    command = None
-    skip = False
-    values = {"--store", "--project", "--project-dir", "--storage", "--machine-id"}
-    for value in before_command:
-        if skip:
-            skip = False
-        elif value in values:
-            skip = True
-        elif not value.startswith("-"):
-            command = value
-            break
-    selected = command in new_groups
-    selected |= "--store" in before_command or any(
-        value.startswith("--store=") for value in before_command
-    )
-    selected |= "--project" in before_command or any(
-        value.startswith("--project=") for value in before_command
-    )
-    if command == "index":
-        from .store._config import settings
+    """Execute a command, reporting operational failures on stderr."""
+    args = build_parser().parse_args(argv)
+    try:
+        _execute(args)
+    except Exception as error:  # noqa: BLE001
+        print(f"cherries: {error}", file=sys.stderr)
+        return 1
+    return 0
 
-        selected |= bool(
-            os.environ.get("CHERRIES_STORE") or settings()[1].get("project")
-        )
-    if selected or not arguments or arguments in (["--help"], ["--version"]):
-        from .store._cli import main as store_main
 
-        return store_main(arguments)
-    return legacy_main(arguments)
+if __name__ == "__main__":
+    raise SystemExit(main())
