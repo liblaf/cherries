@@ -61,15 +61,15 @@ push/pull 显式传输该 ref 及源码所需的 Git/LFS 内容。
 
 两端 run 的文件集合如下，目录按需创建：
 
-| 内容 | 本地 | 远端 | 结束后 |
-| --- | --- | --- | --- |
-| `run.yaml` | 下述 YAML | 同左 | 名称、description、tags、metadata 可编辑 |
-| `run.log` | UTF-8 stdout/stderr、生命周期和异常 | 原样复制 | 固定 |
-| `metrics.parquet` | 可选，四列 | 原样复制 | 固定 |
-| `inputs/`、`outputs/` | 真实文件 | 无物理目录，YAML 引用 CAS | 固定 |
-| `src/` | 仅入口脚本，保留原文件名，如 `10-run.py` | 原样复制 | 固定 |
-| `figs/` | 真实文件 | 无物理目录，YAML 引用 CAS | 可追加/编辑 |
-| `assets/`、`reports/`、`README.md/html` | 真实文件 | 原样复制 | 可追加/编辑 |
+| 内容                                    | 本地                                     | 远端                      | 结束后                                   |
+| --------------------------------------- | ---------------------------------------- | ------------------------- | ---------------------------------------- |
+| `run.yaml`                              | 下述 YAML                                | 同左                      | 名称、description、tags、metadata 可编辑 |
+| `run.log`                               | UTF-8 stdout/stderr、生命周期和异常      | 原样复制                  | 固定                                     |
+| `metrics.parquet`                       | 可选，四列                               | 原样复制                  | 固定                                     |
+| `inputs/`、`outputs/`                   | 真实文件                                 | 无物理目录，YAML 引用 CAS | 固定                                     |
+| `src/`                                  | 仅入口脚本，保留原文件名，如 `10-run.py` | 原样复制                  | 固定                                     |
+| `figs/`                                 | 真实文件                                 | 无物理目录，YAML 引用 CAS | 可追加/编辑                              |
+| `assets/`、`reports/`、`README.md/html` | 真实文件                                 | 原样复制                  | 可追加/编辑                              |
 
 产物清单直接放在 run.yaml.artifacts，不增加 sidecar、状态、索引、版本或引用计数文件。
 Git/LFS 使用原生格式。目录登记展开为文件，保留相对层级；空目录省略，不创建占位文件。
