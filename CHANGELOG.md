@@ -7,6 +7,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v6.0.0](https://github.com/liblaf/cherries/releases/tag/v6.0.0) - 2026-11-15
+
+### 💥 BREAKING CHANGES
+
+- Replace the previous context-manager APIs, legacy recorders,
+and store formats with run(main), daily run directories, and run.yaml artifact
+manifests. Experiment scripts and record stores require the new format. - [1cc692e](https://github.com/liblaf/cherries/commit/1cc692edefaaa16920cd6dce9a0a6379be19a066) by [@liblaf](https://github.com/liblaf)
+
+### ✨ Features
+
+- **\[breaking\]** rebuild experiment records around artifact manifests - [1cc692e](https://github.com/liblaf/cherries/commit/1cc692edefaaa16920cd6dce9a0a6379be19a066) by [@liblaf](https://github.com/liblaf)
+
+### 🐛 Bug Fixes
+
+- **(ci)** use portable PyPI URLs in the lockfile - [94afec8](https://github.com/liblaf/cherries/commit/94afec8e5f5f67f883f1f9a96979478ce5954837) by [@liblaf](https://github.com/liblaf)
+
+### 📝 Documentation
+
+- format run storage table - [01e3308](https://github.com/liblaf/cherries/commit/01e33081cece9f1d5373c745113f8b89d78d39eb) by [@liblaf](https://github.com/liblaf)
+
+### ✅ Tests
+
+- keep child tracebacks deterministic under forced color - [be397b4](https://github.com/liblaf/cherries/commit/be397b43ea634e8e6b9bd33e0516d3a95bf46229) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@liblaf](https://github.com/liblaf)
+- [@renovate[bot]](https://github.com/apps/renovate)
+
 ## [v5.0.0](https://github.com/liblaf/cherries/releases/tag/v5.0.0) - 2026-11-08
 
 ### 💥 BREAKING CHANGES
@@ -22,6 +51,7 @@ collections. Existing records are never converted in place. - [e68006b](https://
 
 ### ❤️ Contributors
 
+- [@liblaf-release-please[bot]](https://github.com/apps/liblaf-release-please)
 - [@liblaf](https://github.com/liblaf)
 - [@renovate[bot]](https://github.com/apps/renovate)
 
