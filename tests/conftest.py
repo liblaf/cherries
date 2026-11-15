@@ -49,7 +49,7 @@ def execute(
         capture_output=True,
         text=True,
         check=check,
-        env={**os.environ, "PYTHONPATH": str(source)},
+        env={**os.environ, "PYTHONPATH": str(source), "PYTHON_COLORS": "0"},
     )
 
 
