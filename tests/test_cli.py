@@ -3,15 +3,15 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
+import shutil
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
 
-from liblaf.cherries import _cli, _storage
+from liblaf.cherries import _cli, _restic, _storage
 
 
 def _record(number: int, **changes: object) -> SimpleNamespace:
@@ -39,32 +39,23 @@ def stores(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     local_class = Mock(return_value=local)
     remote_class = Mock(return_value=remote)
     monkeypatch.setattr(_storage, "LocalStore", local_class)
-    monkeypatch.setattr(_storage, "RemoteStore", remote_class)
+    monkeypatch.setattr(_restic, "ResticStore", remote_class)
     return SimpleNamespace(
         local=local, remote=remote, local_class=local_class, remote_class=remote_class
     )
 
 
-def test_list_filters_before_limit_and_returns_only_yaml_objects(
+def test_list_and_show_cli_routing(
     stores: SimpleNamespace, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    older = _record(1)
     newer = _record(3)
-    stores.local.runs.return_value = [
-        _record(4, tags=["mesh"]),
-        older,
-        _record(5, description="other", **{"run-name": "other"}),
-        newer,
-        _record(6, params={"mesh": {"count": 99}, "optional": None}),
-    ]
+    stores.local.list_metadata.return_value = [newer.metadata]
     assert (
         _cli.main(
             [
                 "list",
                 "--tag",
                 "checked",
-                "--tag",
-                "mesh",
                 "--param",
                 'mesh={"count":42}',
                 "--param",
@@ -79,118 +70,89 @@ def test_list_filters_before_limit_and_returns_only_yaml_objects(
         == 0
     )
     assert json.loads(capsys.readouterr().out) == [newer.metadata]
-    stores.local.runs.assert_called_once_with(unfinished=False)
+    stores.local.list_metadata.assert_called_once_with(
+        tags=["checked"],
+        params=[("mesh", {"count": 42}), ("optional", None)],
+        search="roundtrip",
+        limit=1,
+        unfinished=False,
+    )
+
+    stores.local.show.return_value = newer.metadata
+    assert _cli.main(["list"]) == 0
+    assert newer.id in capsys.readouterr().out
+    assert _cli.main(["show", newer.id]) == 0
+    assert f"run-id: {newer.id}" in capsys.readouterr().out
+    assert _cli.main(["show", newer.id, "--json"]) == 0
+    assert json.loads(capsys.readouterr().out) == newer.metadata
 
 
-def test_repeated_parameter_filters_are_all_required(
+def test_remote_show_outside_repo(
     stores: SimpleNamespace, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    stores.local.runs.return_value = [_record(1, params={"count": 2})]
-    assert (
-        _cli.main(
-            [
-                "list",
-                "--param",
-                "count=1",
-                "--param",
-                "count=2",
-                "--json",
-            ]
-        )
-        == 0
-    )
-    assert json.loads(capsys.readouterr().out) == []
-
-
-def test_unfinished_list_and_missing_null_parameter(
-    stores: SimpleNamespace, capsys: pytest.CaptureFixture[str]
-) -> None:
-    stores.local.runs.return_value = [_record(1, params={}), _record(2)]
-    assert (
-        _cli.main(
-            [
-                "list",
-                "--unfinished",
-                "--param",
-                "optional=null",
-                "--json",
-            ]
-        )
-        == 0
-    )
-    assert json.loads(capsys.readouterr().out) == [_record(2).metadata]
-    stores.local.runs.assert_called_once_with(unfinished=True)
-
-
-def test_remote_read_outside_repo_and_logical_files(
-    stores: SimpleNamespace, capsys: pytest.CaptureFixture[str], tmp_path: Path
-) -> None:
-    record = Mock()
-    record.files.return_value = ["outputs/mesh.vtu", "outputs/empty"]
-    stores.remote.get.return_value = record
+    record = _record(1)
+    stores.remote.show.return_value = record.metadata
     assert (
         _cli.main(
             [
                 "--remote",
-                str(tmp_path),
+                "sftp:nas:/archive/cherries",
                 "--project-id",
                 "study",
-                "files",
-                "run-id",
-                "outputs",
+                "show",
+                record.id,
                 "--json",
             ]
         )
         == 0
     )
-    assert json.loads(capsys.readouterr().out) == ["outputs/mesh.vtu", "outputs/empty"]
-    stores.local_class.assert_not_called()
-    stores.remote_class.assert_called_once_with(tmp_path, "study")
-    record.files.assert_called_once_with("outputs")
-
-
-def test_show_json_preserves_metadata(
-    stores: SimpleNamespace, capsys: pytest.CaptureFixture[str]
-) -> None:
-    record = _record(1)
-    stores.local.get.return_value = record
-    assert _cli.main(["show", record.id, "--json"]) == 0
     assert json.loads(capsys.readouterr().out) == record.metadata
+    stores.local_class.assert_not_called()
+    stores.remote_class.assert_called_once_with("sftp:nas:/archive/cherries", "study")
 
 
-def test_push_and_pull_have_fixed_source_and_destination(
-    stores: SimpleNamespace,
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-    capsys: pytest.CaptureFixture[str],
+def test_path_and_verify_are_local_only(
+    stores: SimpleNamespace, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stores.local.get.return_value = SimpleNamespace(
+        directory=tmp_path / "run", verify=Mock()
+    )
+    assert _cli.main(["path", "run-id"]) == 0
+    assert capsys.readouterr().out.strip() == str(tmp_path / "run")
+
+    assert _cli.main(["verify", "run-id"]) == 0
+    stores.local.get.return_value.verify.assert_called_once_with()
+
+    assert _cli.main(["--remote", str(tmp_path), "path", "run-id"]) != 0
+    assert "local" in capsys.readouterr().err
+
+    assert _cli.main(["--remote", str(tmp_path), "verify", "run-id"]) != 0
+    assert "restic check" in capsys.readouterr().err
+
+
+def test_push_and_pull_route_through_restic_store(
+    stores: SimpleNamespace, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     local_record = stores.local.get.return_value
-    remote_record = stores.remote.get.return_value
-    push = Mock(return_value=tmp_path / "remote-run")
-    pull = Mock(return_value=tmp_path / "local-run")
-    monkeypatch.setattr(_storage, "push", push)
-    monkeypatch.setattr(_storage, "pull", pull)
+    stores.remote.push.return_value = "abcdef01"
+    stores.remote.pull.return_value = tmp_path / "local-run"
     prefix = ["--remote", str(tmp_path / "remote")]
     assert _cli.main([*prefix, "push", "run-id"]) == 0
-    push.assert_called_once_with(local_record, stores.remote)
-    assert capsys.readouterr().out.strip() == str(tmp_path / "remote-run")
+    stores.remote.push.assert_called_once_with(local_record)
+    assert capsys.readouterr().out.strip() == "abcdef01"
     assert _cli.main([*prefix, "pull", "run-id", "--overwrite"]) == 0
-    pull.assert_called_once_with(remote_record, stores.local, overwrite=True)
+    stores.remote.pull.assert_called_once_with("run-id", stores.local, overwrite=True)
     assert capsys.readouterr().out.strip() == str(tmp_path / "local-run")
 
 
-def test_edit_decodes_json_values_and_uses_remote(
+def test_edit_and_add_are_local_only(
     stores: SimpleNamespace, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    record = stores.remote.get.return_value
+    record = stores.local.get.return_value
     record.edit.return_value = tmp_path / "run"
     assert (
         _cli.main(
             [
-                "--remote",
-                str(tmp_path),
-                "--project-id",
-                "study",
                 "edit",
                 "run-id",
                 "--name",
@@ -219,16 +181,60 @@ def test_edit_decodes_json_values_and_uses_remote(
     )
     assert capsys.readouterr().out.strip() == str(tmp_path / "run")
 
+    assert _cli.main(["--remote", str(tmp_path), "edit", "run-id", "--name", "x"]) != 0
+    assert "immutable" in capsys.readouterr().err
 
-def test_remote_gc_does_not_require_local_repository(
+    source = tmp_path / "plot.png"
+    record.add.return_value = tmp_path / "run/figs/plot.png"
+    assert _cli.main(["add", "run-id", str(source), "--as", "figs/plot.png"]) == 0
+    record.add.assert_called_once_with(source.resolve(), "figs/plot.png")
+    assert capsys.readouterr().out.strip() == str(tmp_path / "run/figs/plot.png")
+    assert (
+        _cli.main(
+            [
+                "--remote",
+                str(tmp_path),
+                "add",
+                "run-id",
+                str(source),
+                "--as",
+                "figs/plot.png",
+            ]
+        )
+        != 0
+    )
+    assert "immutable" in capsys.readouterr().err
+
+
+def test_lineage_and_prune_cli_routing(
+    stores: SimpleNamespace, capsys: pytest.CaptureFixture[str]
+) -> None:
+    kept = _record(2)
+    stores.local.lineage.return_value = [kept.metadata]
+    stores.local.prune.return_value = {"keep": [kept.id], "remove": ["old"]}
+    assert _cli.main(["lineage", "--tag", "selected", "--json"]) == 0
+    assert json.loads(capsys.readouterr().out) == [kept.metadata]
+    stores.local.lineage.assert_called_once_with([], tags=["selected"])
+
+    assert _cli.main(["prune", "--tag", "selected", "--dry-run", "--json"]) == 0
+    assert json.loads(capsys.readouterr().out) == {"keep": [kept.id], "remove": ["old"]}
+    stores.local.prune.assert_called_once_with(
+        [], tags=["selected"], unfinished=False, dry_run=True
+    )
+
+
+def test_remote_gc_requires_remote_and_skips_local_repo(
     stores: SimpleNamespace, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    stores.remote.gc.return_value = {"objects": 2, "bytes": 80}
+    assert _cli.main(["gc"]) != 0
+    assert "--remote is required" in capsys.readouterr().err
+
+    stores.remote.gc.return_value = "pruned\n"
     assert _cli.main(["--remote", str(tmp_path), "gc", "--dry-run"]) == 0
     stores.local_class.assert_not_called()
-    stores.remote_class.assert_called_once_with(tmp_path, None)
+    stores.remote_class.assert_called_once_with(str(tmp_path), None)
     stores.remote.gc.assert_called_once_with(dry_run=True)
-    assert "bytes: 80" in capsys.readouterr().out
+    assert capsys.readouterr().out == "pruned\n"
 
 
 def test_operational_failure_is_nonzero_and_only_on_stderr(
@@ -241,53 +247,15 @@ def test_operational_failure_is_nonzero_and_only_on_stderr(
     assert "run is missing" in captured.err
 
 
-def test_real_local_to_remote_record_flow(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+@pytest.mark.skipif(shutil.which("restic") is None, reason="restic is unavailable")
+def test_real_cli_local_to_restic_flow(
+    repo: Path, saved: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """An edited record remains queryable as logical files after CAS upload."""
-    import subprocess
+    run_id = saved.name
+    local = ["--repo", str(repo), "--project-id", repo.name]
+    assert _cli.main([*local, "path", run_id]) == 0
+    assert capsys.readouterr().out.strip() == str(saved)
 
-    import yaml
-
-    repo = tmp_path / "repo"
-    repo.mkdir()
-
-    def git(*args: str) -> str:
-        return subprocess.check_output(
-            ["git", "-C", str(repo), *args], text=True
-        ).strip()
-
-    git("init", "--quiet")
-    script = repo / "run.py"
-    script.write_text("print('experiment')\n")
-    git("add", "run.py")
-    git(
-        "-c",
-        "user.name=CLI Test",
-        "-c",
-        "user.email=test@example.com",
-        "commit",
-        "--quiet",
-        "-m",
-        "initial",
-    )
-    data = _record(1, commit=git("rev-parse", "HEAD")).metadata
-    run_id = data["run-id"]
-    directory = repo / "cherries/runs/2026/11/15" / run_id
-    (directory / "src").mkdir(parents=True)
-    (directory / "src" / script.name).write_bytes(script.read_bytes())
-    (directory / "outputs").mkdir()
-    payload = b"mesh payload\x00\xff"
-    (directory / "outputs" / "mesh.bin").write_bytes(payload)
-    digest = hashlib.sha256(payload).hexdigest()
-    data["artifacts"]["outputs"] = [
-        {"name": "mesh.bin", "sha256": digest, "size": len(payload)}
-    ]
-    (directory / "run.log").write_text("completed\n")
-    (directory / "run.yaml").write_text(yaml.safe_dump(data, sort_keys=False))
-    git("update-ref", f"refs/cherries/runs/{run_id}", data["commit"])
-
-    local = ["--repo", str(repo), "--project-id", "study"]
     assert (
         _cli.main(
             [
@@ -298,63 +266,33 @@ def test_real_local_to_remote_record_flow(
                 "checked mesh",
                 "--description",
                 "Mesh passed",
+                "--add-tag",
+                "selected",
             ]
         )
         == 0
     )
-    assert capsys.readouterr().out.strip() == str(directory)
+    assert capsys.readouterr().out.strip() == str(saved)
+
+    remote = tmp_path / "restic-remote"
+    assert _cli.main([*local, "--remote", str(remote), "push", run_id]) == 0
+    assert capsys.readouterr().out.strip()
+
     assert (
-        _cli.main(
-            [
-                *local,
-                "list",
-                "--search",
-                "Mesh passed",
-                "--tag",
-                "checked",
-                "--param",
-                'mesh={"count":42}',
-                "--json",
-            ]
-        )
+        _cli.main(["--remote", str(remote), "--project-id", "other", "list", "--json"])
         == 0
     )
+    assert json.loads(capsys.readouterr().out) == []
+
+    remote_args = ["--remote", str(remote), "--project-id", repo.name]
+    assert _cli.main([*remote_args, "list", "--search", "Mesh passed", "--json"]) == 0
     [listed] = json.loads(capsys.readouterr().out)
     assert listed["run-name"] == "checked mesh"
-    assert listed["commit"] == data["commit"]
+    assert _cli.main([*remote_args, "show", run_id, "--json"]) == 0
+    assert json.loads(capsys.readouterr().out) == listed
 
-    remote = tmp_path / "remote"
-    assert _cli.main([*local, "--remote", str(remote), "push", run_id]) == 0
-    remote_directory = remote / "projects/study/runs/2026/11/15" / run_id
-    assert capsys.readouterr().out.strip() == str(remote_directory)
-    assert not (remote_directory / "outputs").exists()
-    assert not (remote_directory / "inputs").exists()
-    assert not (remote_directory / "figs").exists()
-    assert (
-        yaml.safe_load((remote_directory / "run.yaml").read_text())["artifacts"]
-        == data["artifacts"]
-    )
-    assert (
-        remote / "objects/sha256" / digest[:2] / digest[2:4] / digest
-    ).read_bytes() == payload
-    remote_args = ["--remote", str(remote), "--project-id", "study"]
-    assert _cli.main([*remote_args, "list", "--search", "Mesh passed", "--json"]) == 0
-    assert json.loads(capsys.readouterr().out) == [listed]
-    assert _cli.main([*remote_args, "files", run_id, "outputs", "--json"]) == 0
-    assert json.loads(capsys.readouterr().out) == ["outputs/mesh.bin"]
-    destination = tmp_path / "restored.bin"
-    assert (
-        _cli.main(
-            [
-                *remote_args,
-                "get",
-                run_id,
-                "outputs/mesh.bin",
-                "--output",
-                str(destination),
-            ]
-        )
-        == 0
-    )
-    assert capsys.readouterr().out.strip() == str(destination)
-    assert destination.read_bytes() == payload
+    assert _cli.main([*local, "remove", run_id]) == 0
+    assert not saved.exists()
+    assert _cli.main([*local, "--remote", str(remote), "pull", run_id]) == 0
+    assert capsys.readouterr().out.strip() == str(saved)
+    assert (saved / "outputs/result.txt").read_text() == "shared contents"

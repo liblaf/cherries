@@ -4,7 +4,7 @@
 # Basics
 site_name = "Cherries"
 site_url = "https://liblaf.github.io/cherries/"
-site_description = "Python experiments as files, Git snapshots, Parquet metrics and shared remote archives."
+site_description = "Python experiments as ordinary files, Git patches, Parquet metrics and Restic archives."
 site_author = "liblaf"
 # Navigation
 nav = [

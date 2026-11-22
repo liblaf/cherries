@@ -1,6 +1,6 @@
 # Copyright (c) 2026 liblaf
 # ruff: noqa: EM101, EM102, TRY003
-"""Ordinary files, safe YAML and content-addressed artifact manifests."""
+"""Ordinary files, safe YAML, reflinks, and Pydantic-validated run metadata."""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ import errno
 import fcntl
 import hashlib
 import os
-import re
 import shutil
 import tempfile
 import time
@@ -19,22 +18,91 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 import yaml
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ARTIFACT_ROLES = ("inputs", "outputs", "figs")
-DATA_DIRS = set(ARTIFACT_ROLES)
-FIELDS = {
-    "project-id",
-    "run-id",
-    "run-name",
-    "start-time",
-    "end-time",
-    "tags",
-    "params",
-    "commit",
-    "metadata",
-    "artifacts",
-}
 _last_uuid = 0
+
+
+def _check_timestamp(value: str) -> str:
+    parsed = datetime.strptime(value, "%Y-%m-%d %H:%M:%S%z")
+    if parsed.isoformat(sep=" ", timespec="seconds") != value:
+        raise ValueError("Invalid timestamp: expected YYYY-mm-dd HH:MM:SS±HH:MM")
+    return value
+
+
+class ArtifactEntry(BaseModel):
+    """One recorded artifact entry inside run.yaml.artifacts."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    name: str
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    size: int = Field(ge=0)
+
+    @field_validator("name")
+    @classmethod
+    def _valid_name(cls, value: str) -> str:
+        path = PurePosixPath(value)
+        if (
+            not value
+            or value == "."
+            or "\\" in value
+            or path.is_absolute()
+            or ".." in path.parts
+            or path.as_posix() != value
+        ):
+            raise ValueError(f"Invalid artifact name: {value}")
+        return value
+
+
+class Artifacts(BaseModel):
+    """Input, output, and figure artifact manifests for a run."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    inputs: list[ArtifactEntry]
+    outputs: list[ArtifactEntry]
+    figs: list[ArtifactEntry]
+
+    @field_validator("inputs", "outputs", "figs")
+    @classmethod
+    def _unique_non_conflicting(
+        cls, entries: list[ArtifactEntry]
+    ) -> list[ArtifactEntry]:
+        names = [entry.name for entry in entries]
+        name_set = set(names)
+        if len(names) != len(name_set):
+            raise ValueError("Duplicate artifact name")
+        for name in names:
+            if any(
+                parent.as_posix() in name_set for parent in PurePosixPath(name).parents
+            ):
+                raise ValueError(f"Artifact file/directory conflict: {name}")
+        return entries
+
+
+class RunMeta(BaseModel):
+    """Schema for run.yaml."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    project_id: str = Field(alias="project-id")
+    run_id: str = Field(alias="run-id")
+    run_name: str = Field(alias="run-name")
+    description: str | None = None
+    start_time: str = Field(alias="start-time")
+    end_time: str | None = Field(alias="end-time")
+    tags: list[str]
+    params: dict[str, Any]
+    commit: str | None = Field(pattern=r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
+    metadata: dict[str, Any]
+    artifacts: Artifacts
+
+    @field_validator("start_time", "end_time")
+    @classmethod
+    def _valid_timestamp(cls, value: str | None) -> str | None:
+        return None if value is None else _check_timestamp(value)
 
 
 def now() -> str:
@@ -44,9 +112,7 @@ def now() -> str:
 
 def run_relative_path(run_id: str, start_time: str) -> Path:
     """Partition a run by its recorded local start date, without conversion."""
-    started = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S%z")
-    if started.isoformat(sep=" ", timespec="seconds") != start_time:
-        raise ValueError("Invalid start-time: expected YYYY-mm-dd HH:MM:SS±HH:MM")
+    _check_timestamp(start_time)
     if not run_id or Path(run_id).name != run_id or run_id in {".", ".."}:
         raise ValueError(f"Invalid run ID: {run_id}")
     return Path(start_time[:4], start_time[5:7], start_time[8:10], run_id)
@@ -92,18 +158,22 @@ def copy(source: Path, destination: Path) -> Path:
     return destination
 
 
+def load_yaml(text: str, source: str | Path = "<yaml>") -> dict[str, Any]:
+    data = yaml.safe_load(text)
+    if not isinstance(data, dict):
+        raise TypeError(f"Expected a YAML mapping in {source}")
+    return data
+
+
 def read_yaml(path: Path) -> dict[str, Any]:
-    return yaml.safe_load(path.read_text(encoding="utf-8"))
+    return load_yaml(path.read_text(encoding="utf-8"), path)
 
 
-def write_yaml(path: Path, data: dict[str, Any]) -> None:
+def write_yaml(path: Path, data: Mapping[str, Any]) -> None:
     atomic_bytes(
         path,
         yaml.safe_dump(
-            data,
-            allow_unicode=True,
-            sort_keys=False,
-            indent=2,
+            dict(data), allow_unicode=True, sort_keys=False, indent=2
         ).encode("utf-8"),
     )
 
@@ -130,71 +200,53 @@ def empty_artifacts() -> dict[str, list[dict[str, Any]]]:
     return {role: [] for role in ARTIFACT_ROLES}
 
 
-def artifact_record(name: str | Path, source: Path) -> dict[str, Any]:
-    digest, size = identity(source)
-    return {"name": Path(name).as_posix(), "sha256": digest, "size": size}
-
-
 def collect_artifacts(source: Path, name: str | Path) -> list[dict[str, Any]]:
-    """Describe the saved files under a declaration, flattening directories."""
+    """Describe saved files under a declaration, flattening directories."""
     if not source.exists():
-        return []  # Copying a wholly empty directory creates no destination.
-    if source.is_dir():
-        return [
-            artifact_record(Path(name) / file.relative_to(source), file)
-            for file in sorted(source.rglob("*"))
-            if file.is_file()
+        return []
+    files = (
+        [
+            (Path(name) / f.relative_to(source), f)
+            for f in sorted(source.rglob("*"))
+            if f.is_file()
         ]
-    return [artifact_record(name, source)]
+        if source.is_dir()
+        else [(Path(name), source)]
+    )
+    return [
+        {"name": rel.as_posix(), "sha256": digest, "size": size}
+        for rel, file in files
+        for digest, size in (identity(file),)
+    ]
 
 
-def artifact_entries(metadata: Mapping[str, Any]) -> dict[Path, dict[str, Any]]:  # noqa: C901 - validate the authoritative manifest before traversal or GC
-    """Read and validate logical file identities without opening payloads."""
-    artifacts = metadata.get("artifacts")
-    if not isinstance(artifacts, dict) or set(artifacts) != DATA_DIRS:
-        raise ValueError("Expected artifacts inputs, outputs and figs lists")
-    result = {}
-    for role in ARTIFACT_ROLES:
-        rows = artifacts[role]
-        if not isinstance(rows, list):
-            raise ValueError(f"Expected artifacts.{role} list")  # noqa: TRY004 - schema validation consistently raises ValueError
-        names = set()
-        for entry in rows:
-            if not isinstance(entry, dict) or set(entry) != {"name", "sha256", "size"}:
-                raise ValueError(f"Invalid artifacts.{role} entry")
-            name = entry["name"]
-            if not isinstance(name, str) or not name:
-                raise ValueError(f"Invalid artifacts.{role} name")
-            path = PurePosixPath(name)
-            if (
-                path.is_absolute()
-                or ".." in path.parts
-                or "\\" in name
-                or path.as_posix() != name
-                or name == "."
-                or name in names
-            ):
-                raise ValueError(f"Invalid or duplicate artifacts.{role} name: {name}")
-            if (
-                not isinstance(entry["sha256"], str)
-                or re.fullmatch(r"[0-9a-f]{64}", entry["sha256"]) is None
-            ):
-                raise ValueError(f"Invalid artifact SHA-256: {name}")
-            if type(entry["size"]) is not int or entry["size"] < 0:
-                raise ValueError(f"Invalid artifact size: {name}")
-            names.add(name)
-            result[Path(role) / name] = entry
-        for name in names:
-            if any(
-                parent.as_posix() in names for parent in PurePosixPath(name).parents
-            ):
-                raise ValueError(f"Artifact file/directory conflict: {role}/{name}")
-    return result
+def validate_metadata(
+    data: Mapping[str, Any],
+    *,
+    expected_run_id: str | None = None,
+    unfinished: bool = False,
+) -> dict[Path, ArtifactEntry]:
+    """Validate run.yaml with Pydantic and return {role/name: ArtifactEntry}."""
+    if not isinstance(data, Mapping):
+        raise TypeError("run.yaml must be a YAML mapping")
+    if "description" in data and data["description"] is None:
+        raise ValueError("description must be a string or omitted")
+    meta = RunMeta.model_validate(data)
+    if expected_run_id is not None and meta.run_id != expected_run_id:
+        raise ValueError(f"Run ID mismatch: expected {expected_run_id}")
+    if not unfinished and meta.end_time is None:
+        raise ValueError("Completed run has no end-time")
+    if not unfinished and meta.commit is None:
+        raise ValueError("Completed run has no Git commit")
+    return {
+        Path(role) / entry.name: entry
+        for role in ARTIFACT_ROLES
+        for entry in getattr(meta.artifacts, role)
+    }
 
 
 def mutable(path: str | Path) -> bool:
     parts = Path(path).parts
-    return parts[0] in {"figs", "assets", "reports"} or str(path) in {
-        "README.md",
-        "README.html",
-    }
+    return (len(parts) >= 2 and parts[0] in {"figs", "assets", "reports"}) or str(
+        path
+    ) in {"README.md", "README.html"}

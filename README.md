@@ -15,13 +15,14 @@
 
 ## Experiments as files
 
-Cherries records Python experiments in ordinary folders. A run keeps end-of-run
-input/output copies, its entry script, a Git snapshot, logs and Parquet metrics.
-Local copies use reflinks when available. Remote archives share SHA-256 contents
-across projects and keep self-contained Git/LFS repositories.
+Cherries records Python experiments in ordinary local folders: end-of-run
+`inputs/`/`outputs/`/`figs/` copies (using Linux reflinks when available), the
+entry script plus `src/diff.patch` against `HEAD`, logs and Parquet metrics.
+Remote archiving delegates deduplication, locking, verification and GC to
+[Restic](https://restic.net/), storing one tagged snapshot per run.
 
-Requires Linux, Python 3.12+ and Git. Source repositories using Git LFS also need
-Git LFS installed.
+Requires Linux, Python 3.12+ and Git. Remote commands (`--remote`) require
+[Restic](https://restic.net/) 0.17+.
 
 ```bash
 uv add liblaf-cherries
@@ -29,24 +30,19 @@ uv add liblaf-cherries
 
 ## Run a script
 
-Use an experiment repository with this layout:
-
 ```text
 project/
   .git/
-  submodules/
   exp/2026/11/15/example/
     README.md
     src/10-run.py
-    data/                 # prepare input files here
-    figs/
-    tmp/                  # debug intermediates; never saved in runs
+    data/                    # inputs and outputs
+    figs/                    # figures
+    tmp/                     # debug intermediates; never saved
   cherries/runs/YYYY/mm/dd/  # saved local runs, partitioned by start date
 ```
 
-Ignore `cherries/` and each study's `data/`, `figs/` and `tmp/` in Git. Put parameters in
-the script. Save this example as `src/10-run.py`, prepare `data/input.txt`, then
-execute `python src/10-run.py`:
+Ignore `cherries/` and each study's `data/`, `figs/` and `tmp/` in Git:
 
 ```python
 from pathlib import Path
@@ -71,95 +67,50 @@ if __name__ == "__main__":
     cherries.run(main)
 ```
 
-`input()` and `output()` return absolute paths under the study's `data/`;
-`fig()` uses its `figs/`. `tmp()` uses `tmp/`, creates parent directories and never
-registers or collects its files. Calls in Config and main behave identically. Registered
-files are copied at the end and recorded in `run.yaml.artifacts` with their
-relative name, SHA-256 and byte size. Paths must stay under the corresponding
-study `data/`, `figs/` or `tmp/` root; prepare outside files there before registering them. `run(main)` constructs the annotated config and
-records its values, including absolute paths. Each run's `src/` holds just the
-entry script; `refs/cherries/runs/<UUIDv7>` preserves the complete end snapshot.
-The run records `start-time` and `end-time` in the machine's local timezone at
-each instant, with an explicit numeric offset: `YYYY-mm-dd HH:MM:SS±HH:MM`
-(for example, `2026-11-15 08:00:00+08:00`). `start()` captures the start; main
-returning or manual `end()` captures the end before artifact copying and Git
-finalization. While running, `end-time` is null.
+Run normally with `python src/10-run.py` (returns saved run `Path`), or debug
+without recording via `DEBUG=1 python src/10-run.py` (returns `None`, keeps
+stdout/stderr in the terminal, works outside Git). Dirty Git LFS files and dirty
+Git submodules are rejected before and after execution; committed LFS files and
+clean submodules are allowed.
 
-For debugging, run `DEBUG=1 python src/10-run.py`. Cherries constructs the config
-and calls main once, leaves stdout/stderr in the terminal and returns `None`.
-It creates no run directory, logs, metrics, metadata, artifact copies or Git
-snapshot, and does not serialize the config. Path helpers still use the study
-workspace; outputs and intermediates remain there. Metric logging does nothing;
-`get_step()` and `set_step()` still work, starting at zero. Exceptions propagate
-without creating a record. Manual `start()`/`end()` supports the same behavior.
-Only the exact value `DEBUG=1` enables this mode when execution starts; changing
-the environment during execution does not switch it. Debugging also works
-outside Git with the same `<study>/src/<script>.py` layout. Normal `run(main)`
-returns the saved run directory (`Path`). Git snapshots exclude study `tmp/`
-alongside `data/` and `figs/`, even when those files are already tracked.
-
-## Inspect, explain and archive
+## Manage, prune and archive
 
 ```bash
 cherries list --tag selected --json
 cherries show RUN
-cherries files RUN
-cherries get RUN outputs/result.txt --output ./result.txt
+cherries path RUN
 cherries edit RUN --description 'Result checked' --add-tag selected
 cherries add RUN analysis.md --as README.md
-cherries add RUN figs/loss.png --as assets/loss.png
-cherries --remote /mnt/archive/cherries push RUN
-cherries --remote /mnt/archive/cherries pull RUN
+cherries add RUN figs/loss.png --as figs/loss.png
+cherries lineage --tag selected
+cherries prune --tag selected --dry-run
 cherries verify RUN
 cherries remove RUN
+cherries --remote /mnt/archive/cherries push RUN
+cherries --remote /mnt/archive/cherries pull RUN
+cherries --remote /mnt/archive/cherries list --tag selected --json
+cherries --remote /mnt/archive/cherries lineage --tag selected
+cherries --remote /mnt/archive/cherries prune --tag selected --dry-run
 cherries --remote /mnt/archive/cherries gc --dry-run
 ```
 
-After execution, maintain the run's README, reports, assets and figures. Inputs,
-outputs, source, parameters, start/end times, log, metrics and Git ref stay fixed.
-Push and pull preserve the exact original strings across destination timezones.
-Default to Markdown; use HTML for complex layouts or interactive figures. When a
-run has one report, save it as `README.md` or `README.html` at the run root. Use
-`reports/` only for additional reports when the run has multiple reports. The
-README can serve as an entry point linking detailed reports without repeating
-their text. Reference images as `assets/image.png` from the root README and
-`../assets/image.png` from a report directly inside `reports/`; adjust relative
-paths for deeper report folders.
+Local runs are ordinary folders (`cherries path RUN` prints the path for direct
+`ls`/`cp`). `lineage` and `prune` follow transitive SHA-256 dependencies from
+`run.yaml.artifacts` (ignoring zero-byte files) on both local runs and Restic
+archives. Remote snapshots are immutable: edit reports or figures locally with
+`edit`/`add` and re-push.
 
-Local runs use `cherries/runs/YYYY/mm/dd/<UUIDv7>[.tmp]/`; remote runs use
-`ROOT/projects/<project-id>/runs/YYYY/mm/dd/<UUIDv7>[.tmp]/`.
-The date comes from the persisted `run.yaml` `start-time` in its original local
-timezone. Finishing after midnight or pushing/pulling across timezones keeps that
-partition. UUIDv7 remains the run identifier; CLI `RUN` accepts the ID or a concrete
-run path. Running experiments use `.tmp`; completed records drop that suffix.
-`list` defaults to completed records; `list --unfinished` selects `.tmp` records.
-`remove` also removes empty date directories. Only this daily layout is supported.
-Metrics append and flush to JSONL, then become four-column Parquet at the end.
-Failures retain `.tmp` with diagnostic logs and re-raise the original exception.
-The required `artifacts` mapping lists `inputs`, `outputs` and `figs`; empty roles
-use `[]`. Local records keep real files alongside this manifest. Remote records
-store these payloads only in extensionless CAS objects and resolve logical paths
-such as `outputs/result.txt` through the manifest. Pull restores real files.
-Repeat push updates editable materials and retains remote-only files and figures.
-Repeat pull preserves existing local materials unless `--overwrite` is passed;
-figures merge by name and destination-only figures remain. Payloads are saved
-before the manifest is published atomically. `verify` checks recorded hashes and
-sizes against the actual saved bytes.
-
-The [storage specification](https://github.com/liblaf/cherries/blob/main/docs/design/cherries/storage.md),
-[Python API](https://github.com/liblaf/cherries/blob/main/docs/design/cherries/api.pyi)
+See the [storage design](https://github.com/liblaf/cherries/blob/main/docs/design/cherries/storage.md)
 and [CLI reference](https://github.com/liblaf/cherries/blob/main/docs/design/cherries/cli.md)
-describe the exact format and commands.
+for exact formats and options.
 
 ## Development
 
 ```bash
 uv sync
 uv run pytest
-uv run nox
 uv run ruff check .
 uv run lint-imports
-uv build
 uv run zensical build
 ```
 

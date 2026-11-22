@@ -1,264 +1,89 @@
 # Copyright (c) 2026 liblaf
+"""Local storage, manifest verification, daily layout, and artifact-lineage pruning."""
+
 from __future__ import annotations
 
 import hashlib
 import shutil
-import threading
 from pathlib import Path
-from typing import IO, Any
+from typing import Any
 
 import pytest
 
-from liblaf.cherries._io import (
-    artifact_entries,
-    identity,
-    read_yaml,
-    run_relative_path,
-    write_yaml,
-)
-from liblaf.cherries._storage import LocalStore, RemoteStore, pull, push
-
-from .conftest import git
+from liblaf.cherries._io import run_relative_path, write_yaml
+from liblaf.cherries._storage import LocalStore, resolve_lineage
 
 
-def test_remote_round_trip_deduplicates_and_omits_empty_directories(
-    repo: Path,
-    saved: Path,
-    tmp_path: Path,
-) -> None:
-    remote = RemoteStore(tmp_path / "remote", repo.name)
-    local = LocalStore(repo)
-    run = local.get(saved.name)
-    assert not (saved / "outputs/bundle/nested/empty").exists()
-    # Older local trees may contain empty directories; pushing skips them too.
-    (saved / "outputs/bundle/nested/empty").mkdir()
-    times = {key: run.metadata[key] for key in ("start-time", "end-time")}
-    run.edit(description="checked before upload")
-    assert {key: run.metadata[key] for key in times} == times
-    destination = push(run, remote)
-    stored = remote.get(saved.name)
-    assert stored.metadata == run.metadata
-    assert {key: stored.metadata[key] for key in times} == times
-    assert not any(
-        (destination / role).exists() for role in ("inputs", "outputs", "figs")
-    )
-    assert len(list((remote.root / "objects").glob("sha256/*/*/*"))) == 4
-    oid, size = identity(saved / "outputs/result.txt")
-    entries = artifact_entries(stored.metadata)
-    assert entries[Path("outputs/other.lfs")] == {
-        "name": "other.lfs",
-        "sha256": oid,
-        "size": size,
+def _make_run(
+    store: LocalStore,
+    run_id: str,
+    *,
+    start_time: str = "2026-11-15 08:00:00+08:00",
+    tags: list[str] | None = None,
+    inputs: dict[str, bytes] | None = None,
+    outputs: dict[str, bytes] | None = None,
+    figs: dict[str, bytes] | None = None,
+    unfinished: bool = False,
+) -> Path:
+    suffix = ".tmp" if unfinished else ""
+    directory = store.runs_dir / run_relative_path(run_id + suffix, start_time)
+    (directory / "src").mkdir(parents=True)
+    (directory / "src/10-run.py").write_text("pass\n")
+    (directory / "run.log").write_text("ok\n")
+    artifacts: dict[str, list[dict[str, Any]]] = {
+        "inputs": [],
+        "outputs": [],
+        "figs": [],
     }
-    empty_oid = hashlib.sha256(b"").hexdigest()
-    assert remote.object(empty_oid).is_file()
-    assert remote.object(empty_oid).read_bytes() == b""
-    assert remote.object(oid).read_text() == "shared contents"
-    assert "outputs/other.lfs" in stored.files()
-    assert "outputs/result.txt.lfs" not in stored.files()
-    stored.verify()
-    disallowed = destination / "outputs/empty"
-    disallowed.mkdir(parents=True)
-    with pytest.raises(ValueError, match="Disallowed remote artifact directory"):
-        stored.verify()
-    disallowed.rmdir()
-    disallowed.parent.rmdir()
-    with pytest.raises(FileNotFoundError):
-        stored.get("outputs/bundle/nested/empty", tmp_path / "empty-export")
-    assert not (tmp_path / "empty-export").exists()
-    stored.get("outputs", tmp_path / "export")
-    assert (tmp_path / "export/other.lfs").read_text() == "shared contents"
-    assert (tmp_path / "export/empty.bin").read_bytes() == b""
-    assert (tmp_path / "export/bundle/nested/data.bin").read_bytes() == b"tree data"
-    assert not (tmp_path / "export/bundle/nested/empty").exists()
-    run.remove()
-    restored = pull(stored, local)
-    local.get(restored.name).verify()
-    assert {key: local.get(restored.name).metadata[key] for key in times} == times
-    assert (restored / "outputs/other.lfs").read_text() == "shared contents"
-    assert (restored / "outputs/bundle/nested/data.bin").read_bytes() == b"tree data"
-    assert not (restored / "outputs/bundle/nested/empty").exists()
-    assert not any(path.is_symlink() for path in remote.root.rglob("*"))
-    assert (
-        git(repo, "rev-parse", f"refs/cherries/runs/{saved.name}")
-        == stored.metadata["commit"]
+    for role, files in (
+        ("inputs", inputs or {}),
+        ("outputs", outputs or {}),
+        ("figs", figs or {}),
+    ):
+        for name, payload in sorted(files.items()):
+            target = directory / role / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(payload)
+            artifacts[role].append(
+                {
+                    "name": name,
+                    "sha256": hashlib.sha256(payload).hexdigest(),
+                    "size": len(payload),
+                }
+            )
+    write_yaml(
+        directory / "run.yaml",
+        {
+            "project-id": store.project_id,
+            "run-id": run_id,
+            "run-name": run_id,
+            "start-time": start_time,
+            "end-time": None if unfinished else start_time,
+            "tags": list(tags or []),
+            "params": {},
+            "commit": None if unfinished else "a" * 40,
+            "metadata": {},
+            "artifacts": artifacts,
+        },
     )
+    return directory
 
 
-def test_directory_get_reads_one_manifest_snapshot(
-    repo: Path,
-    saved: Path,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from liblaf.cherries import _storage
-
-    remote = RemoteStore(tmp_path / "remote", repo.name)
-    push(LocalStore(repo).get(saved.name), remote)
-    stored = remote.get(saved.name)
-    original = _storage.read_yaml
-    reads = []
-
-    def counted(path: Path) -> dict[str, Any]:
-        reads.append(path)
-        return original(path)
-
-    monkeypatch.setattr(_storage, "read_yaml", counted)
-    stored.get("outputs", tmp_path / "export")
-    assert reads == [stored.directory / "run.yaml"]
-    assert (tmp_path / "export/result.txt").read_bytes() == b"shared contents"
-    assert (tmp_path / "export/bundle/nested/data.bin").read_bytes() == b"tree data"
-
-
-@pytest.mark.parametrize("operation", ["push", "figure"])
-def test_gc_waits_for_payload_and_manifest_publication(  # noqa: PLR0915 - controlled writer/collector synchronization
-    repo: Path,
-    saved: Path,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    operation: str,
-) -> None:
-    remote = RemoteStore(tmp_path / "remote", repo.name)
-    local = LocalStore(repo).get(saved.name)
-    figure = tmp_path / "new.png"
-    figure.write_bytes(b"new figure not referenced yet")
-    if operation == "figure":
-        push(local, remote)
-    original = remote.put
-    copied = threading.Event()
-    publish = threading.Event()
-    gc_started = threading.Event()
-    gc_done = threading.Event()
-    errors = []
-    gc_results = []
-
-    def paused(source: Path, expected: tuple[str, int] | None = None) -> Path:
-        result = original(source, expected)
-        copied.set()
-        assert publish.wait(10)
-        return result
-
-    def writer() -> None:
-        try:
-            if operation == "figure":
-                remote.get(saved.name).add(figure, "figs/new.png")
-            else:
-                push(local, remote)
-        except Exception as error:  # noqa: BLE001 - report worker failures in the test thread
-            errors.append(error)
-
-    def collector() -> None:
-        gc_started.set()
-        try:
-            gc_results.append(remote.gc())
-        except Exception as error:  # noqa: BLE001 - report worker failures in the test thread
-            errors.append(error)
-        finally:
-            gc_done.set()
-
-    monkeypatch.setattr(remote, "put", paused)
-    writing = threading.Thread(target=writer)
-    collecting = threading.Thread(target=collector)
-    writing.start()
-    try:
-        assert copied.wait(10)
-        collecting.start()
-        assert gc_started.wait(10)
-        assert not gc_done.wait(0.1)
-    finally:
-        publish.set()
-        writing.join(10)
-        if collecting.ident is not None:
-            collecting.join(10)
-    assert not writing.is_alive()
-    assert not collecting.is_alive()
-    assert not errors
-    assert gc_results == [{"objects": 0, "bytes": 0}]
-    remote.get(saved.name).verify()
-
-
-def test_repeated_sync_updates_only_mutable_materials_and_preserves_unique_files(  # noqa: PLR0915 - repeated upload/download lifecycle
-    repo: Path,
-    saved: Path,
-    tmp_path: Path,
-) -> None:
+def test_local_edit_add_and_verify(repo: Path, saved: Path, tmp_path: Path) -> None:
     local = LocalStore(repo)
-    remote = RemoteStore(tmp_path / "remote", repo.name)
     run = local.get(saved.name)
-    source = tmp_path / "report.md"
-    source.write_text("first")
-    run.add(source, "README.md")
-    assert push(run, remote) == remote.runs_dir / saved.relative_to(local.runs_dir)
-    stored = remote.get(saved.name)
-    commit = run.metadata["commit"]
     times = {key: run.metadata[key] for key in ("start-time", "end-time")}
-    source.write_text("only on remote")
-    stored.add(source, "reports/remote.md")
-    source.write_text("updated")
-    run.add(source, "README.md")
     run.edit(
-        name="checked", description="verified", add_tags=["selected"], metadata={"n": 1}
+        name="checked",
+        description="verified",
+        add_tags=["selected"],
+        metadata={"n": 1},
     )
     assert {key: run.metadata[key] for key in times} == times
-    changed = run.metadata
-    changed.update(
-        {
-            "start-time": "2020-01-01 00:00:00-05:00",
-            "end-time": "2020-01-01 00:01:00-05:00",
-        }
-    )
-    write_yaml(saved / "run.yaml", changed)
-    assert push(run, remote) == stored.directory
-    assert list(remote.runs_dir.glob("*/*/*/*/run.yaml")) == [
-        stored.directory / "run.yaml"
-    ]
-    assert {key: stored.metadata[key] for key in times} == times
-    changed.update(times)
-    write_yaml(saved / "run.yaml", changed)
-    assert (stored.directory / "README.md").read_text() == "updated"
-    assert (stored.directory / "reports/remote.md").read_text() == "only on remote"
-    assert stored.metadata["commit"] == commit
-    assert stored.metadata["description"] == "verified"
-    source.write_text("local-only")
-    run.add(source, "reports/local.md")
-    source.write_text("remote version")
-    stored.add(source, "README.md")
-    stored.edit(description="remote annotation")
-    assert {key: stored.metadata[key] for key in times} == times
-    changed = stored.metadata
-    changed.update(
-        {
-            "start-time": "2021-01-01 00:00:00-07:00",
-            "end-time": "2021-01-01 00:01:00-07:00",
-        }
-    )
-    write_yaml(stored.directory / "run.yaml", changed)
-    assert pull(stored, local) == saved
-    assert {key: run.metadata[key] for key in times} == times
-    assert (saved / "README.md").read_text() == "updated"
+    assert run.metadata["run-name"] == "checked"
     assert run.metadata["description"] == "verified"
-    assert (saved / "reports/remote.md").exists()
-    assert pull(stored, local, overwrite=True) == saved
-    assert list(local.runs_dir.glob("*/*/*/*/run.yaml")) == [saved / "run.yaml"]
-    assert {key: run.metadata[key] for key in times} == times
-    assert (saved / "README.md").read_text() == "remote version"
-    assert (saved / "reports/local.md").read_text() == "local-only"
-    assert run.metadata["description"] == "remote annotation"
-    assert run.metadata["params"] == stored.metadata["params"]
-    with pytest.raises(ValueError, match="fixed"):
-        run.add(source, "outputs/result.txt")
-    assert git(repo, "rev-parse", f"refs/cherries/runs/{saved.name}") == commit
+    assert "selected" in run.metadata["tags"]
 
-
-@pytest.mark.parametrize("remote", [False, True])
-def test_add_preserves_file_paths_without_empty_directory_placeholders(
-    repo: Path, saved: Path, tmp_path: Path, *, remote: bool
-) -> None:
-    run = LocalStore(repo).get(saved.name)
-    if remote:
-        store = RemoteStore(tmp_path / "remote", repo.name)
-        push(run, store)
-        run = store.get(saved.name)
     attachment = tmp_path / "attachment"
     (attachment / "nested/empty").mkdir(parents=True)
     (attachment / "nested/file.txt").write_text("attachment")
@@ -267,101 +92,24 @@ def test_add_preserves_file_paths_without_empty_directory_placeholders(
         "attachment"
     )
     assert not (run.directory / "assets/attachment/nested/empty").exists()
-    assert run.files("assets") == ["assets/attachment/nested/file.txt"]
 
-
-def test_cas_gc_is_global_and_retains_unfinished_manifest_without_payload_reads(
-    repo: Path,
-    saved: Path,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    local = LocalStore(repo)
-    remote = RemoteStore(tmp_path / "remote", repo.name)
-    push(local.get(saved.name), remote)
-    stored = remote.get(saved.name)
-    retained = stored.metadata["artifacts"]["outputs"][0]
-    data = stored.metadata
-    data["project-id"] = "other"
-    data["run-id"] = "00000000-0000-7000-8000-000000000002"
-    other = (
-        remote.root
-        / "projects/other/runs"
-        / run_relative_path(data["run-id"] + ".tmp", data["start-time"])
-        / "run.yaml"
+    figures = tmp_path / "figures"
+    (figures / "nested/empty").mkdir(parents=True)
+    (figures / "nested/a.lfs").write_bytes(b"literal suffix")
+    (figures / "nested/zero").write_bytes(b"")
+    run.add(figures, "figs/bundle")
+    assert (run.directory / "figs/bundle/nested/a.lfs").read_bytes() == (
+        b"literal suffix"
     )
-    data["artifacts"] = {"inputs": [retained], "outputs": [], "figs": []}
-    write_yaml(other, data)
-    orphan = tmp_path / "orphan.bin"
-    orphan.write_bytes(b"unused payload")
-    unused = remote.put(orphan)
-    stored.remove()
-    original_open = Path.open
+    assert (run.directory / "figs/bundle/nested/zero").read_bytes() == b""
+    assert not (run.directory / "figs/bundle/nested/empty").exists()
 
-    def no_cas_open(path: Path, *args: Any, **kwargs: Any) -> IO[str]:
-        assert remote.root / "objects" not in path.parents, (
-            "GC must not read CAS payload bytes"
-        )
-        return original_open(path, *args, **kwargs)
+    # Extra freeform notes in the run directory are allowed.
+    (run.directory / "notes.txt").write_text("freeform note\n")
 
-    monkeypatch.setattr(Path, "open", no_cas_open)
-    plan = remote.gc(dry_run=True)
-    assert plan["objects"] >= 1
-    assert unused.exists()
-    remote.gc()
-    assert not unused.exists()
-    assert remote.object(retained["sha256"]).exists()
-    other.unlink()
-    remote.gc()
-    assert not remote.object(retained["sha256"]).exists()
-    assert not list((remote.root / "objects/sha256").glob("*"))
-    assert not (remote.root / "objects").exists()
-    assert (repo / "exp/2026/11/15/example/data/result.txt").exists()
-
-
-def test_gc_rejects_any_malformed_manifest_before_deletion(
-    repo: Path, saved: Path, tmp_path: Path
-) -> None:
-    remote = RemoteStore(tmp_path / "remote", repo.name)
-    push(LocalStore(repo).get(saved.name), remote)
-    orphan = tmp_path / "orphan"
-    orphan.write_bytes(b"orphan")
-    payload = remote.put(orphan)
-    write_yaml(
-        remote.root / "projects/other/runs/2026/11/15/bad.tmp/run.yaml",
-        {"artifacts": {}},
-    )
-    for dry_run in (True, False):
-        with pytest.raises(ValueError, match=r"artifact|Artifact"):
-            remote.gc(dry_run=dry_run)
-        assert payload.exists()
-
-
-def test_corrupt_payload_fails_readonly_verification_and_get(
-    repo: Path,
-    saved: Path,
-    tmp_path: Path,
-) -> None:
-    remote = RemoteStore(tmp_path / "remote", repo.name)
-    push(LocalStore(repo).get(saved.name), remote)
-    run = remote.get(saved.name)
-    oid = hashlib.sha256(b"shared contents").hexdigest()
-    remote.object(oid).write_bytes(b"shared contenTS")
-    with pytest.raises(ValueError, match="mismatch"):
-        run.verify()
-    with pytest.raises(ValueError, match="mismatch"):
-        run.get("outputs/result.txt", tmp_path / "out.txt")
-    assert not (tmp_path / "out.txt").exists()
-
-
-def test_get_does_not_replace_destination_only_tmp_sibling(
-    repo: Path,
-    saved: Path,
-    tmp_path: Path,
-) -> None:
-    (tmp_path / "result.txt.tmp").write_text("keep destination-only file")
-    LocalStore(repo).get(saved.name).get("outputs/result.txt", tmp_path / "result.txt")
-    assert (tmp_path / "result.txt.tmp").read_text() == "keep destination-only file"
+    with pytest.raises(ValueError, match="fixed"):
+        run.add(attachment / "nested/file.txt", "outputs/result.txt")
+    run.verify()
 
 
 @pytest.mark.parametrize(
@@ -376,20 +124,15 @@ def test_get_does_not_replace_destination_only_tmp_sibling(
         {"name": "file", "sha256": "a" * 64, "size": 1, "extra": 2},
     ],
 )
-def test_corrupt_manifest_cannot_be_verified_or_materialized(
-    repo: Path, saved: Path, tmp_path: Path, entry: dict
+def test_corrupt_manifest_fails_verify(
+    repo: Path, saved: Path, entry: dict[str, Any]
 ) -> None:
-    remote = RemoteStore(tmp_path / "remote", repo.name)
-    push(LocalStore(repo).get(saved.name), remote)
-    record = remote.get(saved.name)
+    record = LocalStore(repo).get(saved.name)
     data = record.metadata
     data["artifacts"]["outputs"] = [entry]
     write_yaml(record.directory / "run.yaml", data)
-    with pytest.raises(ValueError, match=r"artifact|Artifact"):
+    with pytest.raises(ValueError):  # noqa: PT011 - Pydantic ValidationError
         record.verify()
-    with pytest.raises(ValueError, match=r"artifact|Artifact"):
-        record.get("outputs", tmp_path / "out")
-    assert not (tmp_path / "out").exists()
 
 
 @pytest.mark.parametrize("change", ["missing", "changed", "unlisted", "role-file"])
@@ -409,165 +152,184 @@ def test_verify_checks_local_manifest_against_real_files(
         LocalStore(repo).get(saved.name).verify()
 
 
-def test_remove_unfinished_remote_copy_before_git_transfer(
-    repo: Path,
-    saved: Path,
-    tmp_path: Path,
+def test_verify_checks_log_and_date_mismatch_before_payloads(
+    repo: Path, saved: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    remote = RemoteStore(tmp_path / "remote", repo.name)
-    pending = remote.runs_dir / run_relative_path(
-        saved.name + ".tmp", read_yaml(saved / "run.yaml")["start-time"]
-    )
-    write_yaml(pending / "run.yaml", read_yaml(saved / "run.yaml"))
-    assert not remote.git(repo.name).exists()
-    remote.get(pending).remove()
-    assert not pending.exists()
-    assert saved.exists()
-
-
-def test_verify_detects_missing_execution_log(repo: Path, saved: Path) -> None:
+    record = LocalStore(repo).get(saved.name)
     (saved / "run.log").unlink()
     with pytest.raises(ValueError, match=r"Missing run\.log"):
-        LocalStore(repo).get(saved.name).verify()
+        record.verify()
+    (saved / "run.log").write_text("ok\n")
 
-
-def test_figs_merge_by_name_while_execution_artifacts_stay_frozen(
-    repo: Path, saved: Path, tmp_path: Path
-) -> None:
-    local = LocalStore(repo)
-    run = local.get(saved.name)
-    remote = RemoteStore(tmp_path / "remote", repo.name)
-    push(run, remote)
-    stored = remote.get(saved.name)
-    frozen = stored.metadata["artifacts"]["outputs"]
-    original = (saved / "outputs/result.txt").read_bytes()
-    # A repeated upload must preserve the first published execution manifest,
-    # even if the source's file and metadata were manually changed afterward.
-    (saved / "outputs/result.txt").write_bytes(b"changed execution")
-    changed = run.metadata
-    changed["artifacts"]["outputs"] = []
-    write_yaml(saved / "run.yaml", changed)
-    figure = tmp_path / "figure"
-    figure.write_bytes(b"remote-only")
-    stored.add(figure, "figs/remote.png")
-    figure.write_bytes(b"new local loss")
-    run.add(figure, "figs/loss.png")
-    figure.write_bytes(b"local-only")
-    run.add(figure, "figs/local.png")
-    push(run, remote)
-    assert stored.metadata["artifacts"]["outputs"] == frozen
-    stored.get("outputs/result.txt", tmp_path / "execution")
-    assert (tmp_path / "execution").read_bytes() == original
-    assert stored.files("figs") == [
-        "figs/local.png",
-        "figs/loss.png",
-        "figs/remote.png",
-    ]
-    assert not (stored.directory / "figs").exists()
-    stored.get("figs", tmp_path / "figures")
-    assert (tmp_path / "figures/loss.png").read_bytes() == b"new local loss"
-    figure.write_bytes(b"remote replacement")
-    stored.add(figure, "figs/loss.png")
-    pull(stored, local)
-    assert (saved / "figs/loss.png").read_bytes() == b"new local loss"
-    assert (saved / "figs/remote.png").read_bytes() == b"remote-only"
-    pull(stored, local, overwrite=True)
-    assert (saved / "figs/loss.png").read_bytes() == b"remote replacement"
-    assert (saved / "figs/local.png").read_bytes() == b"local-only"
-    assert run.metadata["artifacts"]["outputs"] == []
-    assert (saved / "outputs/result.txt").read_bytes() == b"changed execution"
-
-
-@pytest.mark.parametrize("remote_record", [False, True])
-def test_add_nested_figures_has_no_empty_dirs_or_manifest_sidecars(
-    repo: Path, saved: Path, tmp_path: Path, *, remote_record: bool
-) -> None:
-    run = LocalStore(repo).get(saved.name)
-    if remote_record:
-        remote = RemoteStore(tmp_path / "remote", repo.name)
-        push(run, remote)
-        run = remote.get(saved.name)
-    source = tmp_path / "figures"
-    (source / "nested/empty").mkdir(parents=True)
-    (source / "nested/a.lfs").write_bytes(b"literal suffix")
-    (source / "nested/zero").write_bytes(b"")
-    run.add(source, "figs/bundle")
-    assert run.files("figs/bundle") == [
-        "figs/bundle/nested/a.lfs",
-        "figs/bundle/nested/zero",
-    ]
-    run.get("figs/bundle", tmp_path / "export")
-    assert (tmp_path / "export/nested/a.lfs").read_bytes() == b"literal suffix"
-    assert (tmp_path / "export/nested/zero").read_bytes() == b""
-    assert not (tmp_path / "export/nested/empty").exists()
-    if remote_record:
-        assert not (run.directory / "figs").exists()
-    run.verify()
-
-
-def test_corrupt_directory_get_publishes_no_files(
-    repo: Path, saved: Path, tmp_path: Path
-) -> None:
-    remote = RemoteStore(tmp_path / "remote", repo.name)
-    push(LocalStore(repo).get(saved.name), remote)
-    run = remote.get(saved.name)
-    oid = artifact_entries(run.metadata)[Path("outputs/result.txt")]["sha256"]
-    remote.object(oid).write_bytes(b"corrupt payload")
-    with pytest.raises(ValueError, match="mismatch"):
-        run.get("outputs", tmp_path / "export")
-    assert not (tmp_path / "export").exists()
-    target = tmp_path / "existing"
-    target.write_bytes(b"preserve existing")
-    with pytest.raises(ValueError, match="mismatch"):
-        run.get("outputs/result.txt", target, overwrite=True)
-    assert target.read_bytes() == b"preserve existing"
-
-
-def test_normal_cas_reuse_does_not_rehash_existing_payload(
-    repo: Path, saved: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    from liblaf.cherries import _storage
-
-    remote = RemoteStore(tmp_path / "remote", repo.name)
-    run = LocalStore(repo).get(saved.name)
-    push(run, remote)
-    original_identity = _storage.identity
-
-    def no_remote_hash(path: Path) -> tuple[str, int]:
-        assert remote.root / "objects" not in path.parents
-        return original_identity(path)
-
-    monkeypatch.setattr(_storage, "identity", no_remote_hash)
-    # The second distinct record reuses all four existing payloads.
-    metadata = run.metadata
-    metadata["run-id"] = "second"
-    copied = saved.with_name("second")
-    shutil.copytree(saved, copied)
-    write_yaml(copied / "run.yaml", metadata)
-    git(repo, "update-ref", "refs/cherries/runs/second", metadata["commit"])
-    # _git transfers also require the matching fixed LFS source ref when present;
-    # fixture source has no native Git LFS payloads.
-    push(local_run := LocalStore(repo).get("second"), remote)
-    assert remote.get(local_run.id).metadata["artifacts"] == metadata["artifacts"]
-
-
-def test_remote_get_reads_payload_once_before_local_verification(
-    repo: Path, saved: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    remote = RemoteStore(tmp_path / "remote", repo.name)
-    push(LocalStore(repo).get(saved.name), remote)
-    run = remote.get(saved.name)
-    oid = artifact_entries(run.metadata)[Path("outputs/result.txt")]["sha256"]
-    payload = remote.object(oid)
+    data = record.metadata
+    data["start-time"] = "1999-12-31 23:59:59-12:00"
+    write_yaml(saved / "run.yaml", data)
     original_open = Path.open
-    reads = []
 
-    def track_payload_open(path: Path, *args: Any, **kwargs: Any) -> IO[str]:
-        if path == payload:
-            reads.append(path)
+    def no_payload_open(path: Path, *args: Any, **kwargs: Any) -> Any:
+        assert not any(
+            saved / role in path.parents for role in ("inputs", "outputs", "figs")
+        )
         return original_open(path, *args, **kwargs)
 
-    monkeypatch.setattr(Path, "open", track_payload_open)
-    run.get("outputs/result.txt", tmp_path / "export")
-    assert reads == [payload]
-    assert (tmp_path / "export").read_text() == "shared contents"
+    monkeypatch.setattr(Path, "open", no_payload_open)
+    with pytest.raises(ValueError, match="start-time"):
+        record.verify()
+
+
+def test_remove_prunes_only_empty_dates_and_stops_at_cherries_root(repo: Path) -> None:
+    store = LocalStore(repo)
+    first = _make_run(store, "first", start_time="2026-01-01 00:00:00+00:00")
+    same_day = _make_run(store, "same-day", start_time="2026-01-01 01:00:00+00:00")
+    next_day = _make_run(store, "next-day", start_time="2026-01-02 00:00:00+00:00")
+    next_month = _make_run(store, "next-month", start_time="2026-02-01 00:00:00+00:00")
+    unrelated = store.root / "notes.txt"
+    unrelated.write_text("keep")
+
+    store.get(first).remove()
+    assert same_day.is_dir()
+    store.get(same_day).remove()
+    assert not first.parent.exists()
+    assert next_day.is_dir()
+    store.get(next_day).remove()
+    assert not (store.runs_dir / "2026/01").exists()
+    assert next_month.is_dir()
+    unrelated.unlink()
+    store.get(next_month).remove()
+    assert not store.runs_dir.exists()
+    assert store.root.is_dir()
+
+
+def test_lineage_and_prune_follow_artifact_chain_and_ignore_empty_files(
+    repo: Path,
+) -> None:
+    store = LocalStore(repo)
+    mesh = b"mesh bytes v1"
+    sim = b"simulation bytes v1"
+    fig = b"paper figure bytes"
+    garbage = b"discarded branch bytes"
+
+    _make_run(store, "run-a", outputs={"mesh.vtu": mesh})
+    _make_run(store, "run-b", inputs={"mesh.vtu": mesh}, outputs={"sim.vtu": sim})
+    _make_run(
+        store,
+        "run-c",
+        tags=["selected"],
+        inputs={"sim.vtu": sim, "empty.txt": b""},
+        figs={"fig1.png": fig},
+    )
+    _make_run(store, "run-dead", outputs={"empty.txt": b"", "trash.vtu": garbage})
+    pending = _make_run(store, "run-wip", unfinished=True)
+
+    assert [m["run-id"] for m in store.lineage(tags=["selected"])] == [
+        "run-c",
+        "run-b",
+        "run-a",
+    ]
+    assert store.lineage(tags=["nonexistent"]) == []
+    with pytest.raises(ValueError, match="No runs matched"):
+        store.prune(tags=["nonexistent"])
+    assert store.find("run-dead") is not None
+
+    dry = store.prune(tags=["selected"], dry_run=True)
+    assert dry == {"keep": ["run-c", "run-b", "run-a"], "remove": ["run-dead"]}
+    assert store.find("run-dead") is not None
+    assert pending.exists()
+
+    assert store.prune(tags=["selected"]) == dry
+    assert store.find("run-dead") is None
+    assert sorted(r.id for r in store.runs()) == ["run-a", "run-b", "run-c"]
+    assert pending.exists()
+
+    assert store.prune(tags=["selected"], unfinished=True) == {
+        "keep": ["run-c", "run-b", "run-a"],
+        "remove": ["run-wip.tmp"],
+    }
+    assert not pending.exists()
+
+
+def test_resolve_lineage_rejects_unknown_seed() -> None:
+    with pytest.raises(FileNotFoundError, match="missing"):
+        resolve_lineage({}, ["missing"])
+
+
+def test_edit_and_add_reject_unfinished_runs_and_validate_before_copy(
+    repo: Path, saved: Path, tmp_path: Path
+) -> None:
+    store = LocalStore(repo)
+    pending = _make_run(store, "wip", unfinished=True)
+    fig = tmp_path / "plot.png"
+    fig.write_bytes(b"img")
+    with pytest.raises(ValueError, match="unfinished"):
+        store.get(pending).edit(description="nope")
+    with pytest.raises(ValueError, match="unfinished"):
+        store.get(pending).add(fig, "figs/plot.png")
+    assert not (pending / "figs/plot.png").exists()
+
+    # Bare directory targets, directory reports, and fig conflicts fail cleanly.
+    run = store.get(saved.name)
+    for bad_target in ("figs", "assets", "reports"):
+        with pytest.raises(ValueError, match="invalid"):
+            run.add(fig, bad_target)
+    with pytest.raises(ValueError, match="directory"):
+        run.add(tmp_path, "README.md")
+    with pytest.raises(ValueError, match="conflict"):
+        run.add(fig, "figs/loss.png/nested.png")
+    assert (saved / "figs/loss.png").read_bytes() == b"figure"
+
+
+def test_local_get_supports_ids_unfinished_ids_paths_and_detects_ambiguity(
+    repo: Path, saved: Path
+) -> None:
+    local = LocalStore(repo)
+    assert local.get(saved.name).directory == saved
+    assert local.get(saved).directory == saved
+    pending = _make_run(
+        local,
+        "unfinished",
+        start_time="2024-02-29 23:59:59+08:00",
+        unfinished=True,
+    )
+    assert local.get("unfinished.tmp").directory == pending
+    assert local.get(pending).directory == pending
+    assert {run.directory for run in local.runs(unfinished=True)} == {pending}
+    assert {run.directory for run in local.runs()} == {saved}
+
+    duplicate = local.runs_dir / "2020/02/29" / saved.name
+    shutil.copytree(saved, duplicate)
+    data = local.show(duplicate)
+    data.update(
+        {
+            "start-time": "2020-02-29 00:00:00+00:00",
+            "end-time": "2020-02-29 00:00:00+00:00",
+        }
+    )
+    write_yaml(duplicate / "run.yaml", data)
+    with pytest.raises(ValueError, match="Ambiguous run ID"):
+        local.get(saved.name)
+
+    with pytest.raises(FileNotFoundError):
+        local.get(repo)
+
+
+def test_local_list_metadata_filters_limits_and_rejects_corrupt_yaml(
+    repo: Path, saved: Path
+) -> None:
+    local = LocalStore(repo)
+    assert [m["run-id"] for m in local.list_metadata(tags=["baseline"])] == [saved.name]
+    assert [m["run-id"] for m in local.list_metadata(search="initial")] == [saved.name]
+    assert local.list_metadata(limit=0) == []
+    with pytest.raises(ValueError, match="non-negative"):
+        local.list_metadata(limit=-1)
+
+    (saved / "run.yaml").write_text("", encoding="utf-8")
+    with pytest.raises(TypeError, match="YAML mapping"):
+        local.get(saved).verify()
+
+    # RunMeta requires canonical hyphenated keys and explicit commit field.
+    bad = local.get(_make_run(local, "bad-meta", unfinished=True))
+    data = bad.metadata
+    del data["commit"]
+    write_yaml(bad.directory / "run.yaml", data)
+    with pytest.raises(ValueError):  # noqa: PT011 - Pydantic ValidationError
+        bad.verify()

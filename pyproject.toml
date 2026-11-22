@@ -3,7 +3,7 @@
 
 [project]
 name = "liblaf-cherries"
-description = "Python experiment records with local files, Git snapshots, Parquet metrics, and remote content-addressed archives."
+description = "Python experiment records as ordinary local files, Git patches, Parquet metrics, and Restic archives."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

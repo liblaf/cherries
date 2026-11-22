@@ -1,4 +1,5 @@
 # Copyright (c) 2026 liblaf
+# ruff: noqa: EM101, EM102, TRY003
 """Record an ordinary Python experiment, with paths registered at script load."""
 
 from __future__ import annotations
@@ -8,7 +9,6 @@ import inspect
 import json
 import math
 import os
-import subprocess
 import sys
 import time
 import traceback
@@ -22,6 +22,7 @@ from pydantic import BaseModel
 
 from . import _git
 from ._io import (
+    atomic_bytes,
     collect_artifacts,
     copy,
     empty_artifacts,
@@ -67,6 +68,8 @@ def _path(role: str, path: Pathish) -> Path:
     base = _script().parent.parent / ("figs" if role == "figs" else "data")
     result = (base / path).resolve()
     name = result.relative_to(base)
+    if name == Path():
+        raise ValueError(f"Path must be inside {base}: {path}")
     if not _debugging:
         _registered[role][name] = result
     if role != "inputs":
@@ -93,7 +96,8 @@ def tmp(path: Pathish) -> Path:
     """Return absolute study/tmp/path, creating parents without recording it."""
     base = _script().parent.parent / "tmp"
     result = (base / path).resolve()
-    result.relative_to(base)
+    if result.relative_to(base) == Path():
+        raise ValueError(f"Path must be inside {base}: {path}")
     result.parent.mkdir(parents=True, exist_ok=True)
     return result
 
@@ -141,6 +145,12 @@ class _Run:
     metrics: TextIO | None = field(default=None)
 
 
+def _current() -> _Run:
+    if _active is None:
+        raise RuntimeError("No active Cherries run")
+    return _active
+
+
 def start(
     *,
     project_id: str | None = None,
@@ -152,22 +162,20 @@ def start(
 ) -> None:
     """Begin at step zero; DEBUG=1 skips recording and retains workspace paths."""
     global _active, _debugging, _debug_step  # noqa: PLW0603
+    if _active is not None:
+        raise RuntimeError("A Cherries run is already active")
     _debugging = os.getenv("DEBUG") == "1"
     _debug_step = 0
     if _debugging:
         return
     start_time = now()
     entry = _script()
-    repo = Path(
-        subprocess.check_output(
-            ["git", "-C", str(entry.parent), "rev-parse", "--show-toplevel"],
-            text=True,
-        ).strip()
-    )
+    repo = _git.root(entry.parent)
+    _git.preflight(repo)
     run_id = uuid7()
     directory = (
         repo / "cherries" / "runs" / run_relative_path(run_id, start_time)
-    ).with_suffix(".tmp")
+    ).with_name(f"{run_id}.tmp")
     directory.mkdir(parents=True)
     data = {
         "project-id": project_id or repo.name,
@@ -190,7 +198,7 @@ def start(
 
 def _finish(*, publish: bool) -> Path:
     global _active  # noqa: PLW0603
-    current = cast("_Run", _active)
+    current = _current()
     try:
         current.metadata["end-time"] = now()
         write_yaml(current.directory / "run.yaml", current.metadata)
@@ -208,33 +216,27 @@ def _finish(*, publish: bool) -> Path:
         if current.metrics is not None:
             current.metrics.close()
             path = current.directory / "metrics.jsonl"
-            # Scan lazily so long experiment journals do not become Python lists.
             pl.scan_ndjson(
                 path,
-                schema={
-                    **METRIC_SCHEMA,
-                    "value": pl.String,
-                },
+                schema={**METRIC_SCHEMA, "value": pl.String},
             ).with_columns(pl.col("value").cast(pl.Float64)).select(
                 list(METRIC_SCHEMA),
             ).sink_parquet(current.directory / "metrics.parquet")
             path.unlink()
-        commit = _git.snapshot(current.repo, current.metadata["run-id"])
+        commit, patch = _git.capture(current.repo)
         current.metadata["commit"] = commit
-        source = _git.read_file(
-            current.repo,
-            commit,
-            current.entry.relative_to(current.repo).as_posix(),
-        )
-        target = current.directory / "src" / current.entry.name
-        target.parent.mkdir(exist_ok=True)
-        target.write_bytes(source)
+        source_dir = current.directory / "src"
+        copy(current.entry, source_dir / current.entry.name)
+        if patch:
+            atomic_bytes(source_dir / "diff.patch", patch)
         write_yaml(current.directory / "run.yaml", current.metadata)
         print(f"Cherries saved {current.metadata['run-id']}", file=sys.stderr)
     finally:
         if current.metrics is not None:
             current.metrics.close()
         current.capture.close()
+        for paths in _registered.values():
+            paths.clear()
         _active = None
     if publish:
         destination = current.directory.with_suffix("")
@@ -244,7 +246,7 @@ def _finish(*, publish: bool) -> Path:
 
 
 def end() -> None:
-    """Record end-time, then save files, metrics and Git; finalize the directory."""
+    """Record end-time, then save files, metrics and Git state; finalize directory."""
     global _debugging  # noqa: PLW0603
     if _debugging:
         _debugging = False
@@ -273,7 +275,7 @@ def run(
         if parameters := inspect.signature(main).parameters:
             config = get_type_hints(main)[next(iter(parameters))]()
             if not _debugging:
-                current = cast("_Run", _active)
+                current = _current()
                 current.metadata["params"] = config.model_dump(mode="json")
                 write_yaml(current.directory / "run.yaml", current.metadata)
             main(config)
@@ -315,11 +317,10 @@ def log_metrics(
     """Append in mapping order, sharing step/time, and flush once without fsync."""
     if _debugging or not metrics:
         return
-    current = cast("_Run", _active)
+    current = _current()
     if current.metrics is None:
         current.metrics = (current.directory / "metrics.jsonl").open(
-            "a",
-            encoding="utf-8",
+            "a", encoding="utf-8"
         )
     stamp = time.time_ns() // 1_000_000 if timestamp_ms is None else timestamp_ms
     for key, raw in metrics.items():
@@ -327,10 +328,7 @@ def log_metrics(
         encoded = (
             value
             if math.isfinite(value)
-            else {
-                math.inf: "Infinity",
-                -math.inf: "-Infinity",
-            }.get(value, "NaN")
+            else {math.inf: "Infinity", -math.inf: "-Infinity"}.get(value, "NaN")
         )
         row = {
             "key": key,
@@ -344,7 +342,7 @@ def log_metrics(
 
 def get_step() -> int:
     """Return the current step, initially zero."""
-    return _debug_step if _debugging else cast("_Run", _active).step
+    return _debug_step if _debugging else _current().step
 
 
 def set_step(step: int) -> None:
@@ -353,4 +351,4 @@ def set_step(step: int) -> None:
     if _debugging:
         _debug_step = step
     else:
-        cast("_Run", _active).step = step
+        _current().step = step

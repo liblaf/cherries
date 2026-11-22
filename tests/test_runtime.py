@@ -11,10 +11,16 @@ import polars as pl
 import pytest
 
 from liblaf import cherries
-from liblaf.cherries._io import FIELDS, read_yaml
+from liblaf.cherries._io import RunMeta, read_yaml
 from liblaf.cherries._storage import LocalStore
 
 from .conftest import execute, git
+
+FIELDS = {
+    field.alias or name
+    for name, field in RunMeta.model_fields.items()
+    if name != "description"
+}
 
 
 def _assert_artifacts(directory: Path, expected: dict[str, dict[str, bytes]]) -> None:
@@ -40,7 +46,7 @@ def _assert_artifacts(directory: Path, expected: dict[str, dict[str, bytes]]) ->
     ("timezone", "offset"),
     [("Asia/Shanghai", "+08:00"), ("Pacific/Marquesas", "-09:30")],
 )
-def test_actual_script_records_end_state_paths_metrics_and_native_logs(
+def test_actual_script_records_end_state_paths_metrics_diff_and_native_logs(  # noqa: PLR0915
     repo: Path,
     monkeypatch: pytest.MonkeyPatch,
     timezone: str,
@@ -59,7 +65,6 @@ def test_actual_script_records_end_state_paths_metrics_and_native_logs(
         repo,
         """from __future__ import annotations
 import ctypes
-import json
 import os
 import subprocess
 import sys
@@ -110,6 +115,7 @@ if __name__ == "__main__":
     )
     assert metadata["project-id"] == repo.name
     assert metadata["run-name"] == "10-run"
+    assert metadata["commit"] == head
     assert uuid.UUID(metadata["run-id"]).version == 7
     assert metadata["params"] == {
         "scale": 0.25,
@@ -126,20 +132,19 @@ if __name__ == "__main__":
             "figs": {"loss.png": b"figure"},
         },
     )
-    assert [p.name for p in (directory / "src").iterdir()] == ["10-run.py"]
+    assert sorted(p.name for p in (directory / "src").iterdir()) == [
+        "10-run.py",
+        "diff.patch",
+    ]
     assert (directory / "src/10-run.py").read_bytes() == (
         study / "src/10-run.py"
     ).read_bytes()
-    assert (
-        git(repo, "show", f"{metadata['commit']}:exp/2026/11/15/example/src/helper.py")
-        == "value = 42"
-    )
+    patch = (directory / "src/diff.patch").read_text()
+    assert "exp/2026/11/15/example/src/helper.py" in patch
+    assert "value = 42" in patch
     assert git(repo, "rev-parse", "HEAD") == head
     assert (repo / ".git/index").read_bytes() == index
-    assert (
-        git(repo, "rev-parse", f"refs/cherries/runs/{directory.name}")
-        == metadata["commit"]
-    )
+    assert not git(repo, "for-each-ref", "refs/cherries/")
     assert not (directory / "metrics.jsonl").exists()
     frame = pl.read_parquet(directory / "metrics.parquet")
     assert frame.schema == {
@@ -172,6 +177,25 @@ if __name__ == "__main__":
     assert (directory / "inputs/input.txt").stat().st_ino != (
         study / "data/input.txt"
     ).stat().st_ino
+    LocalStore(repo).get(directory.name).verify()
+
+
+def test_clean_committed_script_omits_diff_patch(repo: Path) -> None:
+    entry = repo / "exp/2026/11/15/example/src/10-run.py"
+    entry.parent.mkdir(parents=True)
+    entry.write_text(
+        """from liblaf import cherries
+def main():
+    cherries.output("result.txt").write_text("clean")
+if __name__ == "__main__":
+    print(cherries.run(main))
+"""
+    )
+    git(repo, "add", str(entry))
+    git(repo, "commit", "-m", "add script")
+    result = execute(repo, entry.read_text())
+    directory = Path(result.stdout.strip())
+    assert [p.name for p in (directory / "src").iterdir()] == ["10-run.py"]
     LocalStore(repo).get(directory.name).verify()
 
 
@@ -312,28 +336,47 @@ if __name__ == "__main__":
     assert not hasattr(cherries, "upload")
 
 
-def test_lfs_entry_script_is_saved_as_python_source(repo: Path) -> None:
-    git(repo, "lfs", "install", "--local")
-    (repo / ".gitattributes").write_text("*.py filter=lfs diff=lfs merge=lfs -text\n")
-    execute(
+def test_dirty_lfs_fails_fast_at_start_and_if_created_mid_run(repo: Path) -> None:
+    (repo / ".gitattributes").write_text("*.bin filter=lfs diff=lfs merge=lfs -text\n")
+    git(repo, "add", ".gitattributes")
+    git(repo, "commit", "-m", "lfs rule")
+
+    # Pre-existing dirty LFS fails fast at start() before running main() or creating .tmp.
+    (repo / "dirty.bin").write_bytes(b"uncommitted lfs")
+    result = execute(
         repo,
         """from liblaf import cherries
 def main():
+    raise AssertionError("main should not run when preflight fails")
+if __name__ == "__main__":
+    cherries.run(main)
+""",
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "Dirty Git LFS" in result.stderr
+    assert not (repo / "cherries").exists()
+    (repo / "dirty.bin").unlink()
+
+    # Dirty LFS created during main() is rejected at end() and retains .tmp diagnostics.
+    result = execute(
+        repo,
+        """from pathlib import Path
+from liblaf import cherries
+def main():
+    repo_root = Path(__file__).resolve().parents[6]
+    (repo_root / "midrun.bin").write_bytes(b"created mid-run")
     cherries.output("result.txt").write_text("done")
 if __name__ == "__main__":
     cherries.run(main)
 """,
+        check=False,
     )
-    (record,) = LocalStore(repo).runs()
-    source = record.directory / "src/10-run.py"
-    assert (
-        source.read_bytes()
-        == (repo / "exp/2026/11/15/example/src/10-run.py").read_bytes()
-    )
-    record.verify()
-    source.write_text("corrupted source")
-    with pytest.raises(ValueError, match="does not match"):
-        record.verify()
+    assert result.returncode != 0
+    assert "Dirty Git LFS" in result.stderr
+    store = LocalStore(repo)
+    assert not store.runs()
+    assert len(store.runs(unfinished=True)) == 1
 
 
 @pytest.mark.parametrize(
@@ -446,13 +489,20 @@ def main(cfg: Config):
     cfg.intermediate.write_text("updated intermediate")
     cherries.tmp("new/deep/intermediate.txt").write_text("new intermediate")
     (study / "tmp/link").symlink_to(study / "data", target_is_directory=True)
-    for path in ("../data/escaped.txt", study / "data/escaped.txt", "link/escaped.txt"):
+    for path in (".", "../data/escaped.txt", study / "data/escaped.txt", "link/escaped.txt"):
         try:
             cherries.tmp(path)
         except ValueError:
             pass
         else:
             raise AssertionError(f"tmp accepted an escaping path: {path}")
+    for fn in (cherries.input, cherries.output, cherries.fig):
+        try:
+            fn(".")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"{fn.__name__} accepted root directory")
     cherries.output("result.txt").write_text("saved result")
 
 if __name__ == "__main__":
@@ -463,10 +513,10 @@ if __name__ == "__main__":
     _assert_artifacts(directory, {"outputs": {"result.txt": b"saved result"}})
     assert temporary.read_text() == "updated intermediate"
     assert not (directory / "tmp").exists()
-    metadata = read_yaml(directory / "run.yaml")
-    snapshot = git(repo, "ls-tree", "-r", "--name-only", metadata["commit"])
-    assert all("tmp" not in Path(path).parts for path in snapshot.splitlines())
-    assert "src/10-run.py" in snapshot
+    patch = (directory / "src/diff.patch").read_text()
+    script_rel = "exp/2026/11/15/example/src/10-run.py"
+    headers = [line for line in patch.splitlines() if line.startswith("diff --git ")]
+    assert headers == [f"diff --git a/{script_rel} b/{script_rel}"]
     LocalStore(repo).get(directory.name).verify()
 
 
@@ -493,9 +543,9 @@ from liblaf.cherries import _runtime
 def forbidden(*args, **kwargs):
     raise AssertionError("debug attempted recording")
 
-_runtime._git.snapshot = forbidden
-_runtime._git.read_file = forbidden
-_runtime.subprocess.check_output = forbidden
+_runtime._git.root = forbidden
+_runtime._git.preflight = forbidden
+_runtime._git.capture = forbidden
 _runtime._Capture = forbidden
 _runtime.copy = forbidden
 _runtime.collect_artifacts = forbidden
@@ -557,7 +607,6 @@ if __name__ == "__main__":
         assert "ValueError: original debug failure" in result.stderr
     assert "debug attempted recording" not in result.stderr
     assert not (repo / "cherries").exists()
-    assert not git(repo, "for-each-ref", "refs/cherries/")
     assert git(repo, "rev-parse", "HEAD") == head
     assert (repo / ".git/index").read_bytes() == index
     assert (study / "data/nested/result.txt").read_text() == "debug result"
@@ -589,7 +638,6 @@ print("manual debug ended")
     )
     assert result.stdout.strip() == "manual debug ended"
     assert not (outside / "cherries").exists()
-    # A new lifecycle reads DEBUG afresh and starts at step zero.
     execute(
         repo,
         """import os
@@ -628,3 +676,10 @@ assert cherries.run(main) is not None
     (record,) = LocalStore(repo).runs()
     assert (record.directory / "metrics.parquet").exists()
     _assert_artifacts(record.directory, {"outputs": {"result.txt": b"recorded"}})
+
+
+def test_lifecycle_helpers_require_an_active_run() -> None:
+    with pytest.raises(RuntimeError, match="No active Cherries run"):
+        cherries.get_step()
+    with pytest.raises(RuntimeError, match="No active Cherries run"):
+        cherries.end()
