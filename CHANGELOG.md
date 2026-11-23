@@ -7,6 +7,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Changelog](https://github.com/conventional-changelog/conventional-changelog-config-spec/blob/master/versions/2.2.0/README.md),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v7.0.0](https://github.com/liblaf/cherries/releases/tag/v7.0.0) - 2026-11-23
+
+### 💥 BREAKING CHANGES
+
+- Remote commands require a Restic repository. Use `cherries path` with shell tools in place of `files` and `get` for local runs. - [0fdae65](https://github.com/liblaf/cherries/commit/0fdae654655db22db00de850f67bcdf7f27a09d6) by [@liblaf](https://github.com/liblaf)
+
+### ✨ Features
+
+- **\[breaking\]** switch remote run archives to Restic - [0fdae65](https://github.com/liblaf/cherries/commit/0fdae654655db22db00de850f67bcdf7f27a09d6) by [@liblaf](https://github.com/liblaf)
+
+### ❤️ Contributors
+
+- [@renovate[bot]](https://github.com/apps/renovate)
+- [@liblaf](https://github.com/liblaf)
+
 ## [v6.0.0](https://github.com/liblaf/cherries/releases/tag/v6.0.0) - 2026-11-15
 
 ### 💥 BREAKING CHANGES
@@ -33,6 +48,7 @@ manifests. Experiment scripts and record stores require the new format. - [1cc69
 
 ### ❤️ Contributors
 
+- [@liblaf-release-please[bot]](https://github.com/apps/liblaf-release-please)
 - [@liblaf](https://github.com/liblaf)
 - [@renovate[bot]](https://github.com/apps/renovate)
 
